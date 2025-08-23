@@ -7,7 +7,7 @@
         "@modelcontextprotocol/server-github"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_TOKEN_HERE"
       }
     },
     "sequential-thinking": {
