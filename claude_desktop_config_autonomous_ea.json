@@ -1,0 +1,74 @@
+{
+  "mcpServers": {
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "github": {
+      "command": "uvx", 
+      "args": ["mcp-server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
+      }
+    },
+    "sequential-thinking": {
+      "command": "uvx",
+      "args": ["mcp-server-sequential-thinking"]
+    },
+    "context7": {
+      "command": "uvx",
+      "args": ["mcp-server-context7"]
+    },
+    "playwright": {
+      "command": "uvx",
+      "args": ["mcp-server-playwright"]
+    },
+    "trading_classifier": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/trading_classifier_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "code_analysis": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/code_analysis_mcp.py"
+      ]
+    },
+    "test_automation": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/test_automation_mcp.py"
+      ]
+    },
+    "python_dev_accelerator": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/python_dev_accelerator_mcp.py"
+      ]
+    },
+    "api_integration": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/api_integration_mcp.py"
+      ]
+    },
+    "metatrader5": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/run.py",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/src"
+      }
+    }
+  }
+}
