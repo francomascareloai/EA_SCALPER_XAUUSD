@@ -1,0 +1,120 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_TOKEN_HERE"
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "everything": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-everything"
+      ]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ]
+    },
+    "trading_classifier": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/trading_classifier_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "code_analysis": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/code_analysis_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "test_automation": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/test_automation_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "python_dev_accelerator": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/python_dev_accelerator_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "api_integration": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/api_integration_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "project_scaffolding": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/MCP_Integration/servers/project_scaffolding_mcp.py"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD"
+      }
+    },
+    "metatrader5_roboforex": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/run.py",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--broker",
+        "roboforex"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/src",
+        "MT5_BROKER": "RoboForex",
+        "MT5_SERVER": "RoboForex-Demo",
+        "MT5_CONFIG_PATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/config/roboforex_config.json"
+      }
+    }
+  }
+}

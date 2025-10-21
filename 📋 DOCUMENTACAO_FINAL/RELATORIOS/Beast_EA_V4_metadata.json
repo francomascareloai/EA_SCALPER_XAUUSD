@@ -1,0 +1,31 @@
+{
+  "file_info": {
+    "original_name": "Beast_EA_V4.mq4",
+    "file_path": "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\CODIGO_FONTE_LIBRARY\\MQL4_Source\\EAs\\Beast_EA_V4.mq4",
+    "file_size": 11996,
+    "extension": ".mq4"
+  },
+  "classification": {
+    "type": "ea",
+    "strategy": "grid_martingale",
+    "market": "Forex",
+    "timeframe": "MULTI",
+    "suggested_category": "MQL4_Source/EAs/Grid_Martingale"
+  },
+  "quality_metrics": {
+    "ftmo_ready": false,
+    "risk_level": "high",
+    "complexity_score": 10
+  },
+  "tags": [
+    "#EA",
+    "#Grid_Martingale",
+    "#Forex",
+    "#HighRisk"
+  ],
+  "metadata": {
+    "created_at": "2025-08-23T17:38:56.066906",
+    "created_by": "Trading Classifier MCP",
+    "version": "1.0"
+  }
+}

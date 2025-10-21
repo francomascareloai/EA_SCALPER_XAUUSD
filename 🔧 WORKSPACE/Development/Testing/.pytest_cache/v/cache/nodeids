@@ -1,0 +1,6 @@
+[
+  "test_exemplo_ambiente.py::test_exemplo_lento",
+  "test_exemplo_ambiente.py::test_imports_basicos",
+  "test_exemplo_ambiente.py::test_pathlib_funcionando",
+  "test_exemplo_ambiente.py::test_python_version"
+]

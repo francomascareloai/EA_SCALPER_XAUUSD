@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-08-24T01:33:30.818597",
+  "model": "deepseek-r1-free",
+  "cache_times": [
+    3.793018341064453,
+    2.1257646083831787,
+    2.7209765911102295
+  ],
+  "context_tests": [],
+  "cache_working": true,
+  "max_context_size": 0
+}

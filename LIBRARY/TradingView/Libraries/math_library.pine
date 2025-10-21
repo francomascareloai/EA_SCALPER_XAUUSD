@@ -1,0 +1,35 @@
+//@version=5
+library("Math Library", overlay=false)
+
+// Exported function: Calculate compound interest
+export calculate_compound_interest(float principal, float rate, int time) =>
+    principal * math.pow(1 + rate / 100, time)
+
+// Exported function: Calculate moving average convergence divergence
+export calculate_macd(float src, int fastLength, int slowLength, int signalLength) =>
+    fastMa = ta.ema(src, fastLength)
+    slowMa = ta.ema(src, slowLength)
+    macdLine = fastMa - slowMa
+    signalLine = ta.ema(macdLine, signalLength)
+    histogram = macdLine - signalLine
+    [macdLine, signalLine, histogram]
+
+// Exported function: Calculate relative strength index
+export calculate_rsi(float src, int length) =>
+    up = math.max(src - src[1], 0)
+    down = math.max(src[1] - src, 0)
+    upAvg = ta.rma(up, length)
+    downAvg = ta.rma(down, length)
+    rs = upAvg / downAvg
+    rsi = 100 - (100 / (1 + rs))
+    rsi
+
+// Exported function: Normalize value between min and max
+export normalize(float value, float minVal, float maxVal) =>
+    (value - minVal) / (maxVal - minVal)
+
+// Exported function: Calculate z-score
+export calculate_zscore(float src, int length) =>
+    mean = ta.sma(src, length)
+    stdDev = ta.stdev(src, length)
+    (src - mean) / stdDev

@@ -1,0 +1,62 @@
+model_list:
+  - model_name: "deepseek-r1-free"
+    litellm_params:
+      model: "deepseek/deepseek-r1-0528:free"
+      api_key: "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"
+      headers:
+        "HTTP-Referer": "http://localhost:3000"
+        "X-Title": "LiteLLM Local"
+    model_info:
+      max_tokens: 163840  # Janela de contexto máxima do DeepSeek R1
+      max_input_tokens: 150000  # Tokens máximos de input
+      max_output_tokens: 13840  # Tokens máximos de output
+
+  - model_name: "gpt-3.5-turbo-free"
+    litellm_params:
+      model: "openai/gpt-3.5-turbo:free"
+      api_key: "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"
+      headers:
+        "HTTP-Referer": "http://localhost:3000"
+        "X-Title": "LiteLLM Local"
+    model_info:
+      max_tokens: 16384
+      max_input_tokens: 12000
+      max_output_tokens: 4384
+
+general_settings:
+  store_model_in_db: false
+  disable_spend_logs: true
+  disable_auth: true  # Desabilita autenticação
+  master_key: null    # Remove master key
+  database_url: null  # Remove database
+  
+  # Configurações de cache otimizadas
+  cache: true
+  cache_type: "disk"
+  cache_params:
+    disk_cache_dir: "./cache/litellm_cache"
+    ttl: 7200  # Cache por 2 horas
+    cache_params:
+      - "messages"
+      - "temperature"
+      - "max_tokens"
+      - "model"
+    redis_cache: false  # Usar disk cache por enquanto
+  
+  # Context Window Enhancement
+  max_tokens: 163840  # Aumenta limite de tokens para DeepSeek R1
+  context_window_fallback_dict:
+    "deepseek-r1-free": 163840  # Contexto máximo do DeepSeek R1
+    "gpt-3.5-turbo-free": 16384
+  
+  # Configurações de chunking para contextos grandes
+  max_budget: 100.0
+  budget_duration: "1h"
+  chunking:
+    enabled: true
+    chunk_size: 50000  # Tamanho do chunk em caracteres
+    overlap: 1000      # Sobreposição entre chunks
+  
+  # Memory Management
+  enable_pre_call_checks: true
+  enable_loadbalancing_on_call: true

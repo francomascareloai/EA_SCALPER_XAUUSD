@@ -1,0 +1,1 @@
+pylint -E  ./src ./tests

@@ -1,0 +1,30 @@
+{
+  "section": "LIBRARY",
+  "description": "Biblioteca escalável de componentes reutilizáveis",
+  "created_at": "2025-08-24T13:28:37.827871",
+  "components": {
+    "MQL5_Components": {
+      "Core_Engine": "Motor principal de trading",
+      "Indicators": "Indicadores técnicos",
+      "Utilities": "Utilitários e funções auxiliares",
+      "Templates": "Templates para desenvolvimento"
+    },
+    "Python_Components": {
+      "Analysis_Tools": "Ferramentas de análise",
+      "Automation_Scripts": "Scripts de automação",
+      "Data_Processing": "Processamento de dados",
+      "Reporting_Tools": "Ferramentas de relatório"
+    }
+  },
+  "usage_guidelines": {
+    "naming_convention": "[TYPE]_[NAME]v[VERSION]_[MARKET].[EXT]",
+    "documentation_required": true,
+    "testing_required": true,
+    "version_control": "Semantic versioning (MAJOR.MINOR.PATCH)"
+  },
+  "integration_points": {
+    "main_eas": "Componentes usados nos EAs principais",
+    "ai_agents": "Ferramentas disponíveis para agentes IA",
+    "tradingview": "Conversões e integrações Pine Script"
+  }
+}

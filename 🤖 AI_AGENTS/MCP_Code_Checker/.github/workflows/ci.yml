@@ -1,0 +1,64 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.13
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .
+        python -m pip install .[dev]
+        
+    - name: Check formatting with black
+      id: black
+      run: black --check src tests
+      continue-on-error: true
+        
+    - name: Check imports with isort
+      id: isort
+      run: isort --check --profile=black --float-to-top src tests
+      continue-on-error: true
+        
+    - name: Check for errors with pylint
+      id: pylint
+      run: pylint -E ./src ./tests
+      continue-on-error: true
+        
+    - name: Run tests
+      id: pytest
+      run: pytest tests
+      continue-on-error: true
+        
+    - name: Check type hints with mypy
+      id: mypy
+      run: mypy --strict src tests
+      continue-on-error: true
+      
+    - name: Summarize results
+      if: always()
+      run: |
+        echo "CI checks completed. Review logs for any errors or warnings."
+        
+        ERROR=0
+        [[ "${{ steps.black.outcome }}" == "failure" ]] && { echo "❌ Black formatting check failed"; ERROR=1; } || echo "✅ Black formatting check passed"
+        [[ "${{ steps.isort.outcome }}" == "failure" ]] && { echo "❌ isort import check failed"; ERROR=1; } || echo "✅ isort import check passed"
+        [[ "${{ steps.pylint.outcome }}" == "failure" ]] && { echo "❌ pylint error check failed"; ERROR=1; } || echo "✅ pylint error check passed"
+        [[ "${{ steps.pytest.outcome }}" == "failure" ]] && { echo "❌ pytest tests failed"; ERROR=1; } || echo "✅ pytest tests passed"
+        [[ "${{ steps.mypy.outcome }}" == "failure" ]] && { echo "❌ mypy type checking failed"; ERROR=1; } || echo "✅ mypy type checking passed"
+        
+        exit $ERROR

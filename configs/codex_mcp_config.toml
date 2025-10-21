@@ -1,0 +1,89 @@
+# Converted from .trae/mcp.json for Codex CLI
+# Place this content under your ~/.codex/config.toml (Windows: C:\Users\Admin\.codex\config.toml)
+# Schema per https://github.com/openai/codex/blob/main/docs/config.md#mcp_servers
+
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+env = {}
+
+[mcp_servers.sequential_thinking]
+command = "npx"
+args = ["-y", "@ahxxm/server-sequential-thinking"]
+env = {}
+
+[mcp_servers.puppeteer]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-puppeteer"]
+env = {}
+
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env = { GITHUB_PERSONAL_ACCESS_TOKEN = "" }
+
+[mcp_servers.everything]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-everything"]
+env = {}
+
+[mcp_servers.mcp_code_checker]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\mcp-code-checker\\src\\main.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.file_analyzer]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_file_analyzer.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.ftmo_validator]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_ftmo_validator.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.metadata_generator]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_metadata_generator.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.code_classifier]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_code_classifier.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.batch_processor]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_batch_processor.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.task_manager]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_task_manager.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.trading_classifier]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\trading_classifier_mcp.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.api_integration]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\api_integration_mcp.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.code_analysis]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\code_analysis_mcp.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.project_scaffolding]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\project_scaffolding_mcp.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+
+[mcp_servers.youtube_transcript]
+command = "python"
+args = ["c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\MCP_Integration\\servers\\mcp_youtube_transcript.py"]
+env = { PYTHONPATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD", VIRTUAL_ENV = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv", PATH = "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\.venv\\Scripts;C:\\Python313;C:\\Python313\\Scripts" }
+

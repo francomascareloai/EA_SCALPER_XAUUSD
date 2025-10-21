@@ -1,0 +1,118 @@
+{
+  "project": "EA_SCALPER_XAUUSD",
+  "index_type": "MCP Integration",
+  "last_update": "2025-08-24T00:00:00Z",
+  "mcp_components": {
+    "mcp_servers": {
+      "path": "MCP_INTEGRATION/mcp_servers",
+      "description": "MCP server configurations and components",
+      "servers": {
+        "metatrader5": {
+          "path": "MCP_INTEGRATION/mcp_servers/metatrader5",
+          "description": "MetaTrader 5 MCP server",
+          "status": "active",
+          "port": 3000
+        },
+        "market_data": {
+          "path": "MCP_INTEGRATION/mcp_servers/market_data",
+          "description": "Market data MCP server",
+          "status": "active",
+          "port": 3001
+        },
+        "risk_analysis": {
+          "path": "MCP_INTEGRATION/mcp_servers/risk_analysis",
+          "description": "Risk analysis MCP server",
+          "status": "active",
+          "port": 3002
+        },
+        "optimization": {
+          "path": "MCP_INTEGRATION/mcp_servers/optimization",
+          "description": "Optimization MCP server",
+          "status": "active",
+          "port": 3003
+        },
+        "testing": {
+          "path": "MCP_INTEGRATION/mcp_servers/testing",
+          "description": "Testing MCP server",
+          "status": "active",
+          "port": 3004
+        }
+      }
+    },
+    "mcp_clients": {
+      "path": "MCP_INTEGRATION/mcp_clients",
+      "description": "MCP client configurations and components",
+      "clients": {
+        "agent_01_client": {
+          "path": "MCP_INTEGRATION/mcp_clients/agent_01",
+          "description": "Market analysis agent MCP client",
+          "server_connections": ["metatrader5", "market_data"]
+        },
+        "agent_02_client": {
+          "path": "MCP_INTEGRATION/mcp_clients/agent_02",
+          "description": "Strategy development agent MCP client",
+          "server_connections": ["metatrader5", "optimization"]
+        },
+        "agent_03_client": {
+          "path": "MCP_INTEGRATION/mcp_clients/agent_03",
+          "description": "Risk management agent MCP client",
+          "server_connections": ["risk_analysis", "metatrader5"]
+        },
+        "agent_04_client": {
+          "path": "MCP_INTEGRATION/mcp_clients/agent_04",
+          "description": "Optimization agent MCP client",
+          "server_connections": ["optimization", "market_data"]
+        },
+        "agent_05_client": {
+          "path": "MCP_INTEGRATION/mcp_clients/agent_05",
+          "description": "Testing agent MCP client",
+          "server_connections": ["testing", "metatrader5"]
+        }
+      }
+    },
+    "mcp_configs": {
+      "path": "MCP_INTEGRATION/mcp_configs",
+      "description": "MCP configuration files",
+      "configurations": {
+        "server_configs": {
+          "path": "MCP_INTEGRATION/mcp_configs/server_configs",
+          "description": "Server configuration files"
+        },
+        "client_configs": {
+          "path": "MCP_INTEGRATION/mcp_configs/client_configs",
+          "description": "Client configuration files"
+        },
+        "security_configs": {
+          "path": "MCP_INTEGRATION/mcp_configs/security",
+          "description": "Security configuration files"
+        },
+        "logging_configs": {
+          "path": "MCP_INTEGRATION/mcp_configs/logging",
+          "description": "Logging configuration files"
+        }
+      }
+    },
+    "mcp_protocols": {
+      "path": "MCP_INTEGRATION/mcp_protocols",
+      "description": "MCP communication protocols",
+      "protocols": {
+        "data_exchange": {
+          "path": "MCP_INTEGRATION/mcp_protocols/data_exchange",
+          "description": "Data exchange protocols"
+        },
+        "command_interface": {
+          "path": "MCP_INTEGRATION/mcp_protocols/command_interface",
+          "description": "Command interface protocols"
+        },
+        "event_notification": {
+          "path": "MCP_INTEGRATION/mcp_protocols/event_notification",
+          "description": "Event notification protocols"
+        },
+        "error_handling": {
+          "path": "MCP_INTEGRATION/mcp_protocols/error_handling",
+          "description": "Error handling protocols"
+        }
+      }
+    }
+  }
+}

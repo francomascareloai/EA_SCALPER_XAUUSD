@@ -1,0 +1,24 @@
+{
+  "name": "FTMO_Conservative",
+  "ea_path": "🚀 MAIN_EAS/PRODUCTION/EA_AUTONOMOUS_XAUUSD_ELITE_v2.0.mq5",
+  "symbol": "XAUUSD",
+  "period": "M15",
+  "deposit": 100000,
+  "leverage": 100,
+  "model": 0,
+  "use_local": 1,
+  "report_format": "html",
+  "ea_set": "MCP/sets/EA_Autonomous_Conservative.set",
+  "datasets": [
+    { "from": "2024.01.01", "to": "2024.01.31" },
+    { "from": "2024.02.01", "to": "2024.02.29" },
+    { "from": "2024.03.01", "to": "2024.03.31" }
+  ],
+  "thresholds": {
+    "monthly_return_min_pct": 6.0,
+    "max_drawdown_max_pct": 8.0,
+    "profit_factor_min": 1.6,
+    "win_rate_min_pct": 55.0,
+    "trades_per_day_max": 3
+  }
+}
