@@ -90,3 +90,30 @@ node_modules/
 *.p12
 config.ini
 secrets.json
+.env
+.env.local
+.env.production
+.env.development
+
+# API Keys and Tokens (CRITICAL SECURITY)
+*personal_access_token*
+*github_token*
+*api_key*
+*secret_key*
+ghp_*
+gho_*
+ghu_*
+ghs_*
+ghr_*
+
+# Configuration files with credentials
+configs/*_config*.json
+configs/*_secrets*.json
+*.config.json
+.mcp*.json
+claude*.json
+
+# Any file containing sensitive tokens
+**/*token*.json
+**/*credential*.json
+**/*secret*.json
