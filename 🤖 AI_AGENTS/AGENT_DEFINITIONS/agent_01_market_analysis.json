@@ -1,0 +1,17 @@
+{
+  "agent_id": "agent_01_market_analysis",
+  "name": "Market Analysis Agent",
+  "description": "Agent responsible for market analysis and data processing",
+  "version": "1.0",
+  "status": "active",
+  "mcp_servers": [
+    "metatrader5",
+    "trading_classifier",
+    "data_analysis"
+  ],
+  "capabilities": [
+    "market_data_analysis",
+    "technical_analysis",
+    "fundamental_analysis"
+  ]
+}

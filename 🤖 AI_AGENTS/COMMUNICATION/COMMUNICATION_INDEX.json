@@ -1,0 +1,95 @@
+{
+  "project": "EA_SCALPER_XAUUSD",
+  "index_type": "AI Agent Communication",
+  "last_update": "2025-08-24T00:00:00Z",
+  "communication_systems": {
+    "message_queue": {
+      "path": "COMMUNICATION/message_queue",
+      "description": "Message queue for inter-agent communication",
+      "components": {
+        "incoming_queue": {
+          "path": "COMMUNICATION/message_queue/incoming",
+          "description": "Incoming messages queue"
+        },
+        "outgoing_queue": {
+          "path": "COMMUNICATION/message_queue/outgoing",
+          "description": "Outgoing messages queue"
+        },
+        "processing_queue": {
+          "path": "COMMUNICATION/message_queue/processing",
+          "description": "Messages currently being processed"
+        },
+        "error_queue": {
+          "path": "COMMUNICATION/message_queue/error",
+          "description": "Messages with processing errors"
+        }
+      }
+    },
+    "shared_memory": {
+      "path": "COMMUNICATION/shared_memory",
+      "description": "Shared memory space for agent coordination",
+      "components": {
+        "market_data": {
+          "path": "COMMUNICATION/shared_memory/market_data",
+          "description": "Shared market data"
+        },
+        "agent_states": {
+          "path": "COMMUNICATION/shared_memory/agent_states",
+          "description": "Shared agent state information"
+        },
+        "coordination_data": {
+          "path": "COMMUNICATION/shared_memory/coordination_data",
+          "description": "Data for agent coordination"
+        },
+        "performance_metrics": {
+          "path": "COMMUNICATION/shared_memory/performance_metrics",
+          "description": "Shared performance metrics"
+        }
+      }
+    },
+    "coordination_logs": {
+      "path": "COMMUNICATION/coordination_logs",
+      "description": "Logs of agent coordination activities",
+      "components": {
+        "communication_logs": {
+          "path": "COMMUNICATION/coordination_logs/communication",
+          "description": "Communication logs between agents"
+        },
+        "coordination_events": {
+          "path": "COMMUNICATION/coordination_logs/events",
+          "description": "Coordination event logs"
+        },
+        "error_logs": {
+          "path": "COMMUNICATION/coordination_logs/errors",
+          "description": "Communication error logs"
+        },
+        "performance_logs": {
+          "path": "COMMUNICATION/coordination_logs/performance",
+          "description": "Communication performance logs"
+        }
+      }
+    },
+    "inter_agent_protocols": {
+      "path": "COMMUNICATION/inter_agent_protocols",
+      "description": "Protocols for inter-agent communication",
+      "components": {
+        "message_formats": {
+          "path": "COMMUNICATION/inter_agent_protocols/message_formats",
+          "description": "Standard message formats"
+        },
+        "communication_protocols": {
+          "path": "COMMUNICATION/inter_agent_protocols/protocols",
+          "description": "Communication protocols"
+        },
+        "security_protocols": {
+          "path": "COMMUNICATION/inter_agent_protocols/security",
+          "description": "Security protocols for communication"
+        },
+        "error_handling": {
+          "path": "COMMUNICATION/inter_agent_protocols/error_handling",
+          "description": "Error handling protocols"
+        }
+      }
+    }
+  }
+}

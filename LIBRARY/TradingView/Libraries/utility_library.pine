@@ -1,0 +1,45 @@
+//@version=5
+library("Utility Library", overlay=false)
+
+// Exported function: Convert timeframe string to minutes
+export timeframe_to_minutes(string tf) =>
+    minutes = 0
+    if tf == "1"
+        minutes := 1
+    else if tf == "5"
+        minutes := 5
+    else if tf == "15"
+        minutes := 15
+    else if tf == "30"
+        minutes := 30
+    else if tf == "60" or tf == "1H"
+        minutes := 60
+    else if tf == "240" or tf == "4H"
+        minutes := 240
+    else if tf == "1D"
+        minutes := 1440
+    else if tf == "1W"
+        minutes := 10080
+    else
+        minutes := 1
+    minutes
+
+// Exported function: Check if new bar
+export is_new_bar() =>
+    var prevTime = time
+    isNew = time != prevTime
+    prevTime := time
+    isNew
+
+// Exported function: Round to specified decimals
+export round_to_decimals(float value, int decimals) =>
+    multiplier = math.pow(10, decimals)
+    math.round(value * multiplier) / multiplier
+
+// Exported function: Clamp value between min and max
+export clamp(float value, float minVal, float maxVal) =>
+    math.max(minVal, math.min(maxVal, value))
+
+// Exported function: Linear interpolation
+export lerp(float start, float end, float t) =>
+    start + (end - start) * t

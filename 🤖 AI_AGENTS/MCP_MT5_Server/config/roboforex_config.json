@@ -1,0 +1,101 @@
+{
+  "broker_config": {
+    "name": "RoboForex",
+    "server_name": "RoboForex-Demo",
+    "company": "RoboForex Ltd",
+    "demo_server": "RoboForex-Demo",
+    "live_server": "RoboForex-Pro",
+    "timezone": "UTC+3",
+    "support_url": "https://www.roboforex.com/support/",
+    "website": "https://www.roboforex.com"
+  },
+  "connection_settings": {
+    "server": "RoboForex-Demo",
+    "login": null,
+    "password": null,
+    "timeout": 10000,
+    "portable": true,
+    "auto_connect": true,
+    "retry_attempts": 3,
+    "retry_delay": 5000
+  },
+  "symbol_settings": {
+    "xauusd_tds": {
+      "symbol": "XAUUSD_TDS",
+      "fallback_symbol": "XAUUSD",
+      "description": "Gold vs US Dollar (TDS)",
+      "primary_timeframe": "M15",
+      "multi_timeframes": ["M1", "M5", "M15", "H1", "H4"],
+      "contract_size": 100,
+      "min_lot": 0.01,
+      "max_lot": 100.0,
+      "lot_step": 0.01,
+      "digits": 2,
+      "point": 0.01,
+      "spread_type": "floating",
+      "commission_type": "per_lot",
+      "swap_type": "points",
+      "margin_currency": "USD",
+      "profit_currency": "USD",
+      "trading_hours": {
+        "monday": "01:05-23:55",
+        "tuesday": "01:05-23:55", 
+        "wednesday": "01:05-23:55",
+        "thursday": "01:05-23:55",
+        "friday": "01:05-23:50",
+        "saturday": "closed",
+        "sunday": "closed"
+      }
+    }
+  },
+  "trading_settings": {
+    "execution_mode": "market",
+    "fill_policy": "FOK",
+    "max_slippage": 10,
+    "magic_number_range": {
+      "start": 10000,
+      "end": 99999
+    },
+    "allowed_order_types": [
+      "ORDER_TYPE_BUY",
+      "ORDER_TYPE_SELL",
+      "ORDER_TYPE_BUY_LIMIT",
+      "ORDER_TYPE_SELL_LIMIT",
+      "ORDER_TYPE_BUY_STOP",
+      "ORDER_TYPE_SELL_STOP"
+    ]
+  },
+  "risk_management": {
+    "max_risk_per_trade": 2.0,
+    "max_daily_loss": 5.0,
+    "max_total_loss": 10.0,
+    "max_positions": 10,
+    "max_lot_size": 1.0,
+    "margin_call_level": 50.0,
+    "stop_out_level": 20.0,
+    "hedging_allowed": false,
+    "netting_only": true
+  },
+  "ftmo_compliance": {
+    "enabled": true,
+    "daily_loss_limit": 5.0,
+    "total_loss_limit": 10.0,
+    "profit_target": 10.0,
+    "minimum_trading_days": 4,
+    "maximum_trading_days": 30,
+    "weekend_holding_allowed": false,
+    "news_trading_restricted": true,
+    "scalping_allowed": true,
+    "hedging_prohibited": true,
+    "martingale_prohibited": true
+  },
+  "performance_settings": {
+    "enable_logging": true,
+    "log_level": "INFO",
+    "log_file": "logs/roboforex_mt5.log",
+    "performance_monitoring": true,
+    "latency_monitoring": true,
+    "error_reporting": true,
+    "statistics_collection": true
+  }
+}
