@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "local-mql5-rag": {
+      "command": "uvx",
+      "args": [
+        "micro-rag-mcp",
+        "--data-folder",
+        "./tools/mcp-mql5-rag/data"
+      ]
+    }
+  }
+}

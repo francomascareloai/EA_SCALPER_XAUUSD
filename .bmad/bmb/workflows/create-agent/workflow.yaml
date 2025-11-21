@@ -1,0 +1,40 @@
+# Build Agent Workflow Configuration
+name: create-agent
+description: "Interactive workflow to build BMAD Core compliant agents (YAML source compiled to .md during install) with optional brainstorming, persona development, and command structure"
+author: "BMad"
+
+# Critical variables load from config_source
+config_source: "{project-root}/.bmad/bmb/config.yaml"
+custom_agent_location: "{config_source}:custom_agent_location"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+
+# Technical documentation for agent building
+agent_compilation: "{project-root}/.bmad/bmb/docs/agent-compilation.md"
+understanding_agent_types: "{project-root}/.bmad/bmb/docs/understanding-agent-types.md"
+simple_agent_architecture: "{project-root}/.bmad/bmb/docs/simple-agent-architecture.md"
+expert_agent_architecture: "{project-root}/.bmad/bmb/docs/expert-agent-architecture.md"
+module_agent_architecture: "{project-root}/.bmad/bmb/docs/module-agent-architecture.md"
+agent_menu_patterns: "{project-root}/.bmad/bmb/docs/agent-menu-patterns.md"
+communication_presets: "{installed_path}/communication-presets.csv"
+
+# Reference examples
+simple_agent_examples: "{project-root}/src/modules/bmb/reference/agents/simple-examples/"
+expert_agent_examples: "{project-root}/src/modules/bmb/reference/agents/expert-examples/"
+module_agent_examples: "{project-root}/src/modules/bmb/reference/agents/module-examples/"
+
+# Module path and component files
+installed_path: "{project-root}/.bmad/bmb/workflows/create-agent"
+template: false # This is an interactive workflow - no template needed
+instructions: "{installed_path}/instructions.md"
+validation: "{installed_path}/agent-validation-checklist.md"
+
+# Output configuration - YAML agents compiled to .md at install time
+# Module agents: Save to .bmad/{{target_module}}/agents/
+# Standalone agents: Save to custom_agent_location/
+module_output_file: "{project-root}/.bmad/{{target_module}}/agents/{{agent_filename}}.agent.yaml"
+standalone_output_file: "{custom_agent_location}/{{agent_filename}}.agent.yaml"
+# Optional user override file (auto-created by installer if missing)
+config_output_file: "{project-root}/.bmad/_cfg/agents/{{target_module}}-{{agent_filename}}.customize.yaml"
+
+standalone: true

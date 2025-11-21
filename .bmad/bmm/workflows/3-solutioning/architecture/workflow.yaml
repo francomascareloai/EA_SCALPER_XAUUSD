@@ -1,0 +1,55 @@
+# Architecture Workflow Configuration
+name: architecture
+description: "Collaborative architectural decision facilitation for AI-agent consistency. Replaces template-driven architecture with intelligent, adaptive conversation that produces a decision-focused architecture document optimized for preventing agent conflicts."
+author: "BMad"
+
+# Critical variables
+config_source: "{project-root}/.bmad/bmm/config.yaml"
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+document_output_language: "{config_source}:document_output_language"
+user_skill_level: "{config_source}:user_skill_level"
+date: system-generated
+
+# Smart input file references - handles both whole docs and sharded docs
+# Priority: Whole document first, then sharded version
+# Strategy: How to load sharded documents (FULL_LOAD, SELECTIVE_LOAD, INDEX_GUIDED)
+input_file_patterns:
+  prd:
+    description: "Product requirements and features"
+    whole: "{output_folder}/*prd*.md"
+    sharded: "{output_folder}/*prd*/index.md"
+    load_strategy: "FULL_LOAD"
+  epics:
+    description: "Epic and story breakdown (optional - uses PRD FRs if not present)"
+    whole: "{output_folder}/*epic*.md"
+    sharded: "{output_folder}/*epic*/index.md"
+    load_strategy: "FULL_LOAD"
+  ux_design:
+    description: "UX design specification (optional)"
+    whole: "{output_folder}/*ux*.md"
+    sharded: "{output_folder}/*ux*/index.md"
+    load_strategy: "FULL_LOAD"
+  document_project:
+    description: "Brownfield project documentation (optional)"
+    sharded: "{output_folder}/index.md"
+    load_strategy: "INDEX_GUIDED"
+
+# Module path and component files
+installed_path: "{project-root}/.bmad/bmm/workflows/3-solutioning/architecture"
+instructions: "{installed_path}/instructions.md"
+validation: "{installed_path}/checklist.md"
+template: "{installed_path}/architecture-template.md"
+
+# Knowledge bases for intelligent decision making
+decision_catalog: "{installed_path}/decision-catalog.yaml"
+architecture_patterns: "{installed_path}/architecture-patterns.yaml"
+pattern_categories: "{installed_path}/pattern-categories.csv"
+
+# Output configuration
+default_output_file: "{output_folder}/architecture.md"
+
+standalone: true
+
+# Web bundle configuration for standalone deployment
