@@ -117,3 +117,7 @@ claude*.json
 **/*token*.json
 **/*credential*.json
 **/*secret*.json
+
+# Codex/CLI session artifacts (can include tokens)
+.codex/
+.codex.backup-*/

@@ -1,0 +1,45 @@
+# MQL5 Elite Ops Module Configuration
+# This file defines installation questions and module configuration values
+
+code: mql5-elite-ops
+name: "MQL5 Elite Ops"
+default_selected: false
+
+# Welcome message shown during installation
+prompt:
+  - "Bem-vindo ao MQL5 Elite Ops!"
+  - "Preparando a unidade de elite para operações em XAUUSD..."
+
+# Core config values are automatically inherited:
+## user_name
+## communication_language
+## document_output_language
+## output_folder
+
+# ============================================================================
+# CONFIGURATION FIELDS
+# ============================================================================
+
+# Trading Experience Level
+experience_level:
+  prompt: "Qual seu nível de experiência com MQL5?"
+  default: "expert"
+  result: "{value}"
+  single-select:
+    - value: "beginner"
+      label: "Iniciante - Preciso de explicações detalhadas"
+    - value: "intermediate"
+      label: "Intermediário - Conheço a sintaxe, foco na estratégia"
+    - value: "expert"
+      label: "Expert - Foco em performance e arquitetura avançada"
+
+# Prop Firm Focus
+prop_firm_focus:
+  prompt: "O foco é aprovação em Prop Firms (FTMO, etc)?"
+  default: "yes"
+  result: "{value}"
+  single-select:
+    - value: "yes"
+      label: "Sim - Rigoroso controle de drawdown e regras"
+    - value: "no"
+      label: "Não - Trading pessoal / flexível"
