@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:paperswithcode.com)",
+      "WebFetch(domain:www.nvidia.com)",
+      "WebFetch(domain:aws.amazon.com)",
+      "WebFetch(domain:openai.com)",
+      "WebFetch(domain:docs.nvidia.com)",
+      "WebFetch(domain:www.quantopian.com)",
+      "WebFetch(domain:www.quantconnect.com)",
+      "Bash(mkdir:*)",
+      "Bash(bash:*)",
+      "Bash(apply_patch:*)",
+      "WebFetch(domain:upjoke.com)",
+      "WebFetch(domain:xkcd.com)",
+      "WebFetch(domain:www.mql5.com)",
+      "Bash(cat bmad/bmb/config.yaml)",
+      "Bash(cat bmad/bmm/workflows/2-plan-workflows/gdd/game-types.csv)",
+      "Bash(cat bmad/bmm/workflows/1-analysis/brainstorm-game/game-brain-methods.csv)",
+      "mcp__brave__brave_web_search",
+      "mcp__tavily-ai-tavily-mcp__tavily-search",
+      "mcp__brave__brave_image_search",
+      "Read(//home/franco/.claude/**)",
+      "Bash(gh:*)",
+      "Bash(git switch:*)",
+      "Bash(git commit --allow-empty -m \"$(cat <<''EOF''\nchore: verify gh CLI workflow (no code changes)\n\nThis empty commit validates branch creation and commit flow.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(echo:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "WebFetch(domain:lobehub.com)",
+      "mcp__tavily-ai-tavily-mcp__tavily-extract",
+      "mcp__filesystem__create_directory",
+      "mcp__filesystem__write_file"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

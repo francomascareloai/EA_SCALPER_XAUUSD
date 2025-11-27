@@ -1,0 +1,91 @@
+# Workflow Status Template
+
+# This tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml
+
+# STATUS DEFINITIONS:
+# ==================
+# Initial Status (before completion):
+#   - required: Must be completed to progress
+#   - optional: Can be completed but not required
+#   - recommended: Strongly suggested but not required
+#   - conditional: Required only if certain conditions met (e.g., if_has_ui)
+#
+# Completion Status:
+#   - {file-path}: File created/found (e.g., "docs/product-brief.md")
+#   - skipped: Optional/conditional workflow that was skipped
+
+generated: "2025-11-21"
+project: "EA_SCALPER_XAUUSD"
+project_type: "brownfield"
+selected_track: "bmad-method"
+field_type: "brownfield"
+workflow_path: ".bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
+workflow_status:
+  - phase: "Prerequisite"
+    workflows:
+      - id: "document-project"
+        status: "completed"
+        agent: "analyst"
+        command: "document-project"
+        output: "Comprehensive project documentation"
+
+  - phase: "Discovery"
+    workflows:
+      - id: "brainstorm-project"
+        status: "optional"
+        agent: "analyst"
+        command: "brainstorm-project"
+      - id: "research"
+        status: "optional"
+        agent: "analyst"
+        command: "research"
+      - id: "product-brief"
+        status: "optional"
+        agent: "analyst"
+        command: "product-brief"
+
+  - phase: "Planning"
+    workflows:
+      - id: "prd"
+        status: "required"
+        agent: "pm"
+        command: "prd"
+      - id: "validate-prd"
+        status: "optional"
+        agent: "pm"
+        command: "validate-prd"
+      - id: "create-design"
+        status: "conditional"
+        agent: "ux-designer"
+        command: "create-design"
+
+  - phase: "Solutioning"
+    workflows:
+      - id: "create-architecture"
+        status: "recommended"
+        agent: "architect"
+        command: "create-architecture"
+      - id: "create-epics-and-stories"
+        status: "required"
+        agent: "pm"
+        command: "create-epics-and-stories"
+      - id: "test-design"
+        status: "recommended"
+        agent: "tea"
+        command: "test-design"
+      - id: "validate-architecture"
+        status: "optional"
+        agent: "architect"
+        command: "validate-architecture"
+      - id: "implementation-readiness"
+        status: "required"
+        agent: "architect"
+        command: "implementation-readiness"
+
+  - phase: "Implementation"
+    workflows:
+      - id: "sprint-planning"
+        status: "required"
+        agent: "sm"
+        command: "sprint-planning"

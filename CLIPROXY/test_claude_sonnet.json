@@ -1,0 +1,10 @@
+{
+    "model": "gemini-claude-sonnet-4-5",
+    "max_tokens": 300,
+    "messages": [
+        {
+            "role": "user",
+            "content": "Test: Respond with a brief confirmation that Claude 4.5 Sonnet is working."
+        }
+    ]
+}

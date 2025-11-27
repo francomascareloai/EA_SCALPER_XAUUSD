@@ -1,399 +1,424 @@
-# CLAUDE.md
+# CLAUDE.md - EA_SCALPER_XAUUSD Development Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance for Factory Droid (Claude Opus 4.5) when working with this trading system repository.
 
-## CRITICAL PRIORITY: Sequential Thinking Mandate
+---
 
-**FIRST AND FOREMOST**: ALL analysis, strategy development, and code review MUST use sequential thinking. This is not a suggestion - it's a mandatory requirement for this trading system.
+## CRITICAL: Builder Mode First
 
-- Activate sequential thinking for ANY trading-related analysis
-- Use "ultrathink" or "think step by step" commands
-- Follow the detailed protocol outlined in the Sequential Thinking section below
-- Never provide superficial analysis of trading strategies or risk management
+**STOP PLANNING. START BUILDING.**
+
+This project has a complete PRD v2.1 (`DOCS/prd.md`). No more planning is needed. Every session should focus on:
+1. Pick ONE small task from the PRD
+2. Build it
+3. Test it
+4. Move to next task
+
+If you catch yourself writing more documentation instead of code → STOP and redirect to implementation.
+
+---
 
 ## Project Overview
 
-This is an EA (Expert Advisor) trading system repository focused on XAUUSD (Gold) scalping strategies for MetaTrader 5 (MT5). The project contains automated trading algorithms, AI-powered analysis tools, and a comprehensive codebase for algorithmic trading development.
+**EA_SCALPER_XAUUSD** - Institutional-grade Expert Advisor for XAUUSD scalping with:
+- MQL5 execution engine (high-speed, FTMO-compliant)
+- Python Agent Hub for advanced analysis (ML, sentiment, fundamentals)
+- Multi-agent scoring system (TechScore, FundScore, SentScore)
+- Full explainability and reasoning for every trade
+
+**Target**: FTMO $100k Challenge compliance (10% max DD, 5% daily DD)
+
+---
+
+## Factory Droid Toolbox
+
+### Skills (Auto-Triggered)
+
+Skills are loaded INTO my context and I execute them directly with full MCP access.
+
+| Skill | Trigger Phrases | What It Does |
+|-------|-----------------|--------------|
+| `web-research` | "deep research", "find repositories", "investigate" | Multi-source research with triangulation |
+| `scientific-critical-thinking` | "evaluate methodology", "assess evidence" | Rigorous validation of claims |
+| `prompt-optimizer` | "optimize prompt", "improve this prompt", "elevate this" | Apply 23 principles to enhance any prompt |
+| `skill-creator` | "create a skill", "new skill" | Guide for creating new skills |
+| `mcp-builder` | "create MCP server", "build MCP" | Guide for MCP server development |
+
+**To invoke**: Just say the trigger phrase naturally. Example: "I need deep research on LSTM for gold prediction"
+
+### Droids (Subagents via Task Tool)
+
+Droids are separate agents I can launch for complex, autonomous tasks.
+
+| Droid | Use For | Invoke With |
+|-------|---------|-------------|
+| `deep-researcher` | Complex multi-source research, academic papers | Task tool with `deep-researcher` |
+| `project-reader` | Codebase analysis, architecture understanding | Task tool with `project-reader` |
+| `research-analyst-pro` | Decision-oriented research with recommendations | Task tool with `research-analyst-pro` |
+| `trading-project-documenter` | Comprehensive trading system documentation | Task tool with `trading-project-documenter` |
+
+**Note**: Droids do NOT have MCP access. For research requiring MCPs, use the `web-research` skill instead.
+
+### Slash Commands
+
+Quick workflows I can execute when you type `/command`:
+
+#### BMAD Method Commands
+| Command | Description |
+|---------|-------------|
+| `/bmad-analyze` | BMAD analysis workflow |
+| `/bmad-brainstorm` | Structured brainstorming session |
+| `/bmad-tech-spec` | Create technical specification |
+| `/bmad-refine-strategy` | Council of Agents strategy refinement |
+| `/bmad-new-feature` | End-to-end feature implementation |
+| `/bmad-market-scan` | Daily market intelligence scan |
+
+#### Development Commands
+| Command | Description |
+|---------|-------------|
+| `/architect` | MQL5 architecture review |
+| `/code-review` | Trading code review |
+| `/strategy` | Strategy analysis |
+| `/optimize` | EA optimization planning |
+
+#### Validation Commands
+| Command | Description |
+|---------|-------------|
+| `/backtest` | Statistical validation (Monte Carlo, WFA) |
+| `/validate-ftmo` | FTMO compliance checker |
+
+#### Research Commands
+| Command | Description |
+|---------|-------------|
+| `/research` | Deep research with all MCPs |
+
+#### Utility Commands
+| Command | Description |
+|---------|-------------|
+| `/optimize-prompt` | Optimize any prompt using 23 principles |
+
+### MCP Tools (Direct Access)
+
+I have direct access to these MCP servers:
+
+#### Search & Research
+- `perplexity-search___search` - AI-synthesized answers with citations
+- `brave-search___brave_web_search` - Broad web search, news, recent events
+- `context7___get-library-docs` - Technical documentation for libraries
+
+#### Code & Development
+- `github___*` - Repository management, code search, PRs, issues
+- `sequential-thinking___sequentialthinking` - Structured problem-solving
+- `code-reasoning___code-reasoning` - Complex code analysis
+
+#### Data
+- `postgres___query` - Database queries (read-only)
+
+---
+
+## MQL5 Elite Ops Agents (Reference Personas)
+
+When I need domain-specific expertise, I can adopt these personas from `.bmad/mql5-elite-ops/agents/`:
+
+| Agent | Expertise | When to Invoke |
+|-------|-----------|----------------|
+| **Quantum Strategist** | PRD, risk analysis, FTMO compliance, R:R ratios | Strategy design, risk questions |
+| **MQL5 Architect** | System design, async patterns, performance | Architecture decisions, module design |
+| **Code Artisan** | Clean MQL5 code, optimization, implementation | Coding tasks, refactoring |
+| **Deep Researcher** | Market analysis, fundamentals, sentiment | Market context, news impact |
+| **Backtest Commander** | Validation, Monte Carlo, Walk-Forward | Testing protocols, robustness |
+
+**To invoke**: Say "Act as [Agent Name]" or ask domain-specific questions and I'll naturally adopt the relevant persona.
+
+---
+
+## Key Documents
+
+| Document | Location | Purpose |
+|----------|----------|---------|
+| PRD v2.1 | `DOCS/prd.md` | **THE BIBLE** - All implementation specs |
+| Architecture | In PRD Section 5 | System design, layers, components |
+| Risk Framework | In PRD Section 10 | FTMO compliance, position sizing |
+| Phase Roadmap | In PRD Section 14 | Implementation phases |
+
+---
 
 ## Repository Structure
 
-The project is organized with a specialized structure for trading systems:
+```
+EA_SCALPER_XAUUSD/
+├── 🚀 MAIN_EAS/           # Expert Advisors
+│   ├── PRODUCTION/        # Production-ready EAs
+│   ├── DEVELOPMENT/       # Active development
+│   └── TESTING/           # Testing phase
+├── 📚 LIBRARY/            # Code library
+│   ├── MQL5_Components/   # MQL5 modules
+│   └── INCLUDES/          # Shared .mqh files
+├── 🔧 WORKSPACE/          # Development environment
+├── 🛠️ TOOLS/              # Python utilities
+├── 📊 DATA/               # Trading data
+├── Python_Agent_Hub/      # Python analysis agents
+├── DOCS/                  # Documentation
+│   └── prd.md             # PRD v2.1 (main reference)
+├── .bmad/                 # BMAD method files
+│   ├── bmm/               # BMad Method Module
+│   ├── bmb/               # BMad Builder
+│   └── mql5-elite-ops/    # Custom trading agents
+└── .factory/              # Factory Droid config
+    ├── commands/          # Slash commands
+    ├── droids/            # Custom droids
+    └── skills/            # Custom skills
+```
 
-### Core Trading Components
-- **🚀 MAIN_EAS/** - Primary Expert Advisors (production, development, testing)
-  - `PRODUCTION/` - Production-ready EAs (v2.10+ with FTMO compliance)
-  - `DEVELOPMENT/` - Active development EAs including ML-powered bots
-  - `TESTING/` - EAs in testing phase
-  - `BACKUP/` - Critical EA backups
+---
 
-- **📚 LIBRARY/** - Centralized code library
-  - `MQL4_Components/` - MQL4 source code organized by strategy
-  - `MQL5_Components/` - MQL5 advanced components and FTMO-ready strategies
-  - `INCLUDES/` - Shared libraries (.mqh files)
-  - `02_Strategies_Legacy/` - Legacy trading strategies
+## Builder Workflow
 
-### Development Environment
-- **🔧 WORKSPACE/** - Active development environment
-  - `current_work/` - Current projects
-  - `experiments/` - Testing and experiments
-  - `Development/` - Development utilities and scripts
+### The 3-Step Loop
 
-- **🛠️ TOOLS/** - Automation and analysis tools
-  - `python_tools/` - Python utilities organized by function
-  - `TOOLS_FINAL/` - Finalized tools and classification systems
+```
+┌─────────────────────────────────────────┐
+│  STEP 1: PICK ONE THING (5 min)        │
+│  - Open PRD, find smallest deliverable  │
+│  - Example: "Create EliteOrderBlock.mqh"│
+│  - NOT: "Design entire signal system"   │
+├─────────────────────────────────────────┤
+│  STEP 2: BUILD IT (1-4 hours)          │
+│  - Write actual code                    │
+│  - Use MCPs if stuck (/research)        │
+│  - Reference Elite Ops agents as needed │
+├─────────────────────────────────────────┤
+│  STEP 3: VALIDATE (30 min)             │
+│  - Compile and test                     │
+│  - /validate-ftmo if risk-related       │
+│  - Move to next small thing             │
+└─────────────────────────────────────────┘
+```
 
-### AI and Automation
-- **🤖 AI_AGENTS/** - AI-powered agents and MCP servers
-  - `MCP_Code_Checker/` - Model Context Protocol code validation server
+### Anti-Patterns to Avoid
 
-- **📊 DATA/** - Trading data and results
-  - `historical_data/` - Historical market data by timeframe
-  - `backtest_results/` - Backtesting results
-  - `live_results/` - Live trading results
+| If doing this... | Do this instead |
+|------------------|-----------------|
+| Writing more docs | Write CODE |
+| Refining PRD | PRD is DONE |
+| Designing architecture | Architecture is IN THE PRD |
+| Task > 4 hours | SPLIT IT SMALLER |
+| Asking "how should we approach..." | Just START |
 
-## Common Development Commands
+---
+
+## Sequential Thinking Protocol
+
+**MANDATORY** for all trading analysis. Use `sequential-thinking___sequentialthinking` MCP.
+
+### When to Use
+- Trading strategy analysis
+- Risk management evaluation
+- Code architecture decisions
+- Bug diagnosis in trading logic
+- Backtest result interpretation
+
+### Quick Protocol
+```
+Thought 1: Define problem and constraints
+Thought 2: Analyze current state
+Thought 3: Evaluate options
+Thought 4: Design approach with risk management
+Thought 5: Implementation plan
+```
+
+### Triggers
+- "ultrathink" - Maximum depth (5-7 thoughts)
+- "think step by step" - Detailed analysis
+- "analyze thoroughly" - Deep dive
+
+---
+
+## Development Commands
+
+### MQL5 Compilation
+```bash
+# MetaEditor CLI (if configured)
+"C:\Program Files\MetaTrader 5\metaeditor64.exe" /compile:"path\to\file.mq5"
+```
 
 ### Python Environment
 ```bash
-# Run trading agents with different configurations
-python scripts/python/trading_agent_simple.py
-python scripts/python/litellm_server.py
-python scripts/python/simple_trading_proxy.py
-
-# Classification and file management tools
-python 🛠️/TOOLS/TOOLS_FINAL/Classification/classificador_otimizado.py
-
-# MCP (Model Context Protocol) servers
-python 🤖/AI_AGENTS/MCP_Code_Checker/src/main.py
+# Activate venv
+cd Python_Agent_Hub
+.venv\Scripts\activate
 
 # Run tests
 python -m pytest tests -q
 ```
 
-### MQL5/MQL4 Development
-The project uses MetaTrader development environment. Expert Advisors are compiled and deployed to MT5 terminals.
-
-### Configuration Files
-- Use `.env` for API keys and environment variables
-- Configuration files in `configs/` directory:
-  - `litellm_config.yaml` - LLM model configuration
-  - `litellm_openrouter_config.yaml` - OpenRouter integration
-
-## Key Architecture Patterns
-
-### Trading System Architecture
-1. **Multi-Agent Trading System** - Multiple coordinated trading agents
-2. **FTMO-Ready Strategies** - Prop firm compliant risk management
-3. **ML Integration** - Machine learning models for market analysis
-4. **Real-time Data Processing** - Live market data analysis
-
-### Code Organization Philosophy
-- **Production vs Development** - Clear separation between production EAs and development code
-- **Scalable Structure** - Organized for thousands of trading files
-- **Multi-Language Support** - MQL4, MQL5, and Python integration
-- **Metadata-Driven** - Extensive metadata organization for trading strategies
-
-### AI Integration Patterns
-- **Model Context Protocol (MCP)** servers for code validation
-- **LiteLLM integration** for multiple AI model providers
-- **Automated classification** and analysis tools
-- **Real-time trading agents** with AI decision making
-
-## Specialized Components
-
-### Expert Advisors (EAs)
-- `EA_AUTONOMOUS_XAUUSD_ELITE_v2.0.mq5` - Main production EA
-- `EA_FTMO_Scalper_Elite_v2.10_BaselineWithImprovements.mq5` - FTMO-compliant version
-- `XAUUSD_ML_Trading_Bot.mq5` - Machine learning integrated trading bot
-
-### Python Trading Infrastructure
-- Trading agents with OpenRouter integration
-- Automated classification and analysis systems
-- Real-time monitoring and optimization tools
-- Multi-agent coordination systems
-
-### Risk Management
-- FTMO-compliant risk parameters
-- Automated position sizing
-- Drawdown monitoring and controls
-- Multi-timeframe risk analysis
-
-## Working with This Codebase
-
-### For Trading Development
-1. Start with EAs in `🚀 MAIN_EAS/PRODUCTION/` for production strategies
-2. Use `🔧 WORKSPACE/Development/` for new strategy development
-3. Test strategies in `📊 DATA/backtest_results/` before deployment
-
-### For AI/ML Development
-1. Configure API keys in `.env` following `.env.example`
-2. Use MCP servers in `🤖 AI_AGENTS/` for code validation
-3. Integrate with trading agents in `scripts/python/`
-
-### For File Management
-1. Use classification tools in `🛠️ TOOLS/TOOLS_FINAL/Classification/`
-2. Follow the established folder structure with emoji indicators
-3. Maintain metadata organization in appropriate folders
-
-## Environment Setup
-
-1. Create `.env` file from `.env.example` with your API keys
-2. Install Python dependencies (requirements scattered across subdirectories)
-3. Configure MetaTrader 5 terminal for EA deployment
-4. Set up MCP servers for AI integration
-
-## MCP Servers Integration
-
-This project has extensive MCP (Model Context Protocol) server integration for enhanced capabilities:
-
-### Available MCP Servers
-
-#### Search & Research
-- **brave-search** - Web search using Brave Search API with `BRAVE_API_KEY`
-- **tavily-search** - Advanced web search with Tavily AI (Smithery hosted)
-- **perplexity-search** - Perplexity AI search integration
-- **exa** - High-quality web search and content extraction
-
-#### Development & Code Tools
-- **github** - GitHub repository access and management (requires `GITHUB_PERSONAL_ACCESS_TOKEN`)
-- **context7** - Documentation and code context retrieval for libraries
-- **claude-context** - Advanced codebase indexing and semantic search
-- **code-reasoning** - Sequential thinking for complex problem-solving
-- **sequential-thinking** - Structured reasoning and analysis
-
-#### Database & Data Management
-- **postgres** - PostgreSQL database access (connected to Supabase)
-- **filesystem** - File system access and management
-
-#### Automation & Workflow
-- **n8n** - Workflow automation via n8n platform with Docker
-- **linear** - Project management integration (Linear API)
-- **notion** - Notion database and page management
-
-#### Web & Browser Automation
-- **playwright** - Browser automation and testing
-- **microsoft-playwright-mcp** - Microsoft's Playwright integration
-- **shay-5555-gif-chrome-devtools-mcp-2** - Chrome DevTools automation
-- **smithery-ai-fetch** - Web content fetching and extraction
-
-#### Communication & Collaboration
-- **docfork-mcp** - Documentation search and retrieval
-- **smithery-toolbox** - General utility tools
-
-### When to Use Each MCP Server
-
-#### For Trading Research & Analysis
-- Use **brave-search** or **tavily-search** for market news and analysis
-- Use **perplexity-search** for in-depth trading strategy research
-- Use **exa** for high-quality content extraction from financial websites
-
-#### For Code Development
-- Use **github** for repository management and code review
-- Use **context7** for library documentation and examples
-- Use **claude-context** for codebase semantic search and understanding
-- Use **code-reasoning** for complex algorithmic problem-solving
-
-#### For Data Analysis
-- Use **postgres** for storing and analyzing trading data
-- Use **filesystem** for managing backtest results and historical data
-
-#### For Automation
-- Use **n8n** for creating automated trading workflows
-- Use **linear** for project management and task tracking
-- Use **notion** for documentation and knowledge management
-
-#### For Testing & Validation
-- Use **playwright** for web-based trading interface testing
-- Use **microsoft-playwright-mcp** for advanced browser automation
-- Use **chrome-devtools-mcp** for debugging web-based trading platforms
-
-### MCP Configuration
-Configuration is stored in `.claude.json` with server-specific settings including API keys, timeouts, and connection parameters. Some servers require Docker containers or external API keys.
-
-## Sequential Thinking - CRITICAL PRIORITY
-
-**MANDATORY**: All complex analysis, code review, and trading strategy development MUST use sequential thinking. This is not optional - it's required for quality results.
-
-### When to Use Sequential Thinking
-**ALWAYS use for:**
-- Trading strategy analysis and optimization
-- Risk management logic evaluation
-- Multi-agent system design
-- Market data analysis and pattern recognition
-- Code architecture decisions
-- Bug diagnosis in complex trading logic
-- Performance optimization analysis
-- Backtest result interpretation
-
-### Sequential Thinking Protocol
-
-#### Step 1: Problem Decomposition
-Break complex trading problems into sequential analysis steps:
-```
-Thought 1: Define the core trading problem and constraints
-Thought 2: Analyze market conditions and data requirements
-Thought 3: Evaluate existing solutions and their limitations
-Thought 4: Design approach with risk management
-Thought 5: Implementation strategy with testing phases
-```
-
-#### Step 2: Market Analysis Chain
-For any trading decision:
-```
-Thought 1: Current market regime and volatility analysis
-Thought 2: Technical indicator validation and reliability
-Thought 3: Risk/reward ratio calculation
-Thought 4: Entry/exit timing optimization
-Thought 5: Position sizing and stop-loss logic
-```
-
-#### Step 3: Code Review Chain
-For any EA analysis:
-```
-Thought 1: Strategy logic correctness and mathematical soundness
-Thought 2: Risk management implementation and drawdown protection
-Thought 3: Market condition handling and edge cases
-Thought 4: Performance bottlenecks and optimization opportunities
-Thought 5: FTMO compliance and regulatory considerations
-```
-
-#### Step 4: Multi-Agent Coordination
-When working with multiple trading agents:
-```
-Thought 1: Define agent responsibilities and communication protocols
-Thought 2: Establish conflict resolution and priority hierarchies
-Thought 3: Design fail-safes and error propagation controls
-Thought 4: Implement monitoring and performance metrics
-Thought 5: Create testing and validation frameworks
-```
-
-### Mandatory Sequential Thinking Triggers
-**IMMEDIATELY activate sequential thinking when:**
-- User mentions "analyze", "evaluate", "optimize", or "debug"
-- Analyzing trading performance or backtest results
-- Reviewing risk management or position sizing
-- Designing new trading strategies or indicators
-- Debugging complex multi-agent interactions
-- Making architectural decisions affecting live trading
-
-### Sequential Thinking Commands
-Use these explicit triggers:
-- `"ultrathink"` - Maximum depth analysis (5-7 thoughts minimum)
-- `"think step by step"` - Detailed sequential analysis
-- `"analyze this thoroughly"` - Deep dive with market context
-- `"chain of reasoning"` - Connect multiple analysis points
-
-### Quality Standards for Sequential Thinking
-Each thought MUST:
-1. Build upon previous reasoning
-2. Consider market context and trading implications
-3. Address risk management explicitly
-4. Include concrete action items
-5. Reference specific files or data when applicable
-
-### Examples of Required Sequential Thinking
-
-#### For EA Analysis:
-```
-User: "Analyze the performance of EA_AUTONOMOUS_XAUUSD_ELITE_v2.0"
-Response should use sequential thinking covering:
-1. Strategy mechanics and entry logic analysis
-2. Risk management implementation review
-3. Market condition适应性 evaluation
-4. Performance metrics interpretation
-5. Optimization recommendations
-```
-
-#### For Strategy Development:
-```
-User: "Create a new scalping strategy for gold"
-Response must use sequential thinking:
-1. Market characteristics and volatility patterns
-2. Timeframe and indicator selection
-3. Entry/exit signal generation logic
-4. Risk parameters and position sizing
-5. Backtesting and validation approach
-```
-
-## Fast Development Tools
-
-This project emphasizes fast, efficient development workflows using modern command-line tools:
-
-### Search & File Operations
-- **Use `ripgrep (rg)` instead of `grep`** for all project-wide searches
-  - `rg "pattern"` - Search content across the project
-  - `rg --files | rg "name"` - Find files by name
-  - `rg -t python "def"` - Language-specific searches
-  - `rg -n -A 3 -B 3` - Get context around matches
-- **Use `fd` (or `fdfind` on Ubuntu/Debian) instead of `find`**
-  - Respects .gitignore automatically
-  - Much faster than traditional find
-- **Use `jq` for JSON parsing and transformations**
-
-### Tool Installation
+### Quick Search
 ```bash
-# macOS
-brew install ripgrep fd jq
-
-# Ubuntu/Debian
-sudo apt update && sudo apt install -y ripgrep fd-find jq
-# Create alias: alias fd=fdfind
+# Find MQL5 files (use Glob tool instead)
+# Search for patterns (use Grep tool instead)
 ```
 
-### Performance Guidelines
-- **File Reading**: Cap reads at 250 lines for large files
-- **Code Search**: Prefer `rg -n -A 3 -B 3` for context over full file reads
-- **JSON Processing**: Always use `jq` instead of regex for JSON manipulation
-- **Batch Operations**: Use `rg --files-with-matches` to find files, then process in parallel
+---
 
-### Examples for This Project
-```bash
-# Find all MQL5 files
-rg --files -t mq5 "\.mq5$"
+## FTMO Compliance Checklist
 
-# Search for trading strategies
-rg -t mq4 -t mq5 "strategy|scalper|expert"
+Every trade/module must respect:
 
-# Find configuration files
-rg --files | rg "\.(yaml|json|toml)$"
+| Constraint | Limit | Implementation |
+|------------|-------|----------------|
+| Max Daily DD | 5% | `FTMO_RiskManager` monitors |
+| Max Total DD | 10% | Hard stop at 8% (buffer) |
+| Risk per trade | 1% max | Position sizing formula |
+| Daily risk limit | 2% max | Cumulative check |
+| Emergency mode | Trigger at 4% daily | Stop new entries |
 
-# Search for risk management code
-rg -n -A 5 -B 5 "risk|drawdown|stop_loss"
+---
 
-# Parse trading data from JSON
-cat trading_results.json | jq '.trades | map(select(.profit > 0))'
+## Quick Reference Card
+
+### I Need To... → Use This
+
+| Task | Tool/Command |
+|------|--------------|
+| Research a topic | `/research` or say "deep research on X" |
+| Validate strategy | `/validate-ftmo` |
+| Review code | `/code-review` |
+| Understand architecture | Reference PRD Section 5 |
+| Check FTMO rules | Reference PRD Section 10 |
+| Implement feature | Builder Workflow (pick → build → validate) |
+| Analyze complex problem | "ultrathink" + sequential-thinking MCP |
+| Find library docs | context7 MCP |
+| Search GitHub | github MCP or `/research` |
+
+---
+
+## Session Checklist
+
+At the start of each session:
+1. ✅ What's the ONE thing to build today?
+2. ✅ Is PRD open for reference?
+3. ✅ Am I in Builder Mode (not Planning Mode)?
+
+At the end of each session:
+1. ✅ Did we produce CODE, not just docs?
+2. ✅ Does it compile/run?
+3. ✅ What's the next small task?
+
+---
+
+## Coding Guidelines
+
+### MQL5 Standards
+```mql5
+#property copyright "EA_SCALPER_XAUUSD"
+#property version   "1.00"
+#property strict
+
+// Use datetime, not int for time
+// Check GetLastError() after trade ops
+// Use SymbolInfoDouble/Integer (never hardcode)
+// No blocking calls in OnTick() - use OnTimer()
 ```
 
-### Quality Assurance & Sequential Thinking Verification
+### Python Standards
+- Type hints for all functions
+- Async/await for I/O operations
+- Pydantic for data validation
+- JSON schema versioning for EA↔Python messages
 
-**Self-Check Requirements for All Responses:**
-1. Did I use sequential thinking for this analysis?
-2. Is there a clear chain of reasoning from problem to solution?
-3. Are risk management implications thoroughly addressed?
-4. Are market conditions and context properly considered?
-5. Are there concrete, actionable recommendations?
+### Performance Constraints
+- OnTick: < 50ms execution (no external calls)
+- OnTimer: Python Hub calls (200ms interval, timeout 400ms)
+- No WebRequest in OnTick - use OnTimer with bounded queue
 
-**Red Flags That Indicate Inadequate Sequential Thinking:**
-- Single-paragraph responses to complex trading questions
-- Generic advice without specific implementation details
-- Missing risk analysis in strategy recommendations
-- No consideration of market regimes or conditions
-- Superficial code review without deeper analysis
+---
 
-**If You Catch Yourself Not Using Sequential Thinking:**
-- Stop and restart with proper sequential thinking
-- Use explicit trigger: "Let me think through this step by step"
-- Reference the Sequential Thinking Protocol above
-- Ensure each thought builds upon the previous one
+## GitHub Reference Repositories
 
-### Important Notes
+When implementing features, search these first:
+
+| Category | Repos |
+|----------|-------|
+| Trading Frameworks | `freqtrade/freqtrade`, `polakowo/vectorbt` |
+| ML for Trading | `AI4Finance-Foundation/FinRL`, `stefan-jansen/machine-learning-for-trading` |
+| Backtesting | `mementum/backtrader`, `kernc/backtesting.py` |
+| MQL5 | Search: `MQL5 FTMO`, `MQL5 scalper XAUUSD` |
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "Planning loop" | STOP. Pick smallest task. Build it. |
+| "Need more info" | Check PRD first. It's comprehensive. |
+| "Which tool?" | See Quick Reference Card above |
+| "Complex problem" | Use ultrathink + sequential-thinking |
+| Compilation error | Check includes, `#property strict` |
+| Python timeout | Check Hub is running, reduce payload |
+
+---
+
+## Context Engineering (Self-Optimization)
+
+Based on Anthropic's research: Context is FINITE. Every token competes for attention.
+
+### Compaction Triggers
+
+When to summarize and refocus:
+- Session exceeds 30+ back-and-forth exchanges
+- Multiple tangent topics explored
+- "I feel lost" or "where were we?"
+- Before starting a new major task
+
+### Compaction Protocol
+
+When triggered, I will:
+1. **Summarize** key decisions made this session
+2. **List** files created/modified
+3. **Identify** current task and next step
+4. **Discard** completed discussion threads from active focus
+
+### Note-Taking for Long Sessions
+
+For multi-hour sessions, I maintain mental notes:
+- Key architectural decisions
+- Unresolved issues/blockers
+- Files that need attention
+- User preferences discovered
+
+### Self-Reflection Checkpoints
+
+Every 10 exchanges, quick self-check:
+- [ ] Am I still on the original task?
+- [ ] Is my response at the right "altitude" (not too prescriptive, not too vague)?
+- [ ] Am I being concise or adding unnecessary content?
+- [ ] Should I suggest compaction?
+
+### Context Efficiency Rules
+
+1. **Minimal but sufficient** - Don't over-explain what the model can infer
+2. **Examples > Rules** - Show, don't tell when possible
+3. **Structure with delimiters** - XML tags, headers for clarity
+4. **Prune completed threads** - Don't reference finished tasks
+
+---
+
+## Important Notes
 
 - This is a professional trading system with real financial implications
-- **Sequential thinking is MANDATORY for all analysis - no exceptions**
-- Always test EAs thoroughly in demo environments before live deployment
-- The project contains both legacy and modern trading strategies
-- File organization uses emoji prefixes for visual categorization
-- Multi-language support requires careful path management for includes
-- MCP servers require proper API keys and configuration for full functionality
-- Some MCP servers need Docker or external services to be running
-- **Quality of analysis directly impacts trading performance and financial outcomes**
+- Always test in demo before live deployment
+- FTMO limits are HARD constraints, not suggestions
+- Quality of implementation directly impacts trading outcomes
+- When in doubt, reference PRD v2.1 - it has all the answers
+
+---
+
+## Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| v3.1 | 2025-11-27 | Context Engineering section, self-optimization protocols |
+| v3.0 | 2025-11-27 | Factory Droid integration: Skills, Droids, Commands, Builder Workflow |
+| v2.0 | 2025-11-20 | MCP servers, sequential thinking protocol |
+| v1.0 | 2025-11-01 | Initial project setup |

@@ -117,3 +117,6 @@ claude*.json
 **/*token*.json
 **/*credential*.json
 **/*secret*.json
+
+# Factory storage (contains auth tokens)
+.storage/

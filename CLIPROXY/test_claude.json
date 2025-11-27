@@ -1,0 +1,10 @@
+{
+    "model": "claude-sonnet-4-5-20250929",
+    "max_tokens": 200,
+    "messages": [
+        {
+            "role": "user",
+            "content": "Respond with: Claude 4.5 is working perfectly!"
+        }
+    ]
+}

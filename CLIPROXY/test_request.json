@@ -1,0 +1,10 @@
+{
+    "model": "gemini-2.5-flash",
+    "max_tokens": 150,
+    "messages": [
+        {
+            "role": "user",
+            "content": "Respond with only: Configuration is working perfectly!"
+        }
+    ]
+}

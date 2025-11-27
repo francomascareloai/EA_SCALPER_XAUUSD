@@ -166,3 +166,71 @@ class HealthResponse(BaseModel):
     timestamp: float = Field(...)
     version: str = Field(default="2.0.0")
     uptime_seconds: Optional[float] = None
+
+
+# === REGIME DETECTION MODELS ===
+
+class MarketRegimeType(str, Enum):
+    """Market regime classification"""
+    PRIME_TRENDING = "prime_trending"
+    NOISY_TRENDING = "noisy_trending"
+    PRIME_REVERTING = "prime_reverting"
+    NOISY_REVERTING = "noisy_reverting"
+    RANDOM_WALK = "random_walk"
+    UNKNOWN = "unknown"
+
+
+class TradingActionType(str, Enum):
+    """Recommended trading action"""
+    FULL_SIZE = "full_size"
+    HALF_SIZE = "half_size"
+    NO_TRADE = "no_trade"
+    UNKNOWN = "unknown"
+
+
+class RegimeDetectionRequest(BaseModel):
+    """Request for Regime Detection Analysis"""
+    schema_version: str = Field(default="1.0")
+    req_id: str = Field(..., description="Unique request ID")
+    timestamp: float = Field(..., description="Unix timestamp")
+    timeout_ms: int = Field(default=500, description="Max processing time in ms")
+    
+    # Market Data
+    symbol: str = Field(default="XAUUSD", description="Trading symbol")
+    timeframe: str = Field(..., description="Timeframe (M5, M15, H1, etc)")
+    
+    # Price data for analysis
+    prices: list[float] = Field(..., min_length=20, description="Close prices (min 20, recommended 100+)")
+    
+    # Optional parameters
+    hurst_window: int = Field(default=100, description="Window for Hurst calculation")
+    entropy_window: int = Field(default=100, description="Window for Entropy calculation")
+
+
+class RegimeDetectionResponse(BaseModel):
+    """Response for Regime Detection Analysis"""
+    schema_version: str = Field(default="1.0")
+    req_id: str = Field(...)
+    timestamp: float = Field(...)
+    
+    # Core Results
+    regime: MarketRegimeType = Field(..., description="Detected market regime")
+    action: TradingActionType = Field(..., description="Recommended trading action")
+    size_multiplier: float = Field(..., ge=0.0, le=1.0, description="Position size multiplier")
+    
+    # Metrics
+    hurst_exponent: float = Field(..., ge=0.0, le=1.0, description="Hurst exponent value")
+    shannon_entropy: float = Field(..., ge=0.0, description="Shannon entropy value")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Detection confidence")
+    
+    # Guidance
+    strategy_hint: str = Field(..., description="Strategy recommendation")
+    score_adjustment: int = Field(..., description="Score modifier based on regime")
+    
+    # Kalman trend (optional)
+    kalman_trend: Optional[str] = Field(None, description="Kalman filter trend direction")
+    
+    # Metadata
+    processing_time_ms: float = Field(...)
+    error: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None

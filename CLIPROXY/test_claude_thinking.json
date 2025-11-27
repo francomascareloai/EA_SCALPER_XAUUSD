@@ -1,0 +1,10 @@
+{
+    "model": "gemini-claude-sonnet-4-5-thinking",
+    "max_tokens": 500,
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hello! Please respond with: Claude 4.5 Thinking is working perfectly via Antigravity!"
+        }
+    ]
+}

@@ -1,0 +1,102 @@
+# Fibonacci Sequence using Dynamic Programming
+
+Here's a Python function that calculates the Fibonacci sequence using dynamic programming:
+
+```python
+def fibonacci_sequence(n: int) -> list[int]:
+    """
+    Calculate the Fibonacci sequence up to n numbers using dynamic programming.
+    
+    The Fibonacci sequence is defined as:
+    F(0) = 0, F(1) = 1
+    F(n) = F(n-1) + F(n-2) for n > 1
+    
+    Args:
+        n (int): The number of Fibonacci numbers to generate (must be >= 1)
+    
+    Returns:
+        list[int]: A list containing the first n Fibonacci numbers
+    
+    Raises:
+        ValueError: If n is less than 1
+    
+    Examples:
+        >>> fibonacci_sequence(5)
+        [0, 1, 1, 2, 3]
+        
+        >>> fibonacci_sequence(10)
+        [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+        
+        >>> fibonacci_sequence(1)
+        [0]
+    """
+    if n < 1:
+        raise ValueError("n must be at least 1")
+    
+    # Base case: if n is 1, return just the first number
+    if n == 1:
+        return [0]
+    
+    # Initialize the sequence with the first two Fibonacci numbers
+    fib_sequence = [0, 1]
+    
+    # Build up the sequence using previously calculated values
+    for i in range(2, n):
+        next_fib = fib_sequence[i - 1] + fib_sequence[i - 2]
+        fib_sequence.append(next_fib)
+    
+    return fib_sequence
+
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Test cases
+    print("First 10 Fibonacci numbers:", fibonacci_sequence(10))
+    print("First 5 Fibonacci numbers:", fibonacci_sequence(5))
+    print("First 1 Fibonacci number:", fibonacci_sequence(1))
+    print("First 15 Fibonacci numbers:", fibonacci_sequence(15))
+```
+
+## Approach Explanation
+
+**Dynamic Programming Strategy:**
+1. **Bottom-up approach**: Instead of using recursion (which recalculates the same values multiple times), we build the sequence iteratively from the ground up.
+
+2. **Memoization through list storage**: We store all previously calculated Fibonacci numbers in a list, so each number is computed exactly once.
+
+3. **Time Complexity**: O(n) - we calculate each Fibonacci number once
+4. **Space Complexity**: O(n) - we store all n numbers in the result list
+
+**Why this is better than naive recursion:**
+- Naive recursion has O(2^n) time complexity due to redundant calculations
+- This DP approach reduces it to O(n) by reusing previous results
+
+**Alternative version** (if you only need the nth Fibonacci number, not the whole sequence):
+
+```python
+def fibonacci_nth(n: int) -> int:
+    """
+    Calculate the nth Fibonacci number using space-optimized dynamic programming.
+    
+    Args:
+        n (int): The position in the Fibonacci sequence (0-indexed)
+    
+    Returns:
+        int: The nth Fibonacci number
+    """
+    if n < 0:
+        raise ValueError("n must be non-negative")
+    if n <= 1:
+        return n
+    
+    # Only keep track of the last two numbers
+    prev2, prev1 = 0, 1
+    
+    for _ in range(2, n + 1):
+        current = prev1 + prev2
+        prev2, prev1 = prev1, current
+    
+    return prev1
+```
+
+This space-optimized version has O(1) space complexity since it only stores the last two values.

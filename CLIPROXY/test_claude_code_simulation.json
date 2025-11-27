@@ -1,0 +1,12 @@
+{
+    "model": "gemini-claude-sonnet-4-5-thinking",
+    "max_tokens": 4096,
+    "temperature": 1,
+    "system": "You are a helpful AI coding assistant. You help users write, debug, and understand code.",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Write a Python function that calculates the Fibonacci sequence up to n numbers using dynamic programming. Include docstring and type hints. Explain your approach briefly."
+        }
+    ]
+}

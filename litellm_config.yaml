@@ -1,0 +1,27 @@
+model_list:
+  # GitHub Copilot
+  - model_name: copilot
+    litellm_params:
+      model: github_copilot/gpt-4
+      api_key: os.environ/GITHUB_TOKEN
+
+  # Claude via Anthropic
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Claude Opus (Preview)
+  - model_name: claude-opus
+    litellm_params:
+      model: anthropic/claude-opus-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+# Configurações gerais
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+
+# Configurações do proxy
+general_settings:
+  master_key: "sk-your-master-key"  # Opcional: para proteger o proxy

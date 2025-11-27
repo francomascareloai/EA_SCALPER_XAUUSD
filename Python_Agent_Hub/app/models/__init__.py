@@ -9,7 +9,12 @@ from .schemas import (
     ReasoningResponse,
     HealthResponse,
     OrderType,
-    SignalType
+    SignalType,
+    # Regime Detection
+    RegimeDetectionRequest,
+    RegimeDetectionResponse,
+    MarketRegimeType,
+    TradingActionType
 )
 
 __all__ = [
@@ -23,5 +28,10 @@ __all__ = [
     "ReasoningResponse",
     "HealthResponse",
     "OrderType",
-    "SignalType"
+    "SignalType",
+    # Regime Detection
+    "RegimeDetectionRequest",
+    "RegimeDetectionResponse",
+    "MarketRegimeType",
+    "TradingActionType"
 ]
