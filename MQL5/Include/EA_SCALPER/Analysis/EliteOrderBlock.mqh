@@ -271,6 +271,7 @@ bool CEliteOrderBlockDetector::CreateOrderBlockStructure(const MqlRates& rates[]
     
     ob.has_fvg_confluence = CheckFVGConfluence(ob);
     ob.has_liquidity_confluence = CheckLiquidityConfluence(ob);
+    ob.has_liquidity = ob.has_liquidity_confluence; // populate required flag for validation
     ob.has_structure_confluence = CheckStructureConfluence(ob);
     ob.confluence_score = CalculateConfluenceScore(ob);
     
@@ -367,11 +368,13 @@ bool CEliteOrderBlockDetector::HasVolumeSpike(const MqlRates& rates[], int index
     if(index >= ArraySize(rates) - 5) return true;
     long current_volume = rates[index].tick_volume;
     long avg_volume = 0;
+    int count = 0;
     for(int i = index + 1; i < index + 11 && i < ArraySize(rates); i++)
     {
         avg_volume += rates[i].tick_volume;
+        count++;
     }
-    avg_volume /= 10;
+    avg_volume = (count > 0) ? avg_volume / count : 0;
     return current_volume > avg_volume * m_volume_threshold;
 }
 

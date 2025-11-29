@@ -1,14 +1,16 @@
 """
-EA_SCALPER_XAUUSD Agent Hub v3.0
+EA_SCALPER_XAUUSD Agent Hub v4.0
 ================================
-Python Backend for Trading Analysis & Fundamentals
+Python Backend for Trading Analysis, Fundamentals & News Trading
 
 Endpoints:
-- /health                    - Health check
-- /api/v1/technical          - Technical analysis
-- /api/v1/fundamentals       - Macro fundamentals (FRED)
-- /api/v1/sentiment          - News sentiment (FinBERT)
-- /api/v1/signal             - Aggregated trading signal
+- /health                         - Health check
+- /api/v1/fundamentals            - Macro fundamentals (FRED)
+- /api/v1/sentiment               - News sentiment (FinBERT)
+- /api/v1/signal                  - Aggregated trading signal
+- /api/v1/calendar/events         - Economic calendar events
+- /api/v1/calendar/news-window    - Check if in news window
+- /api/v1/calendar/signal         - Calendar trading signal
 """
 
 from fastapi import FastAPI
@@ -39,8 +41,8 @@ START_TIME = time.time()
 # Create FastAPI app
 app = FastAPI(
     title="EA_SCALPER_XAUUSD Agent Hub",
-    description="Python Backend for Gold Trading - Fundamentals, Sentiment & ML",
-    version="3.0.0"
+    description="Python Backend for Gold Trading - Fundamentals, Sentiment, Calendar & ML",
+    version="4.0.0"
 )
 
 # CORS Middleware
@@ -62,22 +64,26 @@ async def add_process_time_header(request, call_next):
     return response
 
 # Import and include routers
-from app.routers import fundamentals
+from app.routers import fundamentals, calendar
 
 app.include_router(fundamentals.router, prefix="/api/v1", tags=["fundamentals"])
+app.include_router(calendar.router, prefix="/api/v1/calendar", tags=["calendar"])
 
 @app.get("/")
 async def root():
     return {
-        "message": "EA_SCALPER_XAUUSD Agent Hub v3.0 - Fundamentals Edition",
-        "version": "3.0.0",
+        "message": "EA_SCALPER_XAUUSD Agent Hub v4.0 - Multi-Strategy Edition",
+        "version": "4.0.0",
         "endpoints": {
             "health": "/health",
             "fundamentals": "/api/v1/fundamentals",
-            "sentiment": "/api/v1/sentiment", 
+            "sentiment": "/api/v1/sentiment",
             "signal": "/api/v1/signal",
             "oil": "/api/v1/oil",
-            "macro": "/api/v1/macro"
+            "macro": "/api/v1/macro",
+            "calendar_events": "/api/v1/calendar/events",
+            "calendar_window": "/api/v1/calendar/news-window",
+            "calendar_signal": "/api/v1/calendar/signal"
         }
     }
 
@@ -87,14 +93,16 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": time.time(),
-        "version": "3.0.0",
+        "version": "4.0.0",
         "uptime_seconds": round(uptime, 2),
         "fred_configured": bool(os.getenv('FRED_API_KEY')),
-        "newsapi_configured": bool(os.getenv('NEWSAPI_KEY'))
+        "newsapi_configured": bool(os.getenv('NEWSAPI_KEY')),
+        "finnhub_configured": bool(os.getenv('FINNHUB_KEY'))
     }
 
 if __name__ == "__main__":
-    logger.info("Starting EA_SCALPER_XAUUSD Agent Hub v3.0...")
+    logger.info("Starting EA_SCALPER_XAUUSD Agent Hub v4.0...")
     logger.info(f"FRED API: {'Configured' if os.getenv('FRED_API_KEY') else 'NOT SET'}")
     logger.info(f"NewsAPI: {'Configured' if os.getenv('NEWSAPI_KEY') else 'NOT SET'}")
+    logger.info(f"Finnhub: {'Configured' if os.getenv('FINNHUB_KEY') else 'NOT SET'}")
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

@@ -21,3 +21,6 @@ scipy>=1.11.0
 # === ASYNC SUPPORT ===
 aiohttp>=3.9.0
 httpx>=0.25.0
+
+# === WEB SCRAPING (Forex Factory) ===
+beautifulsoup4>=4.12.0

@@ -14,6 +14,8 @@
 #include "../Analysis/CStructureAnalyzer.mqh"
 #include "../Analysis/CLiquiditySweepDetector.mqh"
 #include "../Analysis/CAMDCycleTracker.mqh"
+#include "../Analysis/EliteOrderBlock.mqh"
+#include "../Analysis/EliteFVG.mqh"
 
 // === SIGNAL QUALITY ENUMERATION ===
 enum ENUM_SIGNAL_QUALITY
@@ -96,6 +98,8 @@ private:
    CStructureAnalyzer*      m_structure;
    CLiquiditySweepDetector* m_sweep;
    CAMDCycleTracker*        m_amd;
+   CEliteOrderBlockDetector* m_ob_detector;
+   CEliteFVGDetector*        m_fvg_detector;
    
    // Weights
    SConfluenceWeights       m_weights;
@@ -122,6 +126,8 @@ public:
    void AttachStructureAnalyzer(CStructureAnalyzer* analyzer) { m_structure = analyzer; }
    void AttachSweepDetector(CLiquiditySweepDetector* detector) { m_sweep = detector; }
    void AttachAMDTracker(CAMDCycleTracker* tracker) { m_amd = tracker; }
+   void AttachOBDetector(CEliteOrderBlockDetector* detector) { m_ob_detector = detector; }
+   void AttachFVGDetector(CEliteFVGDetector* detector) { m_fvg_detector = detector; }
    
    // Configuration
    void SetWeights(double structure, double regime, double sweep, double amd, double ob, double fvg, double zone);
@@ -174,6 +180,8 @@ CConfluenceScorer::CConfluenceScorer()
    m_structure = NULL;
    m_sweep = NULL;
    m_amd = NULL;
+   m_ob_detector = NULL;
+   m_fvg_detector = NULL;
    
    // Default weights (total = 100%)
    m_weights.w_structure = 0.25;   // 25%
@@ -413,16 +421,104 @@ double CConfluenceScorer::ScoreAMD()
 
 double CConfluenceScorer::ScoreOBProximity(double price)
 {
-   // TODO: Integrate with EliteOrderBlock detector
-   // For now, return neutral score
-   return 50.0;
+   if(m_ob_detector == NULL) return 50.0;
+   
+   // Find nearest active OB (either side)
+   SAdvancedOrderBlock best;
+   bool found = false;
+   double best_dist = DBL_MAX;
+   SAdvancedOrderBlock candidate;
+   
+   if(m_ob_detector->GetNearestOB(OB_BULLISH, candidate))
+   {
+      double mid = (candidate.high_price + candidate.low_price) / 2.0;
+      double dist = MathAbs(price - mid);
+      if(dist < best_dist) { best_dist = dist; best = candidate; found = true; }
+   }
+   if(m_ob_detector->GetNearestOB(OB_BEARISH, candidate))
+   {
+      double mid = (candidate.high_price + candidate.low_price) / 2.0;
+      double dist = MathAbs(price - mid);
+      if(dist < best_dist) { best_dist = dist; best = candidate; found = true; }
+   }
+   
+   if(!found) return 30.0; // mild penalty if no OB context
+   
+   // Normalize distance by ATR(H1)
+   double atr[];
+   ArrayResize(atr, 1);
+   int atr_handle = iATR(_Symbol, PERIOD_H1, 14);
+   if(atr_handle == INVALID_HANDLE || CopyBuffer(atr_handle, 0, 0, 1, atr) <= 0)
+   {
+      if(atr_handle != INVALID_HANDLE) IndicatorRelease(atr_handle);
+      return 50.0;
+   }
+   IndicatorRelease(atr_handle);
+   
+   double distance_atr = (atr[0] > 0) ? best_dist / atr[0] : 5.0;
+   
+   double score = 0;
+   if(distance_atr <= 0.3) score = 100;
+   else if(distance_atr <= 0.5) score = 85 + (0.5 - distance_atr) * 75;
+   else if(distance_atr <= 1.0) score = 60 + (1.0 - distance_atr) * 50;
+   else if(distance_atr <= 2.0) score = (2.0 - distance_atr) * 60;
+   else score = 20;
+   
+   // Weight by OB probability/quality
+   score *= (best.probability_score / 100.0);
+   return MathMin(100, MathMax(0, score));
 }
 
 double CConfluenceScorer::ScoreFVGProximity(double price)
 {
-   // TODO: Integrate with EliteFVG detector
-   // For now, return neutral score
-   return 50.0;
+   if(m_fvg_detector == NULL) return 50.0;
+   
+   // Choose nearest bullish/bearish FVG
+   SEliteFairValueGap best;
+   bool found = false;
+   double best_dist = DBL_MAX;
+   SEliteFairValueGap candidate;
+   
+   if(m_fvg_detector->GetNearestFVG(FVG_BULLISH, candidate))
+   {
+      double mid = (candidate.upper_level + candidate.lower_level) / 2.0;
+      double dist = MathAbs(price - mid);
+      if(dist < best_dist) { best_dist = dist; best = candidate; found = true; }
+   }
+   if(m_fvg_detector->GetNearestFVG(FVG_BEARISH, candidate))
+   {
+      double mid = (candidate.upper_level + candidate.lower_level) / 2.0;
+      double dist = MathAbs(price - mid);
+      if(dist < best_dist) { best_dist = dist; best = candidate; found = true; }
+   }
+   
+   if(!found) return 30.0; // no FVG nearby
+   
+   double atr[];
+   ArrayResize(atr, 1);
+   int atr_handle = iATR(_Symbol, PERIOD_H1, 14);
+   if(atr_handle == INVALID_HANDLE || CopyBuffer(atr_handle, 0, 0, 1, atr) <= 0)
+   {
+      if(atr_handle != INVALID_HANDLE) IndicatorRelease(atr_handle);
+      return 50.0;
+   }
+   IndicatorRelease(atr_handle);
+   
+   double distance_atr = (atr[0] > 0) ? best_dist / atr[0] : 5.0;
+   
+   double score = 0;
+   if(distance_atr <= 0.3) score = 100;
+   else if(distance_atr <= 0.5) score = 85 + (0.5 - distance_atr) * 75;
+   else if(distance_atr <= 1.0) score = 60 + (1.0 - distance_atr) * 50;
+   else if(distance_atr <= 2.0) score = (2.0 - distance_atr) * 60;
+   else score = 20;
+   
+   // Weight by FVG quality/freshness
+   score *= (best.quality_score / 100.0);
+   if(best.is_fresh) score *= 1.1;
+   score *= best.time_decay_factor;
+   
+   return MathMin(100, MathMax(0, score));
 }
 
 double CConfluenceScorer::ScorePremiumDiscount()

@@ -30,6 +30,7 @@ private:
    double            m_current_total_loss;
    int               m_trades_today;
    bool              m_trading_halted;
+   bool              m_new_trades_paused;   // Soft stop without disabling management
    datetime          m_last_day_check;
 
 public:
@@ -48,6 +49,7 @@ public:
    //--- Getters
    bool              IsTradingHalted() const { return m_trading_halted; }
    double            GetCurrentDailyLoss() const { return m_current_daily_loss; }
+   bool              IsSoftStopActive() const { return m_new_trades_paused; }
 
 private:
    void              CheckNewDay();
@@ -69,6 +71,7 @@ CFTMO_RiskManager::CFTMO_RiskManager() :
    m_current_total_loss(0.0),
    m_trades_today(0),
    m_trading_halted(false),
+   m_new_trades_paused(false),
    m_last_day_check(0)
 {
 }
@@ -95,6 +98,7 @@ bool CFTMO_RiskManager::Init(double risk_per_trade, double max_daily_loss, doubl
    m_daily_start_equity = m_initial_equity;
    m_last_day_check = TimeCurrent();
 
+   m_new_trades_paused = false;
    return true;
 }
 
@@ -125,6 +129,7 @@ void CFTMO_RiskManager::CheckNewDay()
       m_daily_start_equity = AccountInfoDouble(ACCOUNT_EQUITY);
       m_trades_today = 0;
       m_current_daily_loss = 0.0;
+      m_new_trades_paused = false; // allow new trades if soft-stop only
       
       // Reset Halt ONLY if not in Total Loss Breach
       if(m_current_total_loss < m_max_total_loss_percent)
@@ -181,10 +186,18 @@ void CFTMO_RiskManager::CheckDrawdownLimits()
    // 4. Soft Stop Check
    if(m_current_daily_loss >= m_soft_stop_percent)
    {
-      // We don't halt, but we might want to reduce risk or stop opening NEW trades
-      // For now, let's treat Soft Stop as a "Stop New Trades" trigger
-      if(!m_trading_halted) Print("WARNING: Soft Stop Level Reached. Pausing New Trades.");
-      m_trading_halted = true; 
+      // Pause new trades, but keep management active
+      if(!m_new_trades_paused) Print("WARNING: Soft Stop Level Reached. Pausing New Trades.");
+      m_new_trades_paused = true; 
+   }
+   else
+   {
+      // Clear soft-stop if losses recover intraday
+      if(m_new_trades_paused && m_current_daily_loss < m_soft_stop_percent * 0.6)
+      {
+         m_new_trades_paused = false;
+         Print("Soft Stop cleared: daily loss recovered.");
+      }
    }
 }
 
@@ -194,6 +207,7 @@ void CFTMO_RiskManager::CheckDrawdownLimits()
 bool CFTMO_RiskManager::CanOpenNewTrade()
 {
    if(m_trading_halted) return false;
+   if(m_new_trades_paused) return false;
    if(m_trades_today >= m_max_trades_per_day) return false;
    
    return true;
@@ -206,8 +220,9 @@ double CFTMO_RiskManager::CalculateLotSize(double sl_points)
 {
    if(sl_points <= 0) return 0.0;
 
-   double account_balance = AccountInfoDouble(ACCOUNT_BALANCE);
-   double risk_amount = account_balance * (m_risk_per_trade_percent / 100.0);
+   // Use equity to incorporate floating P/L in live risk
+   double account_equity = AccountInfoDouble(ACCOUNT_EQUITY);
+   double risk_amount = account_equity * (m_risk_per_trade_percent / 100.0);
    
    double tick_value = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_VALUE);
    double tick_size = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);

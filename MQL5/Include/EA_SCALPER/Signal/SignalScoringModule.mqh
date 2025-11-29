@@ -31,6 +31,8 @@ private:
    ENUM_ORDER_TYPE   m_last_direction;
    double            m_last_sl;
    double            m_last_tp;
+   SAdvancedOrderBlock m_last_ob;
+   bool              m_has_ob;
 
 public:
                      CSignalScoringModule();
@@ -47,6 +49,8 @@ public:
    ENUM_ORDER_TYPE   GetDirection() const { return m_last_direction; }
    double            GetStopLossPrice() const { return m_last_sl; }
    double            GetTakeProfitPrice() const { return m_last_tp; }
+   bool              GetBestOrderBlock(SAdvancedOrderBlock &ob) const { if(!m_has_ob) return false; ob = m_last_ob; return true; }
+   CEliteOrderBlockDetector* GetOBDetector() { return &m_ob_detector; }
 
 private:
    int               CalculateTechnicalScore();
@@ -64,8 +68,10 @@ CSignalScoringModule::CSignalScoringModule() :
    m_last_score(0),
    m_last_direction(WRONG_VALUE),
    m_last_sl(0.0),
-   m_last_tp(0.0)
+   m_last_tp(0.0),
+   m_has_ob(false)
 {
+   ZeroMemory(m_last_ob);
 }
 
 //+------------------------------------------------------------------+
@@ -122,13 +128,16 @@ int CSignalScoringModule::CalculateTechnicalScore()
    // Detect Order Blocks
    if(!m_ob_detector.DetectEliteOrderBlocks())
    {
+      m_has_ob = false;
       return 0;
    }
 
    // Get the best Order Block (Sorted by quality in detector)
-   if(m_ob_detector.GetCount() == 0) return 0;
+   if(m_ob_detector.GetCount() == 0) { m_has_ob = false; return 0; }
 
    SAdvancedOrderBlock best_ob = m_ob_detector.GetOrderBlock(0);
+   m_last_ob = best_ob;
+   m_has_ob = true;
    
    // Basic Validation
    if(best_ob.probability_score < 50) return 0;

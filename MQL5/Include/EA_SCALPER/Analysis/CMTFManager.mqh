@@ -230,6 +230,7 @@ private:
    int               m_htf_rsi_handle;
    int               m_mtf_atr_handle;
    int               m_ltf_rsi_handle;
+   int               m_ltf_atr_handle;
    
    // Update intervals
    datetime          m_htf_last_bar;
@@ -282,6 +283,12 @@ public:
    bool              CanTradeShort();
    ENUM_MTF_ALIGNMENT GetAlignment() const { return m_confluence.alignment; }
    double            GetPositionSizeMultiplier() const { return m_confluence.position_size_mult; }
+   void              SetStructureFlags(bool has_ob, bool has_fvg, bool has_liquidity=false)
+   {
+      m_mtf.has_active_ob = has_ob;
+      m_mtf.has_active_fvg = has_fvg;
+      m_mtf.has_liquidity_pool = has_liquidity;
+   }
    
    // Setters
    void              SetMinTrendStrength(double strength) { m_min_trend_strength = strength; }
@@ -305,9 +312,10 @@ CMTFManager::CMTFManager()
    m_htf_ma20_handle = INVALID_HANDLE;
    m_htf_ma50_handle = INVALID_HANDLE;
    m_htf_atr_handle = INVALID_HANDLE;
-   m_htf_rsi_handle = INVALID_HANDLE;
-   m_mtf_atr_handle = INVALID_HANDLE;
-   m_ltf_rsi_handle = INVALID_HANDLE;
+      m_htf_rsi_handle = INVALID_HANDLE;
+      m_mtf_atr_handle = INVALID_HANDLE;
+      m_ltf_rsi_handle = INVALID_HANDLE;
+      m_ltf_atr_handle = INVALID_HANDLE;
    
    m_htf_last_bar = 0;
    m_mtf_last_bar = 0;
@@ -344,6 +352,7 @@ bool CMTFManager::Init(string symbol)
    
    // Create M5 indicators
    m_ltf_rsi_handle = iRSI(m_symbol, MTF_LTF, 14, PRICE_CLOSE);
+   m_ltf_atr_handle = iATR(m_symbol, MTF_LTF, 14);
    
    // Validate handles
    if(m_htf_ma20_handle == INVALID_HANDLE || 
@@ -351,7 +360,8 @@ bool CMTFManager::Init(string symbol)
       m_htf_atr_handle == INVALID_HANDLE ||
       m_htf_rsi_handle == INVALID_HANDLE ||
       m_mtf_atr_handle == INVALID_HANDLE ||
-      m_ltf_rsi_handle == INVALID_HANDLE)
+      m_ltf_rsi_handle == INVALID_HANDLE ||
+      m_ltf_atr_handle == INVALID_HANDLE)
    {
       Print("[MTF] Failed to create indicator handles");
       return false;
@@ -373,6 +383,7 @@ void CMTFManager::Deinit()
    if(m_htf_rsi_handle != INVALID_HANDLE) IndicatorRelease(m_htf_rsi_handle);
    if(m_mtf_atr_handle != INVALID_HANDLE) IndicatorRelease(m_mtf_atr_handle);
    if(m_ltf_rsi_handle != INVALID_HANDLE) IndicatorRelease(m_ltf_rsi_handle);
+   if(m_ltf_atr_handle != INVALID_HANDLE) IndicatorRelease(m_ltf_atr_handle);
 }
 
 //+------------------------------------------------------------------+
@@ -491,7 +502,7 @@ void CMTFManager::AnalyzeMTF()
    
    // Note: OB/FVG detection will be done by their respective modules
    // Here we just check if we're in a zone
-   m_mtf.has_active_ob = false;  // Will be set by COrderBlockDetector
+   m_mtf.has_active_ob = (m_mtf.bos_bullish || m_mtf.bos_bearish);  // heuristic until detectors wire in
    m_mtf.has_active_fvg = false; // Will be set by CFVGDetector
    m_mtf.has_liquidity_pool = false; // Will be set by CLiquiditySweepDetector
    
@@ -550,7 +561,10 @@ void CMTFManager::AnalyzeLTF()
       m_ltf.momentum_aligned = false;
    
    // Calculate optimal entries
-   double atr_m5 = iATR(m_symbol, MTF_LTF, 14);
+   double atr_m5_buf[];
+   ArraySetAsSeries(atr_m5_buf, true);
+   if(CopyBuffer(m_ltf_atr_handle, 0, 0, 1, atr_m5_buf) < 1) return;
+   double atr_m5 = atr_m5_buf[0];
    double current_price = SymbolInfoDouble(m_symbol, SYMBOL_BID);
    
    m_ltf.optimal_entry_long = low1;  // Entry at previous low

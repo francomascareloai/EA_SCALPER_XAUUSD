@@ -5,20 +5,28 @@
 //+------------------------------------------------------------------+
 #property copyright "Franco - Singularity Edition"
 #property link      "https://www.mql5.com"
-#property version   "3.20"
+#property version   "3.30"
 #property strict
 
 /*
-   v3.20 - Multi-Timeframe Architecture
-   =====================================
+   v3.30 - Order Flow + Multi-Timeframe Architecture
+   ==================================================
    HTF (H1)  = Direction filter - NEVER trade against H1 trend
    MTF (M15) = Structure zones  - OB, FVG, Liquidity levels
    LTF (M5)  = Execution        - Entry confirmation & tight SL
+   
+   NEW in v3.30:
+   - Footprint/Cluster Chart Analysis (ATAS-style)
+   - Diagonal Imbalance Detection
+   - Stacked Imbalance Detection (3+ consecutive)
+   - Absorption Zone Detection
+   - Order Flow Confluence Scoring
    
    Benefits:
    - 2-3x more trading opportunities
    - Tighter stop losses (M5 precision)
    - Better alignment with SMC methodology
+   - Order Flow confirmation for higher win rate
    - Spread cost still acceptable (5-8% on M5)
 */
 
@@ -40,6 +48,10 @@
 #include <EA_SCALPER/Analysis/CSessionFilter.mqh>
 #include <EA_SCALPER/Analysis/CNewsFilter.mqh>
 #include <EA_SCALPER/Analysis/CEntryOptimizer.mqh>
+#include <EA_SCALPER/Analysis/EliteFVG.mqh>
+
+//--- Order Flow / Footprint Analysis (NEW v3.30)
+#include <EA_SCALPER/Analysis/CFootprintAnalyzer.mqh>
 
 //--- Signal Modules
 #include <EA_SCALPER/Signal/CConfluenceScorer.mqh>
@@ -112,6 +124,7 @@ CAMDCycleTracker        g_AMD;
 CSessionFilter          g_Session;
 CNewsFilter             g_News;
 CEntryOptimizer         g_EntryOpt;
+CEliteFVGDetector       g_FVG;
 CConfluenceScorer       g_Confluence;
 
 //--- Global State
@@ -122,7 +135,7 @@ bool g_IsEmergencyMode = false;
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   Print("=== EA_SCALPER_XAUUSD v3.20 Singularity MTF Edition ===");
+   Print("=== EA_SCALPER_XAUUSD v3.30 Singularity Order Flow Edition ===");
    Print("=== HTF=H1 | MTF=M15 | LTF=M5 (Execution) ===");
    
    // 1. Initialize Risk Manager (FTMO Compliance)
@@ -213,6 +226,8 @@ int OnInit()
    g_Confluence.AttachStructureAnalyzer(&g_Structure);
    g_Confluence.AttachSweepDetector(&g_Sweep);
    g_Confluence.AttachAMDTracker(&g_AMD);
+   g_Confluence.AttachOBDetector(g_ScoringEngine.GetOBDetector());
+   g_Confluence.AttachFVGDetector(&g_FVG);
    g_Confluence.SetMinScore(70);       // Tier B minimum
    g_Confluence.SetMinConfluences(3);  // At least 3 factors
    
@@ -238,7 +253,7 @@ void OnDeinit(const int reason)
    g_AMD.Deinitialize();
    g_Sweep.Deinitialize();
    
-   Print("EA_SCALPER_XAUUSD v3.20 Singularity MTF Deinitialized. Reason: ", reason);
+   Print("EA_SCALPER_XAUUSD v3.30 Singularity Order Flow Deinitialized. Reason: ", reason);
 }
 
 //+------------------------------------------------------------------+
@@ -246,12 +261,22 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-   //=== GATE 1: Emergency Mode Check (Fastest) ===
-   if(g_IsEmergencyMode) return;
-   
-   // Update Risk State (Floating P/L, Drawdown)
+   // Always refresh risk state so daily reset can recover from emergency
    g_RiskManager.OnTick();
    
+   // If we were halted previously but risk manager is now clear (e.g., new day), exit emergency
+   if(g_IsEmergencyMode && !g_RiskManager.IsTradingHalted())
+   {
+      g_IsEmergencyMode = false;
+      Print("Emergency mode cleared - risk limits back within range.");
+   }
+   
+   // Keep managing open positions even during halt/soft-stop conditions
+   g_TradeManager.OnTick();  // State machine for partials/trailing
+   if(!g_TradeManager.HasActiveTrade())
+      g_Executor.ManagePositions(); // Legacy manager only if TradeManager not handling a position
+   
+   // Hard halt: no new trades while still allow management above
    if(g_RiskManager.IsTradingHalted())
    {
       if(!g_IsEmergencyMode)
@@ -261,10 +286,6 @@ void OnTick()
       }
       return;
    }
-
-   //=== GATE 2: Manage Open Positions ===
-   g_Executor.ManagePositions();
-   g_TradeManager.OnTick();  // State machine for partials/trailing
    
    // Skip new trade logic if we already have a position
    if(g_TradeManager.HasActiveTrade()) return;
@@ -303,11 +324,9 @@ void OnTick()
       // Update MTF Manager (H1, M15, M5)
       g_MTF.Update();
       
-      // Get MTF confluence
-      SMTFConfluence mtf_conf = g_MTF.GetConfluence();
-      
       // Check HTF (H1) direction - NEVER trade against H1 trend
-      if(InpRequireHTFAlign && !mtf_conf.htf_aligned)
+      SMTFConfluence mtf_conf_htf = g_MTF.GetConfluence();
+      if(InpRequireHTFAlign && !mtf_conf_htf.htf_aligned)
       {
          static datetime last_htf_log = 0;
          if(TimeCurrent() - last_htf_log > 1800)
@@ -317,18 +336,21 @@ void OnTick()
          }
          return;
       }
-      
-      // Check minimum MTF alignment (at least GOOD = 2 TFs aligned)
-      if(mtf_conf.alignment < MTF_ALIGN_GOOD)
-      {
-         return; // Not enough confluence
-      }
    }
 
    //=== SIGNAL GENERATION ===
    // Update analysis modules
    g_Sweep.Update();
    g_AMD.Update();
+   
+   // Refresh FVGs on new M15 bar to avoid heavy per-tick detection
+   static datetime last_fvg_bar = 0;
+   datetime m15_bar = iTime(_Symbol, PERIOD_M15, 0);
+   if(m15_bar != last_fvg_bar)
+   {
+      g_FVG.DetectEliteFairValueGaps();
+      last_fvg_bar = m15_bar;
+   }
    
    // Calculate confluence score
    int score = g_ScoringEngine.CalculateScore();
@@ -351,6 +373,62 @@ void OnTick()
    
    if(signal == SIGNAL_NONE) return;
    
+   // Pull best order block zone from scoring module if available
+   double ob_low = 0, ob_high = 0;
+   SAdvancedOrderBlock best_ob;
+   if(g_ScoringEngine.GetBestOrderBlock(best_ob))
+   {
+      ob_low = best_ob.low_price;
+      ob_high = best_ob.high_price;
+   }
+   bool has_ob = (ob_low > 0 && ob_high > 0);
+   
+   // Pull nearest FVG in signal direction
+   double fvg_low = 0, fvg_high = 0;
+   SEliteFairValueGap best_fvg;
+   if(signal == SIGNAL_BUY)
+   {
+      if(g_FVG.GetNearestFVG(FVG_BULLISH, best_fvg))
+      {
+         fvg_low = best_fvg.lower_level;
+         fvg_high = best_fvg.upper_level;
+      }
+   }
+   else if(signal == SIGNAL_SELL)
+   {
+      if(g_FVG.GetNearestFVG(FVG_BEARISH, best_fvg))
+      {
+         fvg_low = best_fvg.lower_level;
+         fvg_high = best_fvg.upper_level;
+      }
+   }
+   bool has_fvg = (fvg_low > 0 && fvg_high > 0);
+   
+   // Update MTF manager with real structure flags (OB/FVG)
+   g_MTF.SetStructureFlags(has_ob, has_fvg, g_Sweep.HasRecentSweep());
+   
+   // Refresh MTF confluence with updated structure flags
+   if(InpUseMTF)
+   {
+      SMTFConfluence mtf_conf = g_MTF.GetConfluence();
+      
+      // Check minimum MTF alignment (at least GOOD = 2 TFs aligned)
+      if(mtf_conf.alignment < MTF_ALIGN_GOOD)
+         return;
+      
+      // Require structure zone if configured
+      if(InpRequireMTFZone && !mtf_conf.mtf_structure)
+      {
+         static datetime last_mtf_zone_log = 0;
+         if(TimeCurrent() - last_mtf_zone_log > 900)
+         {
+            Print("[MTF] Structure zone missing - waiting for OB/FVG alignment. ", g_MTF.GetAnalysisSummary());
+            last_mtf_zone_log = TimeCurrent();
+         }
+         return;
+      }
+   }
+   
    //=== GATE 8: MTF Direction Confirmation (NEW v3.20) ===
    if(InpUseMTF)
    {
@@ -372,8 +450,6 @@ void OnTick()
    }
    
    // Get zone data for entry optimization
-   double fvg_low = 0, fvg_high = 0;
-   double ob_low = 0, ob_high = 0;
    double sweep_level = 0;
    double current_price = (signal == SIGNAL_BUY) 
       ? SymbolInfoDouble(_Symbol, SYMBOL_ASK) 
@@ -381,9 +457,30 @@ void OnTick()
    
    // Get sweep level from AMD tracker
    if(signal == SIGNAL_BUY)
+   {
       sweep_level = g_AMD.GetManipulationLow();
+      SLiquidityPool ssl = g_Sweep.GetNearestSSL(current_price);
+      if(ssl.is_valid) sweep_level = ssl.level;
+   }
    else
+   {
       sweep_level = g_AMD.GetManipulationHigh();
+      SLiquidityPool bsl = g_Sweep.GetNearestBSL(current_price);
+      if(bsl.is_valid) sweep_level = bsl.level;
+   }
+   
+   // Require structure context; avoid defaulting to market-only entries
+   bool has_structure_context = (fvg_low > 0 || fvg_high > 0 || ob_low > 0 || ob_high > 0 || sweep_level != 0);
+   if(!has_structure_context)
+   {
+      static datetime last_structure_log = 0;
+      if(TimeCurrent() - last_structure_log > 900)
+      {
+         Print("Entry skipped: missing structure context (OB/FVG/sweep).");
+         last_structure_log = TimeCurrent();
+      }
+      return;
+   }
    
    // Calculate optimal entry
    SOptimalEntry entry = g_EntryOpt.CalculateOptimalEntry(
@@ -435,7 +532,7 @@ void OnTick()
                                        entry.take_profit_1, entry.take_profit_2, entry.take_profit_3,
                                        score, reason))
    {
-      Print("=== TRADE EXECUTED (v3.20 MTF) ===");
+      Print("=== TRADE EXECUTED (v3.30 Order Flow) ===");
       Print("Direction: ", (signal == SIGNAL_BUY ? "BUY" : "SELL"));
       Print("Entry: ", current_price, " | SL: ", entry.stop_loss);
       Print("TP1: ", entry.take_profit_1, " (40%)");
@@ -455,8 +552,26 @@ void OnTick()
 //+------------------------------------------------------------------+
 void OnTimer()
 {
-   // Update regime detector (slow calculation)
-   // g_Regime.Update();
+   // Slow-lane analytics
+   static datetime last_h1_bar = 0;
+   static datetime last_m15_bar = 0;
+   
+   datetime h1_bar = iTime(_Symbol, PERIOD_H1, 0);
+   datetime m15_bar = iTime(_Symbol, PERIOD_M15, 0);
+   
+   // Regime/HTF updates on new H1 bar
+   if(h1_bar != last_h1_bar)
+   {
+      g_Regime.AnalyzeRegime(_Symbol, PERIOD_H1);
+      last_h1_bar = h1_bar;
+   }
+   
+   // Structure/M15 updates on new M15 bar
+   if(m15_bar != last_m15_bar)
+   {
+      g_Structure.AnalyzeStructure(_Symbol, PERIOD_M15);
+      last_m15_bar = m15_bar;
+   }
    
    // Check for new day (reset daily counters)
    static int last_day = 0;

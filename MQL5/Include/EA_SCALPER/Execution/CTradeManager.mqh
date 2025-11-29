@@ -373,12 +373,14 @@ bool CTradeManager::ClosePartial(double percent, string reason)
             ulong ticket = PositionGetTicket(i);
             if(m_trade.PositionClosePartial(ticket, lots_to_close))
             {
+               // Capture profit from this partial only; prefer trade result, fallback to proportional unrealized
+               double partial_profit = m_trade.ResultProfit();
+               if(partial_profit == 0.0)
+                  partial_profit = PositionGetDouble(POSITION_PROFIT) * percent;
+
                m_active_trade.current_lots -= lots_to_close;
                m_active_trade.partials_taken++;
-               
-               // Calculate realized P/L (from position, not trade result)
-               double profit = PositionGetDouble(POSITION_PROFIT);
-               m_active_trade.realized_pnl += profit;
+               m_active_trade.realized_pnl += partial_profit;
                
                Print("CTradeManager: Partial close - ", lots_to_close, " lots. Reason: ", reason);
                return true;
