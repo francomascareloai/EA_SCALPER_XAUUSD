@@ -1,0 +1,39 @@
+//@version=5
+indicator("Example Risk Alert", overlay=false)
+
+// Input parameters
+maxDrawdownPerc = input.float(2.0, "Maximum Drawdown %", minval=0.5, maxval=10.0)
+maxPositions = input.int(5, "Maximum Open Positions", minval=1, maxval=20)
+
+// Track account metrics (simulated)
+// In real implementation, these would come from external sources or strategy
+var float accountBalance = 10000.0
+var float currentEquity = 10000.0
+var int openPositions = 0
+
+// Simulate account changes (in real scenario, these would be actual values)
+if (bar_index % 100 == 0)  // Update every 100 bars for simulation
+    // Simulate profit/loss
+    pnl = math.random(-50, 100)
+    currentEquity += pnl
+    // Simulate position changes
+    openPositions := math.random(0, maxPositions)
+
+// Calculate drawdown
+drawdown = (accountBalance - currentEquity) / accountBalance * 100
+
+// Risk conditions
+highDrawdown = drawdown >= maxDrawdownPerc
+tooManyPositions = openPositions >= maxPositions
+
+// Alert conditions
+alertcondition(highDrawdown, "High Drawdown Alert", "Account drawdown has exceeded maximum threshold")
+alertcondition(tooManyPositions, "Too Many Positions Alert", "Number of open positions has exceeded maximum limit")
+
+// Plot metrics
+plot(drawdown, "Drawdown %", color=color.red)
+hline(maxDrawdownPerc, "Max Drawdown Threshold", color=color.red, linestyle=hline.style_dashed)
+
+// Plot position count
+plot(openPositions, "Open Positions", color=color.blue, display=display.data_window)
+hline(maxPositions, "Max Positions Threshold", color=color.blue, linestyle=hline.style_dashed)

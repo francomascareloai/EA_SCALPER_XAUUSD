@@ -19,6 +19,16 @@
         "GITHUB_TOOLSETS": "",
         "GITHUB_READ_ONLY": ""
       }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--browser=",
+        "--headless=",
+        "--viewport-size="
+      ]
     }
   }
 }

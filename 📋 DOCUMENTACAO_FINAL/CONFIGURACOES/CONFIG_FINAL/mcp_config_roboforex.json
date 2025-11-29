@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "metatrader5_roboforex": {
+      "command": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/.venv/Scripts/python.exe",
+      "args": [
+        "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/run.py",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--broker",
+        "roboforex"
+      ],
+      "env": {
+        "PYTHONPATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/src",
+        "MT5_BROKER": "RoboForex",
+        "MT5_SERVER": "RoboForex-Pro",
+        "MT5_LOGIN": "68235069",
+        "MT5_CONFIG_PATH": "C:/Users/Admin/Documents/EA_SCALPER_XAUUSD/mcp-metatrader5-server/config/roboforex_config.json"
+      }
+    }
+  }
+}

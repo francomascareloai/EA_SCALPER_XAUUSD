@@ -1,0 +1,28 @@
+//@version=5
+strategy("Example Scalping Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// Input parameters
+rsiLength = input.int(14, "RSI Length")
+rsiOverbought = input.int(70, "RSI Overbought")
+rsiOversold = input.int(30, "RSI Oversold")
+emaLength = input.int(20, "EMA Length")
+
+// Calculate indicators
+rsi = ta.rsi(close, rsiLength)
+ema = ta.ema(close, emaLength)
+
+// Generate signals
+longCondition = ta.crossover(rsi, rsiOversold) and close > ema
+shortCondition = ta.crossunder(rsi, rsiOverbought) and close < ema
+
+// Execute trades
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+
+// Plot indicators
+plot(ema, "EMA", color=color.blue)
+hline(rsiOverbought, "RSI Overbought", color=color.red)
+hline(rsiOversold, "RSI Oversold", color=color.green)

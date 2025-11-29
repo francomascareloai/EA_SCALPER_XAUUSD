@@ -1,0 +1,27 @@
+//@version=5
+strategy("Example Swing Strategy", overlay=true, default_qty_type=strategy.percent_of_equity, default_qty_value=10)
+
+// Input parameters
+fastLength = input.int(12, "Fast Length")
+slowLength = input.int(26, "Slow Length")
+signalLength = input.int(9, "Signal Length")
+
+// Calculate MACD
+[macdLine, signalLine, _] = ta.macd(close, fastLength, slowLength, signalLength)
+histogram = macdLine - signalLine
+
+// Generate signals
+longCondition = ta.crossover(macdLine, signalLine) and macdLine < 0
+shortCondition = ta.crossunder(macdLine, signalLine) and macdLine > 0
+
+// Execute trades
+if (longCondition)
+    strategy.entry("Long", strategy.long)
+
+if (shortCondition)
+    strategy.entry("Short", strategy.short)
+
+// Plot indicators
+plot(macdLine, "MACD", color=color.blue)
+plot(signalLine, "Signal", color=color.red)
+plot(histogram, "Histogram", style=plot.style_columns, color=histogram > 0 ? color.green : color.red)

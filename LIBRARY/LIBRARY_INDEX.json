@@ -1,0 +1,15 @@
+{
+  "library": "EA_SCALPER_XAUUSD Library",
+  "version": "1.0",
+  "last_updated": "2025-08-24",
+  "components": {
+    "mql5_components": {
+      "description": "Reusable MQL5 components",
+      "path": "LIBRARY/mql5_components"
+    },
+    "python_components": {
+      "description": "Python components for trading automation",
+      "path": "LIBRARY/python_components"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "cleanup_date": "2025-08-24T17:08:15.692992",
+  "total_processing_time": 102.98256301879883,
+  "backup_directory": "c:\\Users\\Admin\\Documents\\EA_SCALPER_XAUUSD\\LIMPEZA_FINAL_COMPLETA\\duplicatas_removidas_20250824_170815",
+  "files_processed": 75611,
+  "duplicate_groups": 15049,
+  "files_removed": 70319,
+  "space_saved_bytes": 5840654335,
+  "space_saved_gb": 5.4395332327112556,
+  "category_statistics": {
+    "python_cache": {
+      "removed": 2032,
+      "space": 14064681
+    },
+    "mql_files": {
+      "removed": 44969,
+      "space": 1922542565
+    },
+    "json_metadata": {
+      "removed": 13843,
+      "space": 33494954
+    },
+    "backup_files": {
+      "removed": 8145,
+      "space": 2114299691
+    },
+    "system_files": {
+      "removed": 0,
+      "space": 0
+    },
+    "other_files": {
+      "removed": 1330,
+      "space": 1756252444
+    }
+  },
+  "summary": {
+    "original_file_count": 147982,
+    "final_file_count": 77663,
+    "cleanup_efficiency": "47.5%",
+    "space_efficiency": "68.9%"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "project": "EA_SCALPER_XAUUSD",
+  "last_update": "2025-08-24T10:00:00Z",
+  "main_eas": {},
+  "backup_status": {
+    "last_backup": "2025-08-24T10:00:00Z",
+    "backup_frequency": "hourly",
+    "retention_policy": "30_days"
+  },
+  "ai_coordination": {
+    "active_agents": 0,
+    "coordination_status": "not_initialized",
+    "last_sync": "2025-08-24T10:00:00Z"
+  }
+}

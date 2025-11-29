@@ -1,0 +1,327 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive EA Validation Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .status-passed { background: linear-gradient(45deg, #10b981, #34d399); }
+        .status-failed { background: linear-gradient(45deg, #ef4444, #f87171); }
+        .status-warning { background: linear-gradient(45deg, #f59e0b, #fbbf24); }
+        .metric-excellent { color: #10b981; }
+        .metric-good { color: #f59e0b; }
+        .metric-poor { color: #ef4444; }
+        .section-card { transition: transform 0.2s ease-in-out; }
+        .section-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-5xl font-bold text-blue-400 mb-2">EA Validation Report</h1>
+            <p class="text-gray-400 text-lg">Comprehensive Testing & Analysis Results</p>
+            <div class="text-sm text-gray-500 mt-4">Generated: 2025-10-18 19:26:26</div>
+        </header>
+
+        <!-- Executive Summary -->
+        <section class="mb-8">
+            <div class="bg-gradient-to-r from-blue-800 to-purple-800 rounded-lg p-6 section-card">
+                <h2 class="text-3xl font-bold mb-6 text-white">Executive Summary</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-center">
+                        <div class="text-sm text-gray-300 mb-2">Overall Score</div>
+                        <div class="text-3xl font-bold text-red-400">47.7/100</div>
+                        <div class="text-xs text-gray-400 mt-1">FAILED</div>
+                    </div>
+                    <div class="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-center">
+                        <div class="text-sm text-gray-300 mb-2">Stress Tests</div>
+                        <div class="text-3xl font-bold text-green-400">0/5</div>
+                        <div class="text-xs text-gray-400 mt-1">0.0% passed</div>
+                    </div>
+                    <div class="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-center">
+                        <div class="text-sm text-gray-300 mb-2">Monte Carlo</div>
+                        <div class="text-3xl font-bold text-yellow-400">100.0%</div>
+                        <div class="text-xs text-gray-400 mt-1">success rate</div>
+                    </div>
+                    <div class="bg-gray-800 bg-opacity-50 rounded-lg p-4 text-center">
+                        <div class="text-sm text-gray-300 mb-2">Risk Level</div>
+                        <div class="text-3xl font-bold text-yellow-400">MEDIUM</div>
+                        <div class="text-xs text-gray-400 mt-1">overall risk</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Validation Components -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Stress Testing Results -->
+            <div class="bg-gray-800 rounded-lg p-6 section-card">
+                <h3 class="text-xl font-bold mb-4 text-blue-300">🧪 Stress Testing</h3>
+                <div class="space-y-3">
+                    
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-300">Extreme Volatility</span>
+                <span class="text-sm font-bold text-red-400">30</span>
+            </div>
+        
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-300">Flash Crash</span>
+                <span class="text-sm font-bold text-red-400">30</span>
+            </div>
+        
+            <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-300">Low Liquidity</span>
+                <span class="text-sm font-bold text-red-400">30</span>
+            </div>
+        
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <div class="text-sm text-gray-400">Worst Case:</div>
+                    <div class="text-sm font-bold text-red-400">Extreme Volatility</div>
+                </div>
+            </div>
+
+            <!-- Monte Carlo Results -->
+            <div class="bg-gray-800 rounded-lg p-6 section-card">
+                <h3 class="text-xl font-bold mb-4 text-blue-300">🎲 Monte Carlo</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Success Rate:</span>
+                        <span class="font-bold text-green-400">100.0%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">VaR (95%):</span>
+                        <span class="font-bold text-yellow-400">$816</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Max DD (95%):</span>
+                        <span class="font-bold text-red-400">2904.9%</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <div class="text-sm text-gray-400">Reliability:</div>
+                    <div class="text-sm font-bold text-green-400">HIGH</div>
+                </div>
+            </div>
+
+            <!-- Walk-Forward Results -->
+            <div class="bg-gray-800 rounded-lg p-6 section-card">
+                <h3 class="text-xl font-bold mb-4 text-blue-300">🚶 Walk-Forward</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Consistency:</span>
+                        <span class="font-bold text-green-400">87.5%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Param Stability:</span>
+                        <span class="font-bold text-yellow-400">74.3%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Periods:</span>
+                        <span class="font-bold text-blue-400">16</span>
+                    </div>
+                </div>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <div class="text-sm text-gray-400">Robustness:</div>
+                    <div class="text-sm font-bold text-green-400">HIGH</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Metrics -->
+        <section class="mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-blue-300">📊 Detailed Validation Metrics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    
+            <div class="bg-gray-700 rounded p-3">
+                <div class="text-sm text-gray-400 mb-1">Monte Carlo Success Rate</div>
+                <div class="text-lg font-bold text-green-400">100.0</div>
+                <div class="text-xs text-gray-500">Benchmark: 70.0</div>
+            </div>
+        
+            <div class="bg-gray-700 rounded p-3">
+                <div class="text-sm text-gray-400 mb-1">Value at Risk (95%)</div>
+                <div class="text-lg font-bold text-green-400">808.2</div>
+                <div class="text-xs text-gray-500">Benchmark: -500.0</div>
+            </div>
+        
+            <div class="bg-gray-700 rounded p-3">
+                <div class="text-sm text-gray-400 mb-1">Maximum Drawdown (95th percentile)</div>
+                <div class="text-lg font-bold text-red-400">2613.8</div>
+                <div class="text-xs text-gray-500">Benchmark: 25.0</div>
+            </div>
+        
+            <div class="bg-gray-700 rounded p-3">
+                <div class="text-sm text-gray-400 mb-1">Walk-Forward Consistency</div>
+                <div class="text-lg font-bold text-green-400">100.0</div>
+                <div class="text-xs text-gray-500">Benchmark: 70.0</div>
+            </div>
+        
+            <div class="bg-gray-700 rounded p-3">
+                <div class="text-sm text-gray-400 mb-1">Parameter Stability</div>
+                <div class="text-lg font-bold text-green-400">70.6</div>
+                <div class="text-xs text-gray-500">Benchmark: 80.0</div>
+            </div>
+        
+            <div class="bg-gray-700 rounded p-3">
+                <div class="text-sm text-gray-400 mb-1">Return Stability</div>
+                <div class="text-lg font-bold text-green-400">41.9</div>
+                <div class="text-xs text-gray-500">Benchmark: 70.0</div>
+            </div>
+        
+                </div>
+            </div>
+        </section>
+
+        <!-- Risk Assessment -->
+        <section class="mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-blue-300">⚠️ Risk Assessment</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-red-400">Risk Factors Identified:</h3>
+                        <ul class="space-y-2">
+                            <li class='text-sm text-gray-300 flex items-start'><span class='text-red-400 mr-2'>⚠️</span>High maximum drawdown risk</li><li class='text-sm text-gray-300 flex items-start'><span class='text-red-400 mr-2'>⚠️</span>High market correlation</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-3 text-yellow-400">Risk Metrics:</h3>
+                        <div class="space-y-2">
+                            
+        <div class="flex justify-between">
+            <span class="text-gray-400">Risk Score:</span>
+            <span class="font-bold text-yellow-400">35/100</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-gray-400">VaR (95%):</span>
+            <span class="font-bold text-red-400">$816</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="text-gray-400">Max DD Risk:</span>
+            <span class="font-bold text-orange-400">2904.9%</span>
+        </div>
+    
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Recommendations -->
+        <section class="mb-8">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h2 class="text-2xl font-bold mb-4 text-blue-300">💡 Recommendations</h2>
+                <div class="space-y-4">
+                    
+            <div class="bg-gray-700 bg-opacity-50 rounded p-3 flex items-start">
+                <span class="text-lg mr-3">✅</span>
+                <span class="text-sm text-green-400">Strategy passes basic validation - continue monitoring and testing</span>
+            </div>
+        
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-bold mb-4 text-blue-300">Performance Distribution</h3>
+                <canvas id="performanceChart" height="200"></canvas>
+            </div>
+            <div class="bg-gray-800 rounded-lg p-6">
+                <h3 class="text-lg font-bold mb-4 text-blue-300">Risk vs Return</h3>
+                <canvas id="riskChart" height="200"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Performance Distribution Chart
+        const perfCtx = document.getElementById('performanceChart').getContext('2d');
+        new Chart(perfCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Stress Tests', 'Monte Carlo', 'Walk-Forward', 'Overall'],
+                datasets: [{
+                    label: 'Score',
+                    data: [30.0, 100.0, 87.5, 47.70314285501221],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.6)',
+                        'rgba(16, 185, 129, 0.6)',
+                        'rgba(245, 158, 11, 0.6)',
+                        'rgba(139, 92, 246, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(139, 92, 246, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#374151' }
+                    },
+                    x: {
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#374151' }
+                    }
+                }
+            }
+        });
+
+        // Risk vs Return Chart
+        const riskCtx = document.getElementById('riskChart').getContext('2d');
+        new Chart(riskCtx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Test Scenarios',
+                    data: [{"x": 70.0, "y": 0}, {"x": 70.0, "y": 0}, {"x": 70.0, "y": 0}, {"x": 70.0, "y": 0}, {"x": 70.0, "y": 0}],
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    pointRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Risk Score',
+                            color: '#9ca3af'
+                        },
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#374151' }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Return Score',
+                            color: '#9ca3af'
+                        },
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#374151' }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+    

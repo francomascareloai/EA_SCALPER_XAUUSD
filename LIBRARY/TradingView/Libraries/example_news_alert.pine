@@ -1,0 +1,25 @@
+//@version=5
+indicator("Example News Alert", overlay=true)
+
+// Input parameters
+newsImpactThreshold = input.float(0.5, "News Impact Threshold", minval=0.1, maxval=1.0)
+volatilityWindow = input.int(20, "Volatility Window")
+
+// Calculate volatility
+volatility = ta.stdev(close, volatilityWindow)
+
+// Detect sudden volatility spikes (simulated news impact)
+// In real implementation, this would come from external news sources
+avgVolatility = ta.sma(volatility, volatilityWindow * 2)
+volatilitySpike = volatility > avgVolatility * (1 + newsImpactThreshold)
+
+// Plot volatility
+plot(volatility, "Current Volatility", color=color.orange)
+plot(avgVolatility, "Average Volatility", color=color.blue)
+plot(avgVolatility * (1 + newsImpactThreshold), "Threshold", color=color.red, style=plot.style_circles)
+
+// Alert conditions
+alertcondition(volatilitySpike, "High Volatility Spike", "Sudden increase in volatility detected, possible news event")
+
+// Plot spike indicator
+bgcolor(volatilitySpike ? color.new(color.yellow, 80) : na, title="Volatility Spike Background")

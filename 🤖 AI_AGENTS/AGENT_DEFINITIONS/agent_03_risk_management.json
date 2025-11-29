@@ -1,0 +1,17 @@
+{
+  "agent_id": "agent_03_risk_management",
+  "name": "Risk Management Agent",
+  "description": "Agent responsible for risk management and compliance",
+  "version": "1.0",
+  "status": "active",
+  "mcp_servers": [
+    "metatrader5",
+    "risk_analysis",
+    "compliance_checker"
+  ],
+  "capabilities": [
+    "risk_assessment",
+    "position_sizing",
+    "drawdown_protection"
+  ]
+}

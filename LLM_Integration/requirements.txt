@@ -1,0 +1,2 @@
+litellm==1.0.0
+diskcache==5.6.1

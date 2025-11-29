@@ -1,0 +1,24 @@
+name: Publish Python Package to PyPI
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        uv python install 3.11
+    - name: Build package
+      run: |
+        uv build
+    - name: Publish to PyPI
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        uv publish -t "$PYPI_TOKEN"

@@ -1,0 +1,27 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# Local configuration
+.env
+
+# Package info
+*.egg-info/
+
+# default log folder used by mcp servers
+/logs/
+
+# Cache files
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EA Optimization Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-blue-400 mb-2">EA Optimization Report</h1>
+            <p class="text-gray-400">Generated on 2025-10-18 18:27:36</p>
+        </header>
+
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-blue-300">Optimization Results</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-gray-800 rounded-lg">
+                    <thead class="bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Strategy</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Return</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Sharpe Ratio</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Max Drawdown</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Win Rate</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Profit Factor</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-600">
+                        
+                        <tr class="hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Balanced Strategy</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">15.75%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">1.850</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">8.20%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">68.5%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2.10</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">🟢 Excellent</td>
+                        </tr>
+            
+                        <tr class="hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Aggressive Strategy</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">28.40%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">1.450</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">15.80%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">62.3%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">1.80</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">🟡 Good</td>
+                        </tr>
+            
+                        <tr class="hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Conservative Strategy</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">9.25%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2.150</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">4.10%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">75.2%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2.80</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">🟢 Excellent</td>
+                        </tr>
+            
+                        <tr class="hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Scalper Pro</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">22.60%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">1.950</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">6.80%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">71.8%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2.40</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">🟢 Excellent</td>
+                        </tr>
+            
+                        <tr class="hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">Swing Trader</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">18.90%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">1.750</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">9.50%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">66.4%</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">2.00</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">🟢 Excellent</td>
+                        </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold mb-4 text-blue-300">Backtest Results</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold mb-2 text-blue-300">Backtest 1</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Duration:</span>
+                            <span>24 hours</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Trades:</span>
+                            <span>48</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Profit:</span>
+                            <span class="text-green-400">$125.50</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Success Rate:</span>
+                            <span>68.8%</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold mb-2 text-blue-300">Backtest 2</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Duration:</span>
+                            <span>168 hours</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Trades:</span>
+                            <span>312</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Profit:</span>
+                            <span class="text-green-400">$892.30</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Success Rate:</span>
+                            <span>71.2%</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold mb-2 text-blue-300">Backtest 3</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Duration:</span>
+                            <span>720 hours</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Trades:</span>
+                            <span>1450</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Profit:</span>
+                            <span class="text-green-400">$4250.80</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Success Rate:</span>
+                            <span>69.5%</span>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-bold mb-2 text-blue-300">Backtest 4</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Duration:</span>
+                            <span>2160 hours</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Trades:</span>
+                            <span>4320</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Profit:</span>
+                            <span class="text-green-400">$12680.40</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Success Rate:</span>
+                            <span>70.1%</span>
+                        </div>
+                    </div>
+                </div>
+            
+            </div>
+        </section>
+    </div>
+</body>
+</html>
+        

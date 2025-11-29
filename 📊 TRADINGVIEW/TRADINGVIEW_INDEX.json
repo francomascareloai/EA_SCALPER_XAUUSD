@@ -1,0 +1,24 @@
+{
+  "section": "TRADINGVIEW",
+  "description": "Scripts Pine Script e conversões MQL",
+  "created_at": "2025-08-24T13:28:37.824177",
+  "categories": {
+    "Pine_Script_Source": {
+      "Indicators": "Indicadores Pine Script",
+      "Strategies": "Estratégias de trading",
+      "Alerts": "Sistemas de alertas",
+      "Libraries": "Bibliotecas de funções"
+    },
+    "MQL_Conversions": {
+      "Converted_Indicators": "Indicadores convertidos para MQL",
+      "Converted_Strategies": "Estratégias convertidas",
+      "Conversion_Tools": "Ferramentas de conversão"
+    }
+  },
+  "conversion_workflow": {
+    "step_1": "Desenvolver em Pine Script",
+    "step_2": "Testar no TradingView",
+    "step_3": "Converter para MQL4/MQL5",
+    "step_4": "Integrar na biblioteca"
+  }
+}
