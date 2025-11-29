@@ -136,3 +136,23 @@ DOCS/RESEARCH/repos/
 
 # Local email accounts configuration (contains credentials)
 tools/email_manager/accounts.json
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+
+# Temp files
+temp_*
+*.log
+
+# Cold storage (large files)
+DOCS/_COLD_STORAGE/
+
+# Archives (already compressed)
+_ARCHIVE/
+
+# OS files
+.DS_Store
+Thumbs.db
