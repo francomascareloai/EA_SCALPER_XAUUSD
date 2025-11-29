@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MQL5 Scraper Monitor</title>
+    <meta charset="utf-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: #1a1a2e; 
+            color: #eee; 
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #00d4ff; margin-bottom: 20px; text-align: center; }
+        .status-box {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #0f3460;
+        }
+        .progress-container {
+            background: #0f3460;
+            border-radius: 10px;
+            height: 40px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #1a1a2e;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #0f3460;
+        }
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        .stat-label { color: #888; margin-top: 5px; }
+        .running { color: #00ff88; }
+        .stopped { color: #ff6b6b; }
+        .info { color: #888; text-align: center; margin-top: 20px; font-size: 0.9em; }
+        #raw { 
+            background: #0f3460; 
+            padding: 15px; 
+            border-radius: 8px; 
+            font-family: monospace; 
+            font-size: 0.85em;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MQL5 PRO SCRAPER</h1>
+        
+        <div class="status-box">
+            <div style="display: flex; justify-content: space-between;">
+                <span>Status: <span id="status" class="stopped">WAITING...</span></span>
+                <span>Speed: <span id="speed">0</span> pg/s</span>
+                <span>Queue: <span id="queue">0</span></span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress" style="width: 0%">0%</div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="success">0</div>
+                <div class="stat-label">Downloaded</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="skipped">0</div>
+                <div class="stat-label">Skipped</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="errors">0</div>
+                <div class="stat-label">Errors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="credits">0</div>
+                <div class="stat-label">Credits</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="total">0</div>
+                <div class="stat-label">Total Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="elapsed">0s</div>
+                <div class="stat-label">Elapsed</div>
+            </div>
+        </div>
+
+        <div class="status-box" style="margin-top: 20px;">
+            <h3 style="margin-bottom: 10px; color: #00d4ff;">Raw Status</h3>
+            <div id="raw">Waiting for status file...</div>
+        </div>
+
+        <div class="info">
+            <p>This page reads from: <code>DOCS/SCRAPED/reference/.status.json</code></p>
+            <p>Last update: <span id="lastUpdate">-</span></p>
+        </div>
+    </div>
+
+    <script>
+        // For local file access, we need to poll via a simple approach
+        // Since we can't read files directly, user needs to refresh
+        // Or use the Python server version
+        
+        let lastData = null;
+        
+        async function loadStatus() {
+            // Try to fetch from local server if running
+            const urls = [
+                'http://localhost:8888/status.json',
+                'http://localhost:9000/status.json',
+                'http://localhost:5000/status.json'
+            ];
+            
+            for (const url of urls) {
+                try {
+                    const r = await fetch(url + '?' + Date.now(), {mode: 'cors'});
+                    if (r.ok) {
+                        const data = await r.json();
+                        updateUI(data);
+                        return;
+                    }
+                } catch(e) {}
+            }
+            
+            document.getElementById('status').textContent = 'NO SERVER';
+            document.getElementById('raw').textContent = 
+                'Server not running. Start it with:\n\n' +
+                'python scripts/scraper_ui.py\n\n' +
+                'Then refresh this page.';
+        }
+        
+        function updateUI(data) {
+            document.getElementById('status').textContent = data.running ? 'RUNNING' : 'STOPPED';
+            document.getElementById('status').className = data.running ? 'running' : 'stopped';
+            
+            document.getElementById('success').textContent = data.success || 0;
+            document.getElementById('skipped').textContent = data.skipped || 0;
+            document.getElementById('errors').textContent = data.errors || 0;
+            document.getElementById('credits').textContent = data.credits || 0;
+            document.getElementById('total').textContent = data.total_files || 0;
+            document.getElementById('queue').textContent = data.queue || 0;
+            document.getElementById('speed').textContent = (data.speed || 0).toFixed(1);
+            
+            const elapsed = data.elapsed || 0;
+            const mins = Math.floor(elapsed / 60);
+            const secs = Math.floor(elapsed % 60);
+            document.getElementById('elapsed').textContent = mins > 0 ? mins + 'm' + secs + 's' : secs + 's';
+            
+            const pct = data.max_pages > 0 ? Math.min(100, data.success / data.max_pages * 100).toFixed(1) : 0;
+            document.getElementById('progress').style.width = pct + '%';
+            document.getElementById('progress').textContent = pct + '%';
+            
+            document.getElementById('raw').textContent = JSON.stringify(data, null, 2);
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+        
+        setInterval(loadStatus, 1000);
+        loadStatus();
+    </script>
+</body>
+</html>

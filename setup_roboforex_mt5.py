@@ -33,10 +33,13 @@ class RoboForexSetup:
             password: Account password  
             server: Server name (default: RoboForex-Demo)
         """
+        # NOTE: do not hard-code real credentials in this file or commit them to version control.
+        # Pass them explicitly (or load from environment variables) and store only in the local
+        # JSON file below, which is ignored by .git.
         credentials = {
-            "login": 68235069,
-            "password": Franco312??,
-            "server": RoboForex-Pro,
+            "login": login,
+            "password": password,
+            "server": server,
             "broker": "RoboForex",
             "setup_date": "2025-08-22",
             "notes": "Demo account for FTMO challenge preparation"

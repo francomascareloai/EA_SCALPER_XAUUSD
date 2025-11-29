@@ -78,6 +78,7 @@ node_modules/
 *.tpl
 *.hst
 *.fxt
+MQL5/compile_log.txt
 
 # Large data files
 *.csv
@@ -90,3 +91,48 @@ node_modules/
 *.p12
 config.ini
 secrets.json
+.env
+.env.local
+.env.production
+.env.development
+
+# API Keys and Tokens (CRITICAL SECURITY)
+*personal_access_token*
+*github_token*
+*api_key*
+*secret_key*
+ghp_*
+gho_*
+ghu_*
+ghs_*
+ghr_*
+
+# Configuration files with credentials
+configs/*_config*.json
+configs/*_secrets*.json
+*.config.json
+.mcp*.json
+claude*.json
+
+# Any file containing sensitive tokens
+**/*token*.json
+**/*credential*.json
+**/*secret*.json
+
+# Factory storage (contains auth tokens)
+.storage/
+
+# RAG Database (large files)
+.rag-db/lancedb/
+.rag-db/models/
+
+# Scraped documentation (can be regenerated)
+DOCS/SCRAPED/reference/
+DOCS/SCRAPED/book/
+DOCS/SCRAPED/articles/
+
+# Cloned research repositories (external Git repos, not tracked here)
+DOCS/RESEARCH/repos/
+
+# Local email accounts configuration (contains credentials)
+tools/email_manager/accounts.json

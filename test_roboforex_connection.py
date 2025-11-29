@@ -7,6 +7,7 @@ Test your RoboForex credentials directly
 import asyncio
 import sys
 from pathlib import Path
+import os
 
 # Add project root to path
 project_root = Path(__file__).parent
@@ -20,18 +21,19 @@ async def test_your_credentials():
     print("🔌 DIRECT ROBOFOREX CONNECTION TEST")
     print("=" * 50)
     
-    # ⚠️ EDIT THESE WITH YOUR ACTUAL ROBOFOREX CREDENTIALS:
-    YOUR_LOGIN = 68235069        # Replace with your RoboForex login
-    YOUR_PASSWORD = "Franco312??"  # Replace with your RoboForex password
-    YOUR_SERVER = "RoboForex-Pro"   # Your server (RoboForex-Demo, RoboForex-Pro, etc.)
+    # ⚠️ Provide your credentials via environment variables or by editing these
+    # placeholders locally. Never commit real credentials to the repository.
+    YOUR_LOGIN = int(os.getenv("ROBOFOREX_LOGIN", "0"))  # Replace locally or set env var
+    YOUR_PASSWORD = os.getenv("ROBOFOREX_PASSWORD", "YourPassword")
+    YOUR_SERVER = os.getenv("ROBOFOREX_SERVER", "RoboForex-Demo")
     
     print(f"📊 Testing with:")
     print(f"  Login: {YOUR_LOGIN}")
     print(f"  Server: {YOUR_SERVER}")
     print(f"  Password: {'*' * len(YOUR_PASSWORD)}")
     
-    # Check if credentials were updated
-    if YOUR_LOGIN == 12345678 and YOUR_PASSWORD == "YourPassword":
+    # Check if credentials were updated from placeholders
+    if YOUR_LOGIN == 0 or YOUR_PASSWORD == "YourPassword":
         print("⚠️ WARNING: You're using template credentials!")
         print("📝 Please edit this script with your real RoboForex credentials")
         print("🔗 Get credentials at: https://www.roboforex.com/demo-account/")

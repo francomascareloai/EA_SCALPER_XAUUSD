@@ -1,0 +1,176 @@
+//+------------------------------------------------------------------+
+//|                                          SignalScoringModule.mqh |
+//|                                                           Franco |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Franco"
+#property link      "https://www.mql5.com"
+#property strict
+
+#include "../Core/Definitions.mqh"
+#include "../Analysis/EliteOrderBlock.mqh"
+
+//+------------------------------------------------------------------+
+//| Class: CSignalScoringModule                                      |
+//| Purpose: Calculates trade scores based on technical, fundamental,|
+//|          and sentiment analysis.                                 |
+//+------------------------------------------------------------------+
+class CSignalScoringModule
+{
+private:
+   //--- Weights
+   double            m_weight_tech;
+   double            m_weight_fund;
+   double            m_weight_sent;
+
+   //--- Components
+   CEliteOrderBlockDetector m_ob_detector;
+
+   //--- State
+   int               m_last_score;
+   ENUM_ORDER_TYPE   m_last_direction;
+   double            m_last_sl;
+   double            m_last_tp;
+
+public:
+                     CSignalScoringModule();
+                    ~CSignalScoringModule();
+
+   //--- Initialization
+   bool              Init(double weight_tech, double weight_fund, double weight_sent);
+
+   //--- Core Logic
+   int               CalculateScore();
+   
+   //--- Getters
+   int               GetLastScore() const { return m_last_score; }
+   ENUM_ORDER_TYPE   GetDirection() const { return m_last_direction; }
+   double            GetStopLossPrice() const { return m_last_sl; }
+   double            GetTakeProfitPrice() const { return m_last_tp; }
+
+private:
+   int               CalculateTechnicalScore();
+   int               CalculateFundamentalScore(); // Placeholder for Phase 2
+   int               CalculateSentimentScore();   // Placeholder for Phase 2
+};
+
+//+------------------------------------------------------------------+
+//| Constructor                                                      |
+//+------------------------------------------------------------------+
+CSignalScoringModule::CSignalScoringModule() :
+   m_weight_tech(0.6),
+   m_weight_fund(0.25),
+   m_weight_sent(0.15),
+   m_last_score(0),
+   m_last_direction(WRONG_VALUE),
+   m_last_sl(0.0),
+   m_last_tp(0.0)
+{
+}
+
+//+------------------------------------------------------------------+
+//| Destructor                                                       |
+//+------------------------------------------------------------------+
+CSignalScoringModule::~CSignalScoringModule()
+{
+}
+
+//+------------------------------------------------------------------+
+//| Initialization                                                   |
+//+------------------------------------------------------------------+
+bool CSignalScoringModule::Init(double weight_tech, double weight_fund, double weight_sent)
+{
+   // Normalize weights if they don't sum to 1.0 (optional, but good practice)
+   double sum = weight_tech + weight_fund + weight_sent;
+   if(sum <= 0) return false;
+
+   m_weight_tech = weight_tech / sum;
+   m_weight_fund = weight_fund / sum;
+   m_weight_sent = weight_sent / sum;
+
+   return true;
+}
+
+//+------------------------------------------------------------------+
+//| Calculate Total Score                                            |
+//+------------------------------------------------------------------+
+int CSignalScoringModule::CalculateScore()
+{
+   // 1. Technical Score (MQL5 Local)
+   int tech_score = CalculateTechnicalScore();
+
+   // 2. Fundamental Score (Python - Placeholder)
+   int fund_score = CalculateFundamentalScore();
+
+   // 3. Sentiment Score (Python - Placeholder)
+   int sent_score = CalculateSentimentScore();
+
+   // Weighted Average
+   double total_score = (tech_score * m_weight_tech) + 
+                        (fund_score * m_weight_fund) + 
+                        (sent_score * m_weight_sent);
+
+   m_last_score = (int)MathRound(total_score);
+   return m_last_score;
+}
+
+//+------------------------------------------------------------------+
+//| Calculate Technical Score (Order Blocks + Confluence)            |
+//+------------------------------------------------------------------+
+int CSignalScoringModule::CalculateTechnicalScore()
+{
+   // Detect Order Blocks
+   if(!m_ob_detector.DetectEliteOrderBlocks())
+   {
+      return 0;
+   }
+
+   // Get the best Order Block (Sorted by quality in detector)
+   if(m_ob_detector.GetCount() == 0) return 0;
+
+   SAdvancedOrderBlock best_ob = m_ob_detector.GetOrderBlock(0);
+   
+   // Basic Validation
+   if(best_ob.probability_score < 50) return 0;
+
+   // Set Signal Properties
+   if(best_ob.type == OB_BULLISH)
+   {
+      m_last_direction = ORDER_TYPE_BUY;
+      m_last_sl = best_ob.low_price; // SL below OB
+      // Simple 1:2 RR for MVP
+      double risk = best_ob.refined_entry - m_last_sl;
+      m_last_tp = best_ob.refined_entry + (risk * 2.0);
+   }
+   else if(best_ob.type == OB_BEARISH)
+   {
+      m_last_direction = ORDER_TYPE_SELL;
+      m_last_sl = best_ob.high_price; // SL above OB
+      // Simple 1:2 RR for MVP
+      double risk = m_last_sl - best_ob.refined_entry;
+      m_last_tp = best_ob.refined_entry - (risk * 2.0);
+   }
+   else
+   {
+      return 0;
+   }
+
+   // Return the Probability Score as the Technical Score
+   return (int)MathRound(best_ob.probability_score);
+}
+
+//+------------------------------------------------------------------+
+//| Calculate Fundamental Score (Placeholder)                        |
+//+------------------------------------------------------------------+
+int CSignalScoringModule::CalculateFundamentalScore()
+{
+   return 50; // Neutral
+}
+
+//+------------------------------------------------------------------+
+//| Calculate Sentiment Score (Placeholder)                          |
+//+------------------------------------------------------------------+
+int CSignalScoringModule::CalculateSentimentScore()
+{
+   return 50; // Neutral
+}
