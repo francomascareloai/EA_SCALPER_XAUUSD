@@ -486,6 +486,293 @@ IMPORTANTE - O QUE MONTE CARLO NAO CAPTURA:
    - Usar com outras analises, nao isoladamente
 ```
 
+## 4.6 Block Bootstrap Monte Carlo (PARTY MODE #001 P3)
+
+### Por Que Block Bootstrap?
+
+Conforme identificado no Party Mode Session #001 (ARGUS finding):
+> "Monte Carlo com 5000 runs e standard. Mas papers recentes sugerem mais."
+> - Marcos Lopez de Prado (2018) - 'Advances in Financial ML': Sugere Monte Carlo com BLOCK BOOTSTRAP para preservar autocorrelacao de trades.
+
+**Problema do Bootstrap Tradicional:**
+- Trades sao amostrados INDEPENDENTEMENTE
+- Perde autocorrelacao (win streaks, loss streaks)
+- Subestima risk of ruin em muitos casos
+
+**Solucao Block Bootstrap:**
+- Amostra BLOCOS de trades consecutivos (5-10)
+- Preserva autocorrelacao dentro do bloco
+- Mais realista para trading
+
+### Implementacao Python
+
+```python
+"""
+Block Bootstrap Monte Carlo for EA_SCALPER_XAUUSD
+Based on: Politis & Romano (1994), Lopez de Prado (2018)
+"""
+import numpy as np
+import pandas as pd
+from typing import List, Tuple
+from dataclasses import dataclass
+
+@dataclass
+class BlockBootstrapResult:
+    """Results from block bootstrap Monte Carlo"""
+    simulations: int
+    block_size: int
+    
+    # Drawdown distribution
+    dd_5th: float
+    dd_50th: float
+    dd_95th: float
+    dd_99th: float
+    
+    # Profit distribution
+    profit_5th: float
+    profit_50th: float
+    profit_95th: float
+    
+    # Risk metrics
+    risk_of_ruin_5pct: float  # Prob of hitting 5% DD
+    risk_of_ruin_10pct: float  # Prob of hitting 10% DD
+    
+    # Autocorrelation preserved
+    avg_streak_length: float
+    max_win_streak: int
+    max_loss_streak: int
+
+def optimal_block_size(n_trades: int, autocorr: float = None) -> int:
+    """
+    Calculate optimal block size using Politis-Romano method.
+    
+    Rule of thumb: block_size = n^(1/3) for stationary series
+    Adjusted for detected autocorrelation if available.
+    """
+    base_size = int(np.ceil(n_trades ** (1/3)))
+    
+    if autocorr is not None and autocorr > 0.1:
+        # Increase block size for higher autocorrelation
+        adjustment = 1 + (autocorr * 2)
+        return int(np.ceil(base_size * adjustment))
+    
+    return max(5, min(base_size, 20))  # Clamp between 5-20
+
+def block_bootstrap_montecarlo(
+    trades: pd.DataFrame,
+    n_simulations: int = 5000,
+    block_size: int = None,
+    initial_capital: float = 100000,
+    ftmo_daily_limit: float = 0.05,
+    ftmo_total_limit: float = 0.10
+) -> BlockBootstrapResult:
+    """
+    Run Block Bootstrap Monte Carlo simulation.
+    
+    Parameters:
+    -----------
+    trades : DataFrame with 'profit' column (in currency)
+    n_simulations : Number of MC runs (5000 recommended)
+    block_size : Size of blocks (auto-calculated if None)
+    initial_capital : Starting capital for DD calculation
+    ftmo_daily_limit : FTMO daily DD limit (default 5%)
+    ftmo_total_limit : FTMO total DD limit (default 10%)
+    
+    Returns:
+    --------
+    BlockBootstrapResult with distribution metrics
+    """
+    
+    profits = trades['profit'].values
+    n_trades = len(profits)
+    
+    # Calculate autocorrelation of returns
+    if n_trades > 10:
+        returns = np.sign(profits)  # Convert to win/loss
+        autocorr = np.corrcoef(returns[:-1], returns[1:])[0, 1]
+    else:
+        autocorr = 0
+    
+    # Determine optimal block size
+    if block_size is None:
+        block_size = optimal_block_size(n_trades, autocorr)
+    
+    # Number of blocks in original series
+    n_blocks = n_trades // block_size
+    
+    # Storage for simulation results
+    max_drawdowns = []
+    final_profits = []
+    daily_violations = 0
+    total_violations = 0
+    all_win_streaks = []
+    all_loss_streaks = []
+    
+    for sim in range(n_simulations):
+        # Resample blocks with replacement
+        block_indices = np.random.randint(0, n_blocks, size=n_blocks)
+        
+        # Construct simulated trade sequence
+        simulated_profits = []
+        for block_idx in block_indices:
+            start = block_idx * block_size
+            end = start + block_size
+            simulated_profits.extend(profits[start:end])
+        
+        # Calculate equity curve
+        equity = [initial_capital]
+        peak = initial_capital
+        max_dd = 0
+        daily_pnl = 0
+        daily_trades = 0
+        
+        for pnl in simulated_profits:
+            new_equity = equity[-1] + pnl
+            equity.append(new_equity)
+            
+            # Track peak and drawdown
+            if new_equity > peak:
+                peak = new_equity
+            dd = (peak - new_equity) / peak
+            max_dd = max(max_dd, dd)
+            
+            # Simple daily tracking (reset every 20 trades)
+            daily_pnl += pnl
+            daily_trades += 1
+            if daily_trades >= 20:
+                daily_dd = -daily_pnl / initial_capital
+                if daily_dd >= ftmo_daily_limit:
+                    daily_violations += 1
+                daily_pnl = 0
+                daily_trades = 0
+        
+        max_drawdowns.append(max_dd * 100)
+        final_profits.append(equity[-1] - initial_capital)
+        
+        if max_dd >= ftmo_total_limit:
+            total_violations += 1
+        
+        # Track streaks
+        current_streak = 0
+        is_winning = None
+        for pnl in simulated_profits:
+            if is_winning is None:
+                is_winning = pnl > 0
+                current_streak = 1
+            elif (pnl > 0) == is_winning:
+                current_streak += 1
+            else:
+                if is_winning:
+                    all_win_streaks.append(current_streak)
+                else:
+                    all_loss_streaks.append(current_streak)
+                is_winning = pnl > 0
+                current_streak = 1
+    
+    # Calculate percentiles
+    dd_percentiles = np.percentile(max_drawdowns, [5, 50, 95, 99])
+    profit_percentiles = np.percentile(final_profits, [5, 50, 95])
+    
+    return BlockBootstrapResult(
+        simulations=n_simulations,
+        block_size=block_size,
+        dd_5th=dd_percentiles[0],
+        dd_50th=dd_percentiles[1],
+        dd_95th=dd_percentiles[2],
+        dd_99th=dd_percentiles[3],
+        profit_5th=profit_percentiles[0],
+        profit_50th=profit_percentiles[1],
+        profit_95th=profit_percentiles[2],
+        risk_of_ruin_5pct=daily_violations / n_simulations * 100,
+        risk_of_ruin_10pct=total_violations / n_simulations * 100,
+        avg_streak_length=np.mean(all_win_streaks + all_loss_streaks) if all_win_streaks else 0,
+        max_win_streak=max(all_win_streaks) if all_win_streaks else 0,
+        max_loss_streak=max(all_loss_streaks) if all_loss_streaks else 0
+    )
+
+def print_block_bootstrap_report(result: BlockBootstrapResult) -> str:
+    """Generate formatted report"""
+    report = []
+    report.append("=" * 70)
+    report.append("BLOCK BOOTSTRAP MONTE CARLO REPORT")
+    report.append("=" * 70)
+    report.append(f"Simulations: {result.simulations:,}")
+    report.append(f"Block Size: {result.block_size} trades (preserves autocorrelation)")
+    report.append("-" * 70)
+    report.append("DRAWDOWN DISTRIBUTION:")
+    report.append(f"   5th percentile:  {result.dd_5th:.1f}% (best case)")
+    report.append(f"  50th percentile:  {result.dd_50th:.1f}% (median)")
+    report.append(f"  95th percentile:  {result.dd_95th:.1f}% (worst likely)")
+    report.append(f"  99th percentile:  {result.dd_99th:.1f}% (extreme)")
+    report.append("-" * 70)
+    report.append("PROFIT DISTRIBUTION:")
+    report.append(f"   5th percentile:  ${result.profit_5th:,.0f}")
+    report.append(f"  50th percentile:  ${result.profit_50th:,.0f}")
+    report.append(f"  95th percentile:  ${result.profit_95th:,.0f}")
+    report.append("-" * 70)
+    report.append("RISK METRICS:")
+    report.append(f"  P(Daily DD >= 5%):  {result.risk_of_ruin_5pct:.1f}%")
+    report.append(f"  P(Total DD >= 10%): {result.risk_of_ruin_10pct:.1f}%")
+    report.append("-" * 70)
+    report.append("STREAK ANALYSIS (preserved autocorrelation):")
+    report.append(f"  Avg streak length: {result.avg_streak_length:.1f}")
+    report.append(f"  Max win streak:    {result.max_win_streak}")
+    report.append(f"  Max loss streak:   {result.max_loss_streak}")
+    report.append("=" * 70)
+    
+    # FTMO Verdict
+    if result.dd_95th < 8:
+        verdict = "APPROVED for FTMO"
+    elif result.dd_95th < 10:
+        verdict = "MARGINAL for FTMO - reduce size"
+    else:
+        verdict = "REJECTED for FTMO - too risky"
+    
+    report.append(f"VERDICT: {verdict}")
+    report.append("=" * 70)
+    
+    return "\n".join(report)
+
+# Usage:
+# result = block_bootstrap_montecarlo(trades_df, n_simulations=5000)
+# print(print_block_bootstrap_report(result))
+```
+
+### Quando Usar Block Bootstrap vs Tradicional
+
+| Cenario | Metodo Recomendado | Motivo |
+|---------|-------------------|--------|
+| Trade-a-trade (sem overlap) | Tradicional | Baixa autocorrelacao |
+| Scalping frequente | Block Bootstrap | Alta autocorrelacao |
+| Swing trading | Tradicional | Trades independentes |
+| Grid/Martingale | Block Bootstrap | Posicoes correlacionadas |
+| ML-based entries | Block Bootstrap | Regimes persistem |
+| Alta win rate (>70%) | Block Bootstrap | Streaks importam |
+
+### Integracao com ORACLE Commands
+
+```
+COMANDO: /montecarlo [trades] --block
+
+FLAGS:
+--block       → Usar Block Bootstrap (recomendado)
+--traditional → Usar Bootstrap tradicional
+--auto        → Auto-detectar baseado em autocorrelacao
+
+OUTPUT ADICIONAL COM --block:
+┌─────────────────────────────────────────────────────────────────────┐
+│ BLOCK BOOTSTRAP INFO:                                               │
+│ Block Size: 7 trades (auto-calculated)                              │
+│ Autocorrelation detected: 0.23 (significant)                        │
+│ Reason: Trades show positive serial correlation                     │
+│                                                                     │
+│ Compared to traditional MC:                                         │
+│ - 95th DD: 11.2% (block) vs 9.4% (traditional)                     │
+│ - Block is MORE CONSERVATIVE (realistic)                            │
+│ - Use block values for FTMO planning                                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 # PARTE 5: METRICAS DE PERFORMANCE
@@ -1084,6 +1371,435 @@ WFA WORKFLOW:
 6. DECISAO:
    sequential-thinking: analisar resultados
    memory: guardar validacao
+```
+
+## 11.0.4 WFA Implementation Guide (PARTY MODE #001 P3)
+
+### Python Implementation (e2b sandbox)
+
+```python
+"""
+Walk-Forward Analysis Implementation for EA_SCALPER_XAUUSD
+Use with e2b MCP for execution
+"""
+import numpy as np
+import pandas as pd
+from dataclasses import dataclass
+from typing import List, Tuple, Optional
+from datetime import datetime, timedelta
+
+@dataclass
+class WFAWindow:
+    """Single WFA window result"""
+    window_id: int
+    is_start: datetime
+    is_end: datetime
+    oos_start: datetime
+    oos_end: datetime
+    is_performance: float  # % return
+    oos_performance: float  # % return
+    is_trades: int
+    oos_trades: int
+    is_sharpe: float
+    oos_sharpe: float
+    best_params: dict
+
+@dataclass
+class WFAResult:
+    """Complete WFA analysis result"""
+    windows: List[WFAWindow]
+    wfe: float
+    wfe_sharpe: float
+    oos_positive_pct: float
+    oos_consistency: float  # StdDev of OOS returns
+    verdict: str  # APPROVED, MARGINAL, REJECTED
+    
+def calculate_wfa(
+    trades_df: pd.DataFrame,
+    n_windows: int = 10,
+    is_ratio: float = 0.70,
+    min_trades_per_window: int = 10,
+    overlap_pct: float = 0.25
+) -> WFAResult:
+    """
+    Execute Walk-Forward Analysis on trade data.
+    
+    Parameters:
+    -----------
+    trades_df : DataFrame with columns ['datetime', 'profit', 'return_pct']
+    n_windows : Number of WFA windows (10-20 recommended)
+    is_ratio : In-Sample ratio (0.70 = 70% IS, 30% OOS)
+    min_trades_per_window : Minimum trades required per window
+    overlap_pct : Overlap between windows (0.25 = rolling 25%)
+    
+    Returns:
+    --------
+    WFAResult with all windows and aggregate metrics
+    """
+    
+    # Sort by datetime
+    df = trades_df.sort_values('datetime').reset_index(drop=True)
+    total_period = (df['datetime'].max() - df['datetime'].min()).days
+    
+    # Calculate window sizes
+    window_size = total_period // (n_windows * (1 - overlap_pct) + overlap_pct)
+    is_size = int(window_size * is_ratio)
+    oos_size = window_size - is_size
+    step_size = int(window_size * (1 - overlap_pct))
+    
+    windows = []
+    
+    for i in range(n_windows):
+        # Calculate window boundaries
+        start_offset = i * step_size
+        is_start = df['datetime'].min() + timedelta(days=start_offset)
+        is_end = is_start + timedelta(days=is_size)
+        oos_start = is_end
+        oos_end = oos_start + timedelta(days=oos_size)
+        
+        # Filter trades for each period
+        is_trades = df[(df['datetime'] >= is_start) & (df['datetime'] < is_end)]
+        oos_trades = df[(df['datetime'] >= oos_start) & (df['datetime'] < oos_end)]
+        
+        # Skip if insufficient trades
+        if len(is_trades) < min_trades_per_window or len(oos_trades) < min_trades_per_window // 3:
+            continue
+        
+        # Calculate performance metrics
+        is_return = is_trades['return_pct'].sum()
+        oos_return = oos_trades['return_pct'].sum()
+        
+        is_sharpe = (is_trades['return_pct'].mean() / is_trades['return_pct'].std() 
+                     * np.sqrt(252)) if is_trades['return_pct'].std() > 0 else 0
+        oos_sharpe = (oos_trades['return_pct'].mean() / oos_trades['return_pct'].std() 
+                      * np.sqrt(252)) if oos_trades['return_pct'].std() > 0 else 0
+        
+        window = WFAWindow(
+            window_id=i + 1,
+            is_start=is_start,
+            is_end=is_end,
+            oos_start=oos_start,
+            oos_end=oos_end,
+            is_performance=is_return,
+            oos_performance=oos_return,
+            is_trades=len(is_trades),
+            oos_trades=len(oos_trades),
+            is_sharpe=is_sharpe,
+            oos_sharpe=oos_sharpe,
+            best_params={}  # Would be filled by optimization
+        )
+        windows.append(window)
+    
+    # Calculate aggregate metrics
+    is_perfs = [w.is_performance for w in windows]
+    oos_perfs = [w.oos_performance for w in windows]
+    is_sharpes = [w.is_sharpe for w in windows]
+    oos_sharpes = [w.oos_sharpe for w in windows]
+    
+    # WFE calculation
+    mean_is = np.mean(is_perfs) if is_perfs else 0
+    mean_oos = np.mean(oos_perfs) if oos_perfs else 0
+    wfe = mean_oos / mean_is if mean_is > 0 else 0
+    
+    # WFE based on Sharpe
+    mean_is_sharpe = np.mean(is_sharpes) if is_sharpes else 0
+    mean_oos_sharpe = np.mean(oos_sharpes) if oos_sharpes else 0
+    wfe_sharpe = mean_oos_sharpe / mean_is_sharpe if mean_is_sharpe > 0 else 0
+    
+    # Consistency metrics
+    oos_positive = sum(1 for p in oos_perfs if p > 0)
+    oos_positive_pct = oos_positive / len(oos_perfs) if oos_perfs else 0
+    oos_consistency = np.std(oos_perfs) if oos_perfs else float('inf')
+    
+    # Verdict
+    if wfe >= 0.6 and oos_positive_pct >= 0.7:
+        verdict = "APPROVED"
+    elif wfe >= 0.5 and oos_positive_pct >= 0.5:
+        verdict = "MARGINAL"
+    else:
+        verdict = "REJECTED"
+    
+    return WFAResult(
+        windows=windows,
+        wfe=wfe,
+        wfe_sharpe=wfe_sharpe,
+        oos_positive_pct=oos_positive_pct,
+        oos_consistency=oos_consistency,
+        verdict=verdict
+    )
+
+def print_wfa_report(result: WFAResult) -> str:
+    """Generate formatted WFA report"""
+    report = []
+    report.append("=" * 70)
+    report.append("WALK-FORWARD ANALYSIS REPORT")
+    report.append("=" * 70)
+    report.append(f"WFE (Return-based): {result.wfe:.2f}")
+    report.append(f"WFE (Sharpe-based): {result.wfe_sharpe:.2f}")
+    report.append(f"OOS Positive Windows: {result.oos_positive_pct*100:.1f}%")
+    report.append(f"OOS Consistency (StdDev): {result.oos_consistency:.2f}%")
+    report.append(f"VERDICT: {result.verdict}")
+    report.append("-" * 70)
+    report.append(f"{'Window':^8} | {'IS Period':^20} | {'OOS Period':^20} | {'IS %':^8} | {'OOS %':^8}")
+    report.append("-" * 70)
+    
+    for w in result.windows:
+        is_period = f"{w.is_start.strftime('%Y-%m-%d')} to {w.is_end.strftime('%Y-%m-%d')}"
+        oos_period = f"{w.oos_start.strftime('%Y-%m-%d')} to {w.oos_end.strftime('%Y-%m-%d')}"
+        report.append(f"{w.window_id:^8} | {is_period:^20} | {oos_period:^20} | {w.is_performance:>+7.1f}% | {w.oos_performance:>+7.1f}%")
+    
+    report.append("=" * 70)
+    return "\n".join(report)
+
+# Usage example:
+# result = calculate_wfa(trades_df, n_windows=10, is_ratio=0.70)
+# print(print_wfa_report(result))
+```
+
+### MQL5 Integration for MT5 Strategy Tester
+
+```cpp
+//+------------------------------------------------------------------+
+//| WFA_Controller.mqh - Walk-Forward Analysis Controller             |
+//| Part of EA_SCALPER_XAUUSD validation system                       |
+//+------------------------------------------------------------------+
+
+#include <Trade\Trade.mqh>
+
+//--- WFA Configuration
+input int      WFA_Windows = 10;           // Number of WFA windows
+input double   WFA_IS_Ratio = 0.70;        // In-Sample ratio
+input int      WFA_MinTrades = 10;         // Minimum trades per window
+input bool     WFA_SaveResults = true;     // Save results to file
+
+//--- WFA Result structure
+struct WFAWindowResult {
+    int      windowId;
+    datetime isStart;
+    datetime isEnd;
+    datetime oosStart;
+    datetime oosEnd;
+    double   isReturn;
+    double   oosReturn;
+    int      isTrades;
+    int      oosTrades;
+    double   isSharpe;
+    double   oosSharpe;
+};
+
+//--- Global WFA storage
+WFAWindowResult g_wfaResults[];
+double g_wfe = 0;
+string g_wfaVerdict = "";
+
+//+------------------------------------------------------------------+
+//| Calculate WFE from completed windows                              |
+//+------------------------------------------------------------------+
+double CalculateWFE() {
+    if(ArraySize(g_wfaResults) == 0) return 0;
+    
+    double sumIS = 0, sumOOS = 0;
+    int count = 0;
+    
+    for(int i = 0; i < ArraySize(g_wfaResults); i++) {
+        sumIS += g_wfaResults[i].isReturn;
+        sumOOS += g_wfaResults[i].oosReturn;
+        count++;
+    }
+    
+    double meanIS = sumIS / count;
+    double meanOOS = sumOOS / count;
+    
+    if(meanIS <= 0) return 0;
+    
+    return meanOOS / meanIS;
+}
+
+//+------------------------------------------------------------------+
+//| Get WFA verdict based on WFE                                      |
+//+------------------------------------------------------------------+
+string GetWFAVerdict(double wfe, double oosPositivePct) {
+    if(wfe >= 0.6 && oosPositivePct >= 0.7)
+        return "APPROVED";
+    else if(wfe >= 0.5 && oosPositivePct >= 0.5)
+        return "MARGINAL";
+    else
+        return "REJECTED";
+}
+
+//+------------------------------------------------------------------+
+//| Save WFA results to CSV                                           |
+//+------------------------------------------------------------------+
+bool SaveWFAResults(string filename) {
+    int handle = FileOpen(filename, FILE_WRITE|FILE_CSV|FILE_COMMON);
+    if(handle == INVALID_HANDLE) return false;
+    
+    // Header
+    FileWrite(handle, "Window,IS_Start,IS_End,OOS_Start,OOS_End,IS_Return,OOS_Return,IS_Trades,OOS_Trades");
+    
+    // Data
+    for(int i = 0; i < ArraySize(g_wfaResults); i++) {
+        FileWrite(handle,
+            g_wfaResults[i].windowId,
+            TimeToString(g_wfaResults[i].isStart, TIME_DATE),
+            TimeToString(g_wfaResults[i].isEnd, TIME_DATE),
+            TimeToString(g_wfaResults[i].oosStart, TIME_DATE),
+            TimeToString(g_wfaResults[i].oosEnd, TIME_DATE),
+            DoubleToString(g_wfaResults[i].isReturn, 2),
+            DoubleToString(g_wfaResults[i].oosReturn, 2),
+            g_wfaResults[i].isTrades,
+            g_wfaResults[i].oosTrades
+        );
+    }
+    
+    // Summary
+    FileWrite(handle, "");
+    FileWrite(handle, "WFE", DoubleToString(g_wfe, 3));
+    FileWrite(handle, "Verdict", g_wfaVerdict);
+    
+    FileClose(handle);
+    return true;
+}
+
+//+------------------------------------------------------------------+
+//| Print WFA Report to Experts log                                   |
+//+------------------------------------------------------------------+
+void PrintWFAReport() {
+    Print("========== WALK-FORWARD ANALYSIS REPORT ==========");
+    Print("WFE: ", DoubleToString(g_wfe, 3));
+    Print("Verdict: ", g_wfaVerdict);
+    Print("Windows analyzed: ", ArraySize(g_wfaResults));
+    Print("-------------------------------------------------");
+    
+    for(int i = 0; i < ArraySize(g_wfaResults); i++) {
+        PrintFormat("Window %d: IS=%.1f%% OOS=%.1f%% (Trades: %d/%d)",
+            g_wfaResults[i].windowId,
+            g_wfaResults[i].isReturn,
+            g_wfaResults[i].oosReturn,
+            g_wfaResults[i].isTrades,
+            g_wfaResults[i].oosTrades
+        );
+    }
+    Print("==================================================");
+}
+```
+
+### MT5 Strategy Tester Automation Script
+
+```python
+"""
+MT5 Strategy Tester Automation for WFA
+Requires: MetaTrader5 Python package
+"""
+import MetaTrader5 as mt5
+from datetime import datetime, timedelta
+import pandas as pd
+
+def run_wfa_optimization(
+    ea_path: str,
+    symbol: str = "XAUUSD",
+    timeframe: int = mt5.TIMEFRAME_M5,
+    n_windows: int = 10,
+    is_ratio: float = 0.70,
+    start_date: datetime = None,
+    end_date: datetime = None
+):
+    """
+    Run Walk-Forward Analysis using MT5 Strategy Tester
+    
+    Note: This requires MT5 terminal to be open
+    """
+    if not mt5.initialize():
+        print("MT5 initialization failed")
+        return None
+    
+    # Default dates: last 2 years
+    if end_date is None:
+        end_date = datetime.now()
+    if start_date is None:
+        start_date = end_date - timedelta(days=730)
+    
+    total_days = (end_date - start_date).days
+    window_days = total_days // n_windows
+    is_days = int(window_days * is_ratio)
+    oos_days = window_days - is_days
+    
+    results = []
+    
+    for i in range(n_windows):
+        # Calculate window dates
+        window_start = start_date + timedelta(days=i * window_days)
+        is_end = window_start + timedelta(days=is_days)
+        oos_end = is_end + timedelta(days=oos_days)
+        
+        print(f"Window {i+1}/{n_windows}: IS={window_start.date()} to {is_end.date()}, OOS={is_end.date()} to {oos_end.date()}")
+        
+        # Note: Full MT5 tester automation requires terminal scripting
+        # This is a template - actual implementation depends on MT5 setup
+        
+        results.append({
+            'window': i + 1,
+            'is_start': window_start,
+            'is_end': is_end,
+            'oos_start': is_end,
+            'oos_end': oos_end,
+            # Results would be filled from MT5 tester output
+        })
+    
+    mt5.shutdown()
+    return pd.DataFrame(results)
+
+# Manual WFA workflow for MT5:
+# 1. Open MT5 Strategy Tester
+# 2. For each window:
+#    a. Set date range to IS period
+#    b. Run optimization (genetic or full)
+#    c. Record best parameters
+#    d. Set date range to OOS period  
+#    e. Run single test with best params
+#    f. Record OOS performance
+# 3. Calculate WFE = Mean(OOS) / Mean(IS)
+```
+
+### WFA Checklist for Manual Execution
+
+```
+WALK-FORWARD ANALYSIS CHECKLIST:
+
+PRE-WFA:
+□ Data quality verified (no gaps, correct timezone)
+□ At least 2 years of data available
+□ Strategy parameters identified for optimization
+□ Performance metric defined (Return, Sharpe, etc.)
+
+CONFIGURATION:
+□ Windows: 10-20 (more = more reliable)
+□ IS/OOS split: 70/30 (standard)
+□ Overlap: 0-25% (rolling preferred)
+□ Min trades per window: 10+ IS, 3+ OOS
+
+EXECUTION (per window):
+□ Set IS date range
+□ Run optimization (genetic recommended)
+□ Record best parameters
+□ Set OOS date range (immediately after IS)
+□ Run single test with best params
+□ Record OOS performance
+□ Document any anomalies
+
+POST-WFA:
+□ Calculate WFE = Mean(OOS) / Mean(IS)
+□ Calculate OOS positive %
+□ Calculate OOS consistency (StdDev)
+□ Apply verdict criteria:
+   - WFE >= 0.6 AND OOS+ >= 70% = APPROVED
+   - WFE >= 0.5 AND OOS+ >= 50% = MARGINAL
+   - Otherwise = REJECTED
+
+INTERPRETATION:
+□ If APPROVED: Proceed to Monte Carlo
+□ If MARGINAL: Review strategy, simplify
+□ If REJECTED: Strategy has no edge, redesign
 ```
 
 ## 11.1 Arquivos Que Oracle Conhece

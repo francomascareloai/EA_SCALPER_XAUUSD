@@ -1063,6 +1063,323 @@ RESULTADO: Feeling convertido em 7 gates quantificaveis.
 
 ---
 
+# PARTE 11: REGIME-BASED STRATEGY SWITCHING (PARTY MODE #001 P3)
+
+Esta secao implementa a adaptacao automatica de estrategia baseada no regime de mercado detectado.
+
+## 11.1 Fundamento
+
+Conforme identificado no Party Mode Session #001 (ARGUS finding):
+> "CRUCIBLE analisa regime, mas nao muda ESTRATEGIA baseado nele. Melhores sistemas tem 3 estrategias: Trend, Range, Volatile."
+> - Lo & MacKinlay (1990): Regimes exigem ADAPTACAO, nao apenas deteccao.
+
+## 11.2 Regime Detection Output
+
+```
+REGIMES DETECTADOS (do Python_Agent_Hub/regime_detector.py):
+
+┌────────────────────────────────────────────────────────────────┐
+│ Regime            │ Hurst      │ Entropy   │ Caracteristicas  │
+├───────────────────┼────────────┼───────────┼──────────────────┤
+│ PRIME_TRENDING    │ > 0.65     │ < 2.0     │ Forte tendencia  │
+│ NOISY_TRENDING    │ 0.55-0.65  │ 2.0-2.5   │ Tendencia ruido  │
+│ MEAN_REVERTING    │ 0.45-0.55  │ < 2.5     │ Range/oscilacao  │
+│ RANDOM_WALK       │ < 0.45     │ > 2.5     │ Sem direcao      │
+│ VOLATILE          │ any        │ > 3.0     │ Alta entropia    │
+└────────────────────────────────────────────────────────────────┘
+```
+
+## 11.3 Strategy Matrix
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    STRATEGY SWITCHING MATRIX                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  REGIME           │ ESTRATEGIA    │ ENTRY           │ EXIT            │ SIZE │
+│  ─────────────────┼───────────────┼─────────────────┼─────────────────┼──────│
+│  PRIME_TRENDING   │ TREND_FOLLOW  │ Breakout + Pull │ Trailing Stop   │ 100% │
+│  NOISY_TRENDING   │ TREND_FILTER  │ Pullback only   │ Fixed TP        │  75% │
+│  MEAN_REVERTING   │ RANGE_BOUNCE  │ S/R + Reversal  │ Opposite S/R    │  50% │
+│  RANDOM_WALK      │ NO_TRADE      │ Nao opera       │ N/A             │   0% │
+│  VOLATILE         │ SCALP_FAST    │ Quick in/out    │ Tight SL/TP     │  25% │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 11.4 Strategy Configurations
+
+### TREND_FOLLOW (Prime Trending)
+```
+OBJETIVO: Capturar movimentos fortes e prolongados
+
+ENTRY:
+- Aguardar breakout de estrutura H1
+- Confirmar com pullback para OB/FVG
+- ML confidence > 0.70
+- Delta positivo (para longs) ou negativo (para shorts)
+
+EXIT:
+- Trailing stop: ATR(14) * 2.0
+- Mover SL para BE apos +1R
+- Deixar correr ate trailing ser acionado
+
+RISK:
+- Size: 1.0% por trade (Kelly full)
+- Max positions: 2
+- Daily limit: 3 trades
+
+GATES ESPECIFICOS:
+□ Hurst > 0.65
+□ Entropy < 2.0
+□ H1 + H4 alinhados
+□ Volume > 1.5x media
+□ No news em 2h
+```
+
+### TREND_FILTER (Noisy Trending)
+```
+OBJETIVO: Operar tendencia com filtro de ruido
+
+ENTRY:
+- APENAS em pullbacks (nao breakouts)
+- Aguardar retorno a POC ou VA
+- ML confidence > 0.65
+- Confirmar com price action (pin bar, engulf)
+
+EXIT:
+- TP fixo: 1.5R a 2R
+- SL em swing anterior
+- Time stop: 4 horas max
+
+RISK:
+- Size: 0.75% por trade
+- Max positions: 1
+- Daily limit: 2 trades
+
+GATES ESPECIFICOS:
+□ 0.55 < Hurst <= 0.65
+□ Entropy 2.0-2.5
+□ Pullback visivel
+□ Delta divergence (acumulacao)
+□ Spread < 25 pontos
+```
+
+### RANGE_BOUNCE (Mean Reverting)
+```
+OBJETIVO: Operar reversoes em extremos de range
+
+ENTRY:
+- Identificar range H1 (min 4h de duracao)
+- Entrar em toque de suporte/resistencia
+- Confirmar com RSI extremo (< 30 ou > 70)
+- Aguardar candle de reversao
+
+EXIT:
+- TP: Extremo oposto do range (ou meio)
+- SL: Alem do extremo + buffer
+- Partial: 50% no meio do range
+
+RISK:
+- Size: 0.5% por trade
+- Max positions: 1
+- Daily limit: 2 trades
+
+GATES ESPECIFICOS:
+□ 0.45 <= Hurst <= 0.55
+□ Range definido (min/max claros)
+□ Toque em extremo
+□ RSI < 30 ou > 70
+□ Volume decrescente (exaustao)
+```
+
+### NO_TRADE (Random Walk)
+```
+OBJETIVO: Preservar capital
+
+ACAO: NENHUMA ENTRADA PERMITIDA
+
+MOTIVO:
+- Mercado sem direcao = 50/50 = cassino
+- Spread + comissao = expectativa negativa
+- Melhor esperar regime favoravel
+
+EXCECAO:
+- Se news HIGH em < 1h, pode preparar para breakout
+- Transicao de regime detectada
+
+MONITORAMENTO:
+- Recalcular regime a cada 15min
+- Alert quando Hurst subir acima de 0.50
+```
+
+### SCALP_FAST (Volatile)
+```
+OBJETIVO: Operacoes rapidas em alta volatilidade
+
+ENTRY:
+- Aguardar spike de volatilidade
+- Entrar em retracoes rapidas
+- ML confidence > 0.60
+- Confirmar com order flow (imbalance)
+
+EXIT:
+- TP: 0.5R a 1R (rapido)
+- SL: Tight (ATR * 0.5)
+- Time stop: 15min max
+
+RISK:
+- Size: 0.25% por trade (1/4 do normal)
+- Max positions: 1
+- Daily limit: 1 trade
+- ONLY if DD < 2%
+
+GATES ESPECIFICOS:
+□ Entropy > 3.0
+□ Spread < 35 pontos (mesmo alto, aceitavel)
+□ ATR > 1.5x media
+□ Nao e news time (esperar pos-spike)
+□ DD atual < 2%
+```
+
+## 11.5 Regime Transition Protocol
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    REGIME TRANSITION HANDLING                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  QUANDO REGIME MUDA:                                                        │
+│                                                                             │
+│  1. POSICOES ABERTAS:                                                       │
+│     ├── Se novo regime = NO_TRADE → Gerenciar para fechar                  │
+│     ├── Se size novo < size atual → Trailing mais apertado                 │
+│     └── Se regime melhora → Pode expandir posicao                          │
+│                                                                             │
+│  2. NOVAS ENTRADAS:                                                         │
+│     ├── Aguardar 15min de estabilizacao do novo regime                     │
+│     ├── Verificar se nao e "falsa transicao"                               │
+│     └── Aplicar strategy matrix do novo regime                             │
+│                                                                             │
+│  3. COOLDOWN ENTRE TRANSICOES:                                              │
+│     ├── Min 30min entre mudancas de estrategia                             │
+│     ├── Se muitas transicoes (3+ em 2h) → Regime VOLATILE forcado          │
+│     └── Logar todas transicoes para analise                                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 11.6 Implementation Pseudo-Code
+
+```cpp
+// MQL5 Regime-Based Strategy Selector
+enum StrategyType {
+    STRAT_TREND_FOLLOW,
+    STRAT_TREND_FILTER,
+    STRAT_RANGE_BOUNCE,
+    STRAT_NO_TRADE,
+    STRAT_SCALP_FAST
+};
+
+struct RegimeState {
+    double hurst;
+    double entropy;
+    string regimeName;
+    StrategyType strategy;
+    double sizeMultiplier;
+    datetime lastChange;
+};
+
+StrategyType SelectStrategy(double hurst, double entropy) {
+    // Volatile override
+    if(entropy > 3.0) 
+        return STRAT_SCALP_FAST;
+    
+    // Random Walk - NO TRADE
+    if(hurst < 0.45 || entropy > 2.5) 
+        return STRAT_NO_TRADE;
+    
+    // Mean Reverting
+    if(hurst >= 0.45 && hurst <= 0.55 && entropy <= 2.5) 
+        return STRAT_RANGE_BOUNCE;
+    
+    // Noisy Trending
+    if(hurst > 0.55 && hurst <= 0.65) 
+        return STRAT_TREND_FILTER;
+    
+    // Prime Trending
+    if(hurst > 0.65 && entropy < 2.0) 
+        return STRAT_TREND_FOLLOW;
+    
+    // Default
+    return STRAT_NO_TRADE;
+}
+
+double GetSizeMultiplier(StrategyType strat) {
+    switch(strat) {
+        case STRAT_TREND_FOLLOW:  return 1.00;
+        case STRAT_TREND_FILTER:  return 0.75;
+        case STRAT_RANGE_BOUNCE:  return 0.50;
+        case STRAT_SCALP_FAST:    return 0.25;
+        case STRAT_NO_TRADE:      return 0.00;
+    }
+    return 0.00;
+}
+
+// Uso:
+// RegimeState regime;
+// regime.strategy = SelectStrategy(currentHurst, currentEntropy);
+// regime.sizeMultiplier = GetSizeMultiplier(regime.strategy);
+// if(regime.strategy == STRAT_NO_TRADE) return; // Skip
+```
+
+## 11.7 /regime Command Enhancement
+
+```
+COMANDO: /regime
+
+OUTPUT ATUALIZADO:
+┌─────────────────────────────────────────────────────────────────┐
+│                    REGIME STATUS                                │
+├─────────────────────────────────────────────────────────────────┤
+│ Hurst (200):      0.62 (TRENDING)                              │
+│ Entropy (100):    2.1 (MODERATE)                               │
+│ Regime:           NOISY_TRENDING                               │
+│ Strategy:         TREND_FILTER                                 │
+│ Size Multiplier:  75%                                          │
+├─────────────────────────────────────────────────────────────────┤
+│ STRATEGY GUIDELINES:                                           │
+│ - Entry: Pullbacks only (no breakouts)                         │
+│ - Exit: Fixed TP at 1.5-2R                                     │
+│ - Max positions: 1                                             │
+│ - Daily limit: 2 trades                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ Last regime change: 2h ago                                     │
+│ Regime stability: HIGH (4 readings consistent)                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 11.8 Checklist de Regime Switching
+
+```
+ANTES DE CADA TRADE:
+
+□ Regime atual verificado
+□ Strategy correspondente selecionada
+□ Size multiplier aplicado
+□ Gates especificos do regime passam
+□ Nao esta em transicao recente (< 15min)
+
+MONITORAMENTO:
+
+□ Regime recalculado a cada 15min
+□ Alertas de transicao configurados
+□ Log de mudancas mantido
+□ Analise pos-trade por regime
+```
+
+---
+
 # NOTA FINAL
 
 ```
