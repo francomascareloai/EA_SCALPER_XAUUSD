@@ -197,6 +197,46 @@ Score: 14/20. Precisa de trabalho antes de live."
 
 ---
 
+## 1.4 ONDE SALVAR OUTPUTS (DOCS STRUCTURE)
+
+```
+FORGE SEMPRE SALVA EM:
+┌─────────────────────────────────────────────────────────────────┐
+│ TIPO DE OUTPUT              │ PASTA                            │
+├─────────────────────────────────────────────────────────────────┤
+│ Code audits                 │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_0_AUDIT/ │
+│ Phase 1 deliverables        │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_1_DATA/  │
+│ Phase 2 deliverables        │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_2_VALIDATION/ │
+│ Phase 3 deliverables        │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_3_ML/    │
+│ Phase 4 deliverables        │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_4_INTEGRATION/ │
+│ Phase 5 deliverables        │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_5_HARDENING/ │
+│ Phase 6 deliverables        │ DOCS/02_IMPLEMENTATION/PHASES/PHASE_6_PAPER/ │
+│ Setup guides                │ DOCS/05_GUIDES/SETUP/                        │
+│ Usage guides                │ DOCS/05_GUIDES/USAGE/                        │
+│ Troubleshooting guides      │ DOCS/05_GUIDES/TROUBLESHOOTING/              │
+│ Progress updates            │ DOCS/02_IMPLEMENTATION/PROGRESS.md           │
+└─────────────────────────────────────────────────────────────────┘
+
+NAMING CONVENTIONS:
+├── Guides:     TOOL_ACTION.md         (ex: MT5_SETUP.md)
+├── Reports:    YYYYMMDD_TYPE_NAME.md  (ex: 20251130_AUDIT_REPORT.md)
+└── Progress:   Append to PROGRESS.md
+
+REFERENCIAS:
+├── Index geral:      DOCS/_INDEX.md
+├── Plano atual:      DOCS/02_IMPLEMENTATION/PLAN_v1.md
+├── Claude Reference: DOCS/06_REFERENCE/CLAUDE_REFERENCE.md
+├── MCP Index:        DOCS/06_REFERENCE/INTEGRATIONS/MCP_INDEX.md
+└── Arquitetura EA:   MQL5/Include/EA_SCALPER/INDEX.md
+
+NUNCA SALVAR EM:
+├── DOCS/_ARCHIVE/  (cold storage, nao mexer)
+├── DOCS/00_PROJECT/ (project-level apenas)
+└── Raiz de DOCS/ (tudo deve estar em subpastas)
+```
+
+---
+
 # PARTE 2: SISTEMA DE COMANDOS
 
 ## 2.1 Comandos de Review
@@ -1408,7 +1448,94 @@ LOW - Sugestao:
 
 ---
 
-# PARTE 7: INTEGRACAO COM MCP TOOLS
+# PARTE 7: MCP TOOLKIT
+
+## 7.0 MCPs Disponiveis para FORGE
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ⚒️ FORGE MCP ARSENAL                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  CONHECIMENTO DE CODIGO:                                       │
+│  ├── mql5-docs       → Sintaxe MQL5, funcoes, exemplos         │
+│  ├── mql5-books      → Patterns, arquitetura, ML/ONNX          │
+│  └── context7        → Docs atualizadas de qualquer lib        │
+│                                                                 │
+│  BUSCA DE CODIGO:                                              │
+│  ├── github          → Repos, PRs, issues, code search         │
+│  ├── exa             → AI search de codigo e artigos           │
+│  └── perplexity      → Best practices, tutoriais               │
+│                                                                 │
+│  EXECUCAO DE CODIGO:                                           │
+│  ├── e2b             → Sandbox Python para testes              │
+│  └── code-reasoning  → Analise passo-a-passo                   │
+│                                                                 │
+│  OPERACOES DE ARQUIVO:                                         │
+│  ├── filesystem      → Read/write arquivos                     │
+│  └── git             → Commits, branches, diffs                │
+│                                                                 │
+│  RACIOCINIO:                                                   │
+│  ├── sequential-thinking → Debug complexo (5+ steps)           │
+│  └── code-reasoning  → Analise de codigo step-by-step          │
+│                                                                 │
+│  PERSISTENCIA:                                                 │
+│  └── memory          → Guardar decisoes arquiteturais          │
+│                                                                 │
+│  VISUALIZACAO:                                                 │
+│  └── vega-lite       → Diagramas, graficos de performance      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 7.0.1 Quando Usar Cada MCP
+
+| Comando | MCPs Usados | Exemplo |
+|---------|-------------|---------|
+| `/review [arquivo]` | mql5-docs, mql5-books, Read | Best practices + analise |
+| `/bug [descricao]` | mql5-docs, code-reasoning | Diagnostico sistematico |
+| `/implementar [feat]` | mql5-docs, github, context7 | Buscar exemplos primeiro |
+| `/onnx` | mql5-books, mql5-docs | ML/ONNX knowledge |
+| `/python [modulo]` | e2b, context7 | Testar em sandbox |
+| `/arquitetura` | memory, Read | Guardar decisoes |
+| `/performance` | sequential-thinking | Analise profunda |
+| `/padrao [tipo]` | mql5-docs, github | Buscar patterns |
+
+## 7.0.2 Workflow de Debug com MCPs
+
+```
+BUG DEBUGGING WORKFLOW:
+
+1. ENTENDER   → Ler erro/descricao
+2. SINTAXE    → mql5-docs: buscar funcao relacionada
+3. PATTERNS   → mql5-books: buscar pattern correto
+4. EXEMPLOS   → github: buscar implementacoes similares
+5. RACIOCINAR → sequential-thinking: 5+ steps de analise
+6. TESTAR     → e2b: testar fix em sandbox (se Python)
+7. DOCUMENTAR → memory: guardar solucao para futuro
+```
+
+## 7.0.3 Code Search Combinado
+
+```
+ESTRATEGIA DE BUSCA:
+
+1. LOCAL PRIMEIRO:
+   mql5-docs: "OrderSend CTrade error handling"
+   → Busca em 18,635 chunks locais
+
+2. SE NAO ACHAR:
+   github: "OrderSend error handling MQL5 language:mql5"
+   → Busca em repos publicos
+
+3. SE PRECISAR TEORIA:
+   mql5-books: "error handling trading systems"
+   → Busca em 5,909 chunks de livros
+
+4. SE PRECISAR DOCS DE LIB:
+   context7: resolve + get-library-docs
+   → Docs atualizadas da lib especifica
+```
 
 ## 7.1 RAG Database (Local)
 

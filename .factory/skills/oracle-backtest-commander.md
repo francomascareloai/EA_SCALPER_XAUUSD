@@ -144,6 +144,41 @@ e curve-fitting. O backtest esta mentindo pra voce."
 
 ---
 
+## 1.3 ONDE SALVAR OUTPUTS (DOCS STRUCTURE)
+
+```
+ORACLE SEMPRE SALVA EM:
+┌─────────────────────────────────────────────────────────────────┐
+│ TIPO DE OUTPUT              │ PASTA                            │
+├─────────────────────────────────────────────────────────────────┤
+│ Backtest results            │ DOCS/04_REPORTS/BACKTESTS/       │
+│ WFA reports                 │ DOCS/04_REPORTS/VALIDATION/      │
+│ Monte Carlo reports         │ DOCS/04_REPORTS/VALIDATION/      │
+│ GO/NO-GO decisions          │ DOCS/04_REPORTS/DECISIONS/       │
+│ ML validation reports       │ DOCS/04_REPORTS/VALIDATION/      │
+│ Metrics analysis            │ DOCS/04_REPORTS/VALIDATION/      │
+│ Progress updates            │ DOCS/02_IMPLEMENTATION/PROGRESS.md│
+└─────────────────────────────────────────────────────────────────┘
+
+NAMING CONVENTIONS:
+├── Backtest:    YYYYMMDD_BACKTEST_NAME.md    (ex: 20251130_BACKTEST_XAUUSD_M15.md)
+├── WFA:         YYYYMMDD_WFA_REPORT.md       (ex: 20251130_WFA_REPORT.md)
+├── Monte Carlo: YYYYMMDD_MC_REPORT.md        (ex: 20251130_MC_REPORT.md)
+├── GO/NO-GO:    YYYYMMDD_GO_NOGO.md          (ex: 20251130_GO_NOGO.md)
+└── ML Valid:    YYYYMMDD_ML_VALIDATION.md    (ex: 20251130_ML_VALIDATION.md)
+
+REFERENCIAS:
+├── Index geral:      DOCS/_INDEX.md
+├── Plano atual:      DOCS/02_IMPLEMENTATION/PLAN_v1.md
+└── Phase 2 folder:   DOCS/02_IMPLEMENTATION/PHASES/PHASE_2_VALIDATION/
+
+HANDOFF PARA SENTINEL:
+└── Apos GO decision → Salvar em DOCS/04_REPORTS/DECISIONS/
+    SENTINEL le daqui para calcular sizing
+```
+
+---
+
 # PARTE 2: COMANDOS
 
 ## 2.1 Lista de Comandos

@@ -154,6 +154,40 @@ Se cair pra 20, entrada valida. Paciencia."
 
 ---
 
+## 1.4 ONDE SALVAR OUTPUTS (DOCS STRUCTURE)
+
+```
+CRUCIBLE SEMPRE SALVA EM:
+┌─────────────────────────────────────────────────────────────────┐
+│ TIPO DE OUTPUT              │ PASTA                            │
+├─────────────────────────────────────────────────────────────────┤
+│ Strategy findings           │ DOCS/03_RESEARCH/FINDINGS/       │
+│ Setup documentation         │ DOCS/03_RESEARCH/FINDINGS/       │
+│ Market analysis             │ DOCS/03_RESEARCH/FINDINGS/       │
+│ SMC/ICT patterns            │ DOCS/03_RESEARCH/FINDINGS/       │
+│ Progress updates            │ DOCS/02_IMPLEMENTATION/PROGRESS.md│
+└─────────────────────────────────────────────────────────────────┘
+
+NAMING CONVENTIONS:
+├── Strategy:  STRATEGY_NAME_FINDING.md    (ex: SMC_ORDER_BLOCKS_FINDING.md)
+├── Setup:     SETUP_TYPE_FINDING.md       (ex: LONDON_KILLZONE_SETUP.md)
+├── Analysis:  YYYYMMDD_ANALYSIS_TYPE.md   (ex: 20251130_MARKET_CONTEXT.md)
+└── Patterns:  PATTERN_NAME.md             (ex: FVG_PATTERNS.md)
+
+REFERENCIAS:
+├── Index geral:      DOCS/_INDEX.md
+├── Plano atual:      DOCS/02_IMPLEMENTATION/PLAN_v1.md
+├── RAG books:        .rag-db/books/   (SMC, Order Flow, teoria)
+└── Knowledge graph:  memory MCP       (contexto de mercado)
+
+HANDOFF PARA OUTROS AGENTES:
+├── → SENTINEL: "Verificar risco antes de executar"
+├── → ORACLE:   "Validar setup estatisticamente"
+└── → FORGE:    "Implementar pattern em codigo"
+```
+
+---
+
 # PARTE 2: SISTEMA DE COMANDOS
 
 ## 2.1 Comandos de Mercado

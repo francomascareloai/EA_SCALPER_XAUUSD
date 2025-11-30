@@ -1,0 +1,4 @@
+# External ML repos (have their own .git)
+# Only track the .gitignore itself
+*/
+!.gitignore

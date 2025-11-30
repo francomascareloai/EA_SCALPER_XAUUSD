@@ -49,11 +49,165 @@ ORACLE → SENTINEL:   "Calcular sizing para go-live"
 | **Codigo MQL5/Python**     | `.factory/skills/forge-code-architect.md`   |
 | **Backtest/Validacao**     | `.factory/skills/oracle-backtest-commander.md` |
 | **Pesquisa/Papers**        | `.factory/skills/argus-research-analyst.md` |
-| **Spec completa (PRD)**    | `DOCS/prd.md`                               |
-| **Referencia tecnica**     | `DOCS/CLAUDE_REFERENCE.md`                  |
+| **Plano de Implementacao** | `DOCS/02_IMPLEMENTATION/PLAN_v1.md`         |
+| **Referencia tecnica**     | `DOCS/06_REFERENCE/CLAUDE_REFERENCE.md`     |
+| **Index de DOCS**          | `DOCS/_INDEX.md`                            |
 | **Arquitetura modulos**    | `MQL5/Include/EA_SCALPER/INDEX.md`          |
 | **RAG sintaxe MQL5**       | `.rag-db/docs/` (query semantica)           |
 | **RAG conceitos/ML**       | `.rag-db/books/` (query semantica)          |
+
+---
+
+## 3.1 DOCS STRUCTURE (ONDE SALVAR)
+
+```
+DOCS/
+├── _INDEX.md                 # Navegacao central (ler primeiro!)
+├── _ARCHIVE/                 # 🗄️ Cold storage (nao mexer)
+│
+├── 00_PROJECT/               # 📋 Project-level docs
+├── 01_AGENTS/                # 🤖 Specs de agentes, Party Mode
+├── 02_IMPLEMENTATION/        # 🚀 Plano, progresso, fases
+├── 03_RESEARCH/              # 🔍 Papers, findings (ARGUS)
+├── 04_REPORTS/               # 📊 Backtests, validacao (ORACLE)
+├── 05_GUIDES/                # 📚 Setup, usage, troubleshooting
+└── 06_REFERENCE/             # 📖 Tecnico, MCPs, integrações
+```
+
+### AGENT → FOLDER: Onde Cada Agente Salva
+
+| Agente | Tipo de Output | Salvar Em |
+|--------|----------------|-----------|
+| 🔥 **CRUCIBLE** | Strategy findings | `DOCS/03_RESEARCH/FINDINGS/` |
+| 🔥 **CRUCIBLE** | Setup documentation | `DOCS/03_RESEARCH/FINDINGS/` |
+| 🛡️ **SENTINEL** | Risk assessments | `DOCS/04_REPORTS/DECISIONS/` |
+| 🛡️ **SENTINEL** | GO/NO-GO risk | `DOCS/04_REPORTS/DECISIONS/` |
+| ⚒️ **FORGE** | Code audits | `DOCS/02_IMPLEMENTATION/PHASES/PHASE_0_AUDIT/` |
+| ⚒️ **FORGE** | Phase deliverables | `DOCS/02_IMPLEMENTATION/PHASES/PHASE_N/` |
+| ⚒️ **FORGE** | Setup guides | `DOCS/05_GUIDES/SETUP/` |
+| ⚒️ **FORGE** | Usage guides | `DOCS/05_GUIDES/USAGE/` |
+| 🔮 **ORACLE** | Backtest results | `DOCS/04_REPORTS/BACKTESTS/` |
+| 🔮 **ORACLE** | WFA/Monte Carlo | `DOCS/04_REPORTS/VALIDATION/` |
+| 🔮 **ORACLE** | GO/NO-GO decisions | `DOCS/04_REPORTS/DECISIONS/` |
+| 🔍 **ARGUS** | Paper summaries | `DOCS/03_RESEARCH/PAPERS/` |
+| 🔍 **ARGUS** | Research findings | `DOCS/03_RESEARCH/FINDINGS/` |
+| 🔍 **ARGUS** | Repo references | `DOCS/03_RESEARCH/REPOS/REPO_INDEX.md` |
+| **ALL** | Progress updates | `DOCS/02_IMPLEMENTATION/PROGRESS.md` |
+| **ALL** | Party Mode sessions | `DOCS/01_AGENTS/PARTY_MODE/` |
+
+### Naming Conventions
+
+| Tipo | Pattern | Exemplo |
+|------|---------|---------|
+| Reports | `YYYYMMDD_TYPE_NAME.md` | `20251130_WFA_REPORT.md` |
+| Findings | `TOPIC_FINDING.md` | `SMC_ORDER_BLOCKS_FINDING.md` |
+| Papers | `YYYYMMDD_AUTHOR_TITLE.md` | `20251130_KOLM_ORDER_FLOW.md` |
+| Guides | `TOOL_ACTION.md` | `MT5_SETUP.md` |
+| Sessions | `SESSION_NNN_YYYY-MM-DD.md` | `SESSION_001_2025-11-29.md` |
+| Decisions | `YYYYMMDD_GO_NOGO.md` | `20251130_GO_NOGO.md` |
+
+### Dados Externos (fora de DOCS)
+
+| O que | Localização |
+|-------|-------------|
+| Código MQL5 scraped | `data/scraped_mql5/` |
+| Repos ML externos | `data/external_repos/` |
+| PDFs e books | `DOCS/_ARCHIVE/BOOKS/` (já no RAG) |
+
+---
+
+## 3.5 MCP ROUTING POR AGENTE
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           MCP ARSENAL (23 Ativos)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  🔥 CRUCIBLE (Estrategia)                                                   │
+│  ├── twelve-data     → Precos real-time XAUUSD                             │
+│  ├── perplexity      → DXY, COT, macro, central banks                      │
+│  ├── brave/exa/kagi  → Web search backup                                   │
+│  ├── mql5-books      → SMC, Order Flow, teoria                             │
+│  ├── mql5-docs       → Sintaxe MQL5                                        │
+│  ├── memory          → Contexto de mercado                                 │
+│  └── time            → Sessoes, fusos                                      │
+│                                                                             │
+│  🛡️ SENTINEL (Risco)                                                        │
+│  ├── calculator      → Kelly, lot size, DD (PRINCIPAL)                     │
+│  ├── postgres        → Trade history, equity                               │
+│  ├── memory          → Estados de risco, circuit breaker                   │
+│  ├── mql5-books      → Van Tharp, position sizing                          │
+│  └── time            → Reset diario, news timing                           │
+│                                                                             │
+│  ⚒️ FORGE (Codigo)                                                          │
+│  ├── mql5-docs       → Sintaxe, funcoes, exemplos (PRINCIPAL)              │
+│  ├── mql5-books      → Patterns, arquitetura                               │
+│  ├── github          → Search code, repos                                  │
+│  ├── context7        → Docs de libs                                        │
+│  ├── e2b             → Sandbox Python                                      │
+│  ├── code-reasoning  → Debug step-by-step                                  │
+│  └── vega-lite       → Diagramas                                           │
+│                                                                             │
+│  🔮 ORACLE (Backtest)                                                       │
+│  ├── calculator      → Monte Carlo, SQN, Sharpe (PRINCIPAL)                │
+│  ├── e2b             → Scripts Python de analise                           │
+│  ├── postgres        → Resultados de backtest                              │
+│  ├── vega-lite       → Equity curves, distribuicoes                        │
+│  ├── mql5-books      → Estatistica, WFA                                    │
+│  └── twelve-data     → Dados historicos                                    │
+│                                                                             │
+│  🔍 ARGUS (Pesquisa)                                                        │
+│  ├── perplexity      → Research geral (TIER 1)                             │
+│  ├── exa             → AI-native search (TIER 1)                           │
+│  ├── brave-search    → Web ampla (TIER 2)                                  │
+│  ├── kagi            → Premium search (100 req)                            │
+│  ├── firecrawl       → Scrape paginas (820 req)                            │
+│  ├── bright-data     → Scraping escala (5k/mes)                            │
+│  ├── github          → Repos, codigo                                       │
+│  ├── mql5-books/docs → Conhecimento local                                  │
+│  └── memory          → Knowledge graph                                     │
+│                                                                             │
+│  📦 TODOS OS AGENTES                                                        │
+│  ├── sequential-thinking → Problemas complexos (5+ steps)                  │
+│  ├── memory              → Persistir conhecimento                          │
+│  └── mql5-books/docs     → RAG local                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Tabela Rapida: Quando Usar Qual MCP
+
+| Preciso de...                  | MCP                     | Agente |
+|--------------------------------|-------------------------|--------|
+| Preco XAUUSD/mercado           | `twelve-data`           | CRUCIBLE |
+| DXY, COT, yields               | `perplexity`            | CRUCIBLE |
+| Calcular lot/Kelly/DD          | `calculator`            | SENTINEL |
+| Buscar sintaxe MQL5            | `mql5-docs`             | FORGE |
+| Buscar patterns/teoria         | `mql5-books`            | FORGE |
+| Buscar repos                   | `github`                | FORGE/ARGUS |
+| Monte Carlo/metricas           | `calculator` + `e2b`    | ORACLE |
+| Visualizar equity curve        | `vega-lite`             | ORACLE |
+| Pesquisa profunda              | `perplexity` + `exa`    | ARGUS |
+| Scrape pagina web              | `firecrawl`             | ARGUS |
+| Persistir conhecimento         | `memory`                | TODOS |
+| Problema complexo              | `sequential-thinking`   | TODOS |
+| Docs de lib externa            | `context7`              | FORGE |
+| Testar codigo Python           | `e2b`                   | FORGE/ORACLE |
+| Crypto correlacoes             | `coingecko`             | CRUCIBLE |
+| Verificar sessao/hora          | `time`                  | CRUCIBLE/SENTINEL |
+
+### Free Tier Limits
+
+| MCP | Limite Free | Uso Recomendado |
+|-----|-------------|-----------------|
+| twelve-data | 8 req/min | Parsimonia |
+| exa | Free tier | Normal |
+| kagi | 100 req | Economizar |
+| firecrawl | 820 req | Scraping essencial |
+| bright-data | 5k/mes | Scraping em escala |
+| coingecko | 30 req/min | Correlacoes |
+| e2b | Free tier | Testes Python |
+| Outros | Ilimitado | Normal |
 
 ---
 
@@ -169,7 +323,44 @@ TRIGGER: "commit", "push", "git status"
 
 ---
 
-## 9. QUICK ACTIONS
+## 9. WINDOWS CLI
+
+```
+FERRAMENTAS RAPIDAS (C:\tools\):
+├── rg.exe  → Busca texto (usar SEMPRE ao inves de findstr)
+└── fd.exe  → Busca arquivos (usar SEMPRE ao inves de dir /s)
+
+COMANDOS ESSENCIAIS:
+├── C:\tools\rg.exe "pattern" .        # buscar texto
+├── C:\tools\rg.exe "pattern" -t py    # buscar só em .py
+├── C:\tools\fd.exe -e mq5             # buscar arquivos .mq5
+├── dir /b                              # listar diretório
+├── type arquivo.txt                    # ler arquivo
+├── copy /Y src dst                     # copiar (sem prompt)
+├── move /Y src dst                     # mover (sem prompt)
+├── del /F /Q arquivo                   # deletar arquivo
+├── rmdir /S /Q pasta                   # deletar pasta
+├── mkdir caminho\novo                  # criar diretório
+├── cd /d D:\caminho                    # mudar drive+dir
+└── where programa                      # encontrar executável
+
+FLAGS OBRIGATORIAS (evitar prompts):
+├── copy /Y       # sobrescrever sem perguntar
+├── move /Y       # sobrescrever sem perguntar
+├── del /F /Q     # force + quiet
+└── rmdir /S /Q   # recursive + quiet
+
+NUNCA USAR (nao existem no Windows):
+├── grep, find, ls, cat, rm, touch, which, python3
+└── && em PowerShell (usar: cmd /c "a && b")
+
+ENCODING UTF-8:
+└── cmd /c "chcp 65001"
+```
+
+---
+
+## 10. QUICK ACTIONS
 
 | Situacao | Acao |
 |----------|------|

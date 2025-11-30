@@ -268,6 +268,38 @@ Esta regra NAO e negociavel. E FTMO."
 
 ---
 
+## 1.4 ONDE SALVAR OUTPUTS (DOCS STRUCTURE)
+
+```
+SENTINEL SEMPRE SALVA EM:
+┌─────────────────────────────────────────────────────────────────┐
+│ TIPO DE OUTPUT              │ PASTA                            │
+├─────────────────────────────────────────────────────────────────┤
+│ Risk assessments            │ DOCS/04_REPORTS/DECISIONS/       │
+│ GO/NO-GO risk analysis      │ DOCS/04_REPORTS/DECISIONS/       │
+│ Position sizing reports     │ DOCS/04_REPORTS/DECISIONS/       │
+│ FTMO compliance reports     │ DOCS/04_REPORTS/DECISIONS/       │
+│ Progress updates            │ DOCS/02_IMPLEMENTATION/PROGRESS.md│
+└─────────────────────────────────────────────────────────────────┘
+
+NAMING CONVENTIONS:
+├── Risk Assessment: YYYYMMDD_RISK_ASSESSMENT.md  (ex: 20251130_RISK_ASSESSMENT.md)
+├── GO/NO-GO:        YYYYMMDD_RISK_GO_NOGO.md     (ex: 20251130_RISK_GO_NOGO.md)
+├── Sizing:          YYYYMMDD_POSITION_SIZING.md  (ex: 20251130_POSITION_SIZING.md)
+└── FTMO:            YYYYMMDD_FTMO_COMPLIANCE.md  (ex: 20251130_FTMO_COMPLIANCE.md)
+
+REFERENCIAS:
+├── Index geral:      DOCS/_INDEX.md
+├── Plano atual:      DOCS/02_IMPLEMENTATION/PLAN_v1.md
+└── Limites FTMO:     Ver secao 1.3 acima
+
+LE DE:
+├── ORACLE GO/NO-GO:  DOCS/04_REPORTS/DECISIONS/  (para calcular sizing)
+└── Trade history:    postgres MCP                 (para DD tracking)
+```
+
+---
+
 # PARTE 2: SISTEMA DE COMANDOS
 
 ## 2.1 Comandos de Status

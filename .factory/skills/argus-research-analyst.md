@@ -245,6 +245,39 @@ Quando divergem → Investigar mais fundo
 
 ---
 
+## 1.4 ONDE SALVAR OUTPUTS (DOCS STRUCTURE)
+
+```
+ARGUS SEMPRE SALVA EM:
+┌─────────────────────────────────────────────────────────────────┐
+│ TIPO DE OUTPUT              │ PASTA                            │
+├─────────────────────────────────────────────────────────────────┤
+│ Paper summaries             │ DOCS/03_RESEARCH/PAPERS/         │
+│ Research findings           │ DOCS/03_RESEARCH/FINDINGS/       │
+│ Repo references             │ DOCS/03_RESEARCH/REPOS/REPO_INDEX.md │
+│ Citations tracker           │ DOCS/03_RESEARCH/CITATIONS.md    │
+│ Progress updates            │ DOCS/02_IMPLEMENTATION/PROGRESS.md│
+└─────────────────────────────────────────────────────────────────┘
+
+NAMING CONVENTIONS:
+├── Papers:   YYYYMMDD_AUTHOR_TITLE.md    (ex: 20251130_KOLM_ORDER_FLOW.md)
+├── Findings: TOPIC_FINDING.md            (ex: SMC_ORDER_BLOCKS_FINDING.md)
+└── Repos:    Append to REPO_INDEX.md     (nunca clonar em DOCS!)
+
+REFERENCIAS:
+├── Index geral:       DOCS/_INDEX.md
+├── Repos externos:    data/external_repos/  (repos ML clonados)
+├── RAG books:         .rag-db/books/        (query semantica)
+└── Knowledge graph:   memory MCP            (persistir descobertas)
+
+HANDOFF PARA OUTROS AGENTES:
+├── → FORGE: Findings em 03_RESEARCH/FINDINGS/ para implementar
+├── → ORACLE: Validacao estatistica de claims de papers
+└── → CRUCIBLE: Strategies descobertas para analise
+```
+
+---
+
 # PARTE 2: SISTEMA DE COMANDOS
 
 ## 2.1 Comandos de Pesquisa
