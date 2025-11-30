@@ -814,9 +814,79 @@ RESULTADO: [X/20]
 
 ---
 
-# PARTE 8: INTEGRACAO COM MCP TOOLS
+# PARTE 8: MCP TOOLKIT
 
-## 8.1 RAG Database (Local)
+## 8.1 MCPs Disponiveis para CRUCIBLE
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    🔥 CRUCIBLE MCP ARSENAL                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  DADOS DE MERCADO:                                             │
+│  ├── twelve-data     → Precos real-time XAUUSD, historico     │
+│  ├── coingecko       → Crypto correlacoes (BTC-Gold)          │
+│  └── postgres        → Dados historicos armazenados           │
+│                                                                 │
+│  PESQUISA E CONTEXTO:                                          │
+│  ├── perplexity      → DXY, COT, central banks, macro         │
+│  ├── brave-search    → Noticias, eventos, backup              │
+│  ├── exa             → AI search (papers, artigos)            │
+│  ├── kagi            → Premium search (100 req free)          │
+│  └── firecrawl       → Extrair dados de paginas               │
+│                                                                 │
+│  CONHECIMENTO LOCAL:                                           │
+│  ├── mql5-books      → SMC, Order Flow, teoria trading        │
+│  ├── mql5-docs       → Sintaxe MQL5, funcoes                  │
+│  └── context7        → Docs atualizadas de libs               │
+│                                                                 │
+│  PERSISTENCIA:                                                 │
+│  ├── memory          → Guardar contexto de mercado            │
+│  └── postgres        → Historico de analises                  │
+│                                                                 │
+│  CALCULOS:                                                     │
+│  ├── calculator      → Risk/reward, position sizing           │
+│  └── sequential-thinking → Analise complexa (5+ steps)        │
+│                                                                 │
+│  TEMPO:                                                        │
+│  └── time            → Sessoes, fusos horarios                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 8.2 Quando Usar Cada MCP
+
+| Situacao | MCP | Query Exemplo |
+|----------|-----|---------------|
+| Preco atual DXY | `perplexity` | "DXY dollar index current price today" |
+| Gold-Silver ratio | `perplexity` | "gold silver ratio today current value" |
+| COT report | `perplexity` | "CFTC COT report gold futures latest" |
+| Central banks | `brave-search` | "central bank gold buying 2025 tonnes" |
+| News calendar | `perplexity` | "forex economic calendar today high impact USD" |
+| Real yields | `perplexity` | "US 10 year real yield TIPS current" |
+| Conceito SMC | `mql5-books` | "order blocks fair value gaps SMC" |
+| Sintaxe MQL5 | `mql5-docs` | "CopyRates parameters usage" |
+| Historico XAUUSD | `twelve-data` | API call para dados historicos |
+| Guardar insight | `memory` | create_entities com contexto |
+| Sessao atual | `time` | get_current_time timezone |
+
+## 8.3 Workflow com MCPs
+
+```
+/mercado WORKFLOW:
+
+1. REGIME → Calcular Hurst/Entropy (local)
+2. DXY    → perplexity: "DXY dollar index current"
+3. RATIO  → perplexity: "gold silver ratio today"
+4. YIELDS → perplexity: "US 10 year real yield TIPS"
+5. COT    → perplexity: "CFTC COT gold futures latest"
+6. NEWS   → perplexity: "forex calendar today high impact"
+7. SESSAO → time: verificar sessao atual
+8. TEORIA → mql5-books: "market regime trading gold"
+9. SALVAR → memory: guardar analise do dia
+```
+
+## 8.4 RAG Database (Local)
 
 ```
 .rag-db/
@@ -891,6 +961,105 @@ Bridge: Bridge/*.mqh
 - "Esse modulo ta vulneravel a X."
 - "Falta validacao aqui."
 - "Boa implementacao. So adiciona log nesse ponto."
+
+---
+
+# PARTE 10: QUANTIFICATION REFERENCE (PARTY MODE #001)
+
+Esta secao converte termos subjetivos em valores numericos para consistencia e testabilidade.
+
+## 10.1 Correlacoes Quantificadas
+
+| Termo Subjetivo | Quantificacao | Fonte |
+|-----------------|---------------|-------|
+| "DXY caindo" | DXY change < -0.3% no dia | Dados historicos |
+| "DXY subindo" | DXY change > +0.3% no dia | Dados historicos |
+| "DXY estavel" | -0.3% <= DXY change <= +0.3% | Dados historicos |
+| "DXY forte" | DXY > 105.0 | Nivel tecnico |
+| "DXY fraco" | DXY < 102.0 | Nivel tecnico |
+| "Correlacao ativa" | |r| > 0.50 | Estatistica |
+| "Correlacao forte" | |r| > 0.70 | Estatistica |
+
+## 10.2 Spread Quantificado
+
+| Termo Subjetivo | Quantificacao | Contexto |
+|-----------------|---------------|----------|
+| "Spread aceitavel" | Spread <= 25 pontos | London/NY |
+| "Spread bom" | Spread <= 18 pontos | Overlap |
+| "Spread alto" | Spread > 30 pontos | Qualquer |
+| "Spread perigoso" | Spread > 45 pontos | Evitar |
+
+## 10.3 Sessoes Quantificadas
+
+| Termo Subjetivo | Quantificacao | Qualidade |
+|-----------------|---------------|-----------|
+| "Asia" | 22:00-07:00 GMT | EVITAR |
+| "London Open" | 07:00-08:30 GMT | BOA |
+| "London" | 08:00-12:00 GMT | BOA |
+| "NY Open" | 12:30-14:00 GMT | BOA |
+| "Overlap" (IDEAL) | 12:00-16:00 GMT | IDEAL |
+| "London Fix" | 15:00 GMT ±30min | CUIDADO |
+| "After hours" | 20:00-22:00 GMT | EVITAR |
+
+## 10.4 Regimes Quantificados
+
+| Termo Subjetivo | Quantificacao | Acao |
+|-----------------|---------------|------|
+| "Trending forte" | Hurst > 0.65 | Size 100% |
+| "Trending" | 0.55 < Hurst <= 0.65 | Size 100% |
+| "Range" | 0.45 <= Hurst <= 0.55 | Size 75% |
+| "Random Walk" | Hurst < 0.45 | NO TRADE |
+| "Baixa entropia" | Entropy < 2.0 | Bom |
+| "Entropia aceitavel" | 2.0 <= Entropy <= 2.5 | OK |
+| "Alta entropia" | Entropy > 2.5 | Cuidado |
+
+## 10.5 Sinais Quantificados
+
+| Termo Subjetivo | Quantificacao | Threshold |
+|-----------------|---------------|-----------|
+| "Setup A+" | Score confluencia >= 85 | Tier A |
+| "Setup bom" | 70 <= Score < 85 | Tier B |
+| "Setup marginal" | 55 <= Score < 70 | Tier C |
+| "Setup ruim" | Score < 55 | NO TRADE |
+| "Confirmacao forte" | 3+ fatores alinhados | GO |
+| "Confirmacao fraca" | 1-2 fatores | WAIT |
+
+## 10.6 Risk Quantificado
+
+| Termo Subjetivo | Quantificacao | FTMO |
+|-----------------|---------------|------|
+| "DD seguro" | DD < 3% | Verde |
+| "DD cautela" | 3% <= DD < 4% | Amarelo |
+| "DD trigger" | 4% <= DD < 5% | Laranja |
+| "DD perigo" | DD >= 5% | STOP |
+
+## 10.7 Conversao de "Feeling"
+
+O "feeling desenvolvido em 20 anos" e uma heuristica baseada em:
+
+```
+FEELING → CHECKLIST QUANTIFICAVEL:
+
+"Feeling bom" significa TODOS passam:
+□ DXY nao contra (change < +0.5%)
+□ Spread < 25 pontos
+□ Sessao nao e Asia
+□ Sem news HIGH em 30min
+□ Hurst > 0.45 (nao Random Walk)
+□ H1 alinhado com direcao
+□ Volume > media 20 periodos
+
+"Feeling ruim" significa 2+ falham:
+□ DXY contra forte (change > +0.5%)
+□ Spread > 30 pontos
+□ Sessao Asia ou after hours
+□ News HIGH em < 15min
+□ Hurst < 0.45
+□ H1 contra direcao
+□ Volume < 50% da media
+
+RESULTADO: Feeling convertido em 7 gates quantificaveis.
+```
 
 ---
 

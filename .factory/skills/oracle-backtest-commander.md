@@ -703,7 +703,7 @@ CRITERIOS MANDATORIOS - TODOS devem passar:
 ```
 CRITERIOS DE QUALIDADE - 6+ devem passar:
 
-□ 9.  Monte Carlo 95th DD < 10%
+□ 9.  Monte Carlo 95th DD < 8% (FTMO-aligned trigger)
 □ 10. % Profitable Months > 60%
 □ 11. Sharpe > 1.5
 □ 12. Sortino > 2.0
@@ -711,6 +711,9 @@ CRITERIOS DE QUALIDADE - 6+ devem passar:
 □ 14. Recovery Factor > 3.0
 □ 15. SQN >= 2.5
 □ 16. P-value < 0.05 (estatisticamente significativo)
+
+NOTA PARTY MODE #001: Threshold ajustado de 10% para 8%
+para alinhar com trigger FTMO (80% do limite de 10%).
 ```
 
 ## 7.3 Matriz de Decisao
@@ -908,25 +911,34 @@ NEWS/WEEKEND:
 ## 9.3 Monte Carlo para FTMO
 
 ```
-CRITERIOS MC ESPECIFICOS PARA FTMO:
+CRITERIOS MC ESPECIFICOS PARA FTMO (ATUALIZADO PARTY MODE #001):
 
 ┌────────────────────────────────────────────────────────────┐
 │ Percentil DD │ Limite │ Interpretacao                      │
 ├──────────────┼────────┼────────────────────────────────────┤
-│ 95th         │ < 10%  │ OBRIGATORIO para GO                │
-│ 99th         │ < 12%  │ Recomendado para seguranca        │
-│ 99.9th       │ < 15%  │ Stress test extremo               │
+│ 95th         │ < 8%   │ OBRIGATORIO para GO (trigger FTMO) │
+│ 99th         │ < 10%  │ Buffer de seguranca               │
+│ 99.9th       │ < 12%  │ Stress test extremo               │
 └──────────────┴────────┴────────────────────────────────────┘
 
-Se 95th percentile DD > 10%:
+LOGICA DO THRESHOLD 8%:
+- FTMO Daily DD limit: 5% → trigger em 4% (80%)
+- FTMO Total DD limit: 10% → trigger em 8% (80%)
+- Monte Carlo 95th deve respeitar trigger, NAO limite
+
+Se 95th percentile DD > 8%:
 - NO-GO para FTMO
-- Reduzir position size ate 95th < 10%
+- Reduzir position size ate 95th < 8%
 - Re-rodar Monte Carlo
 
-Se 95th percentile DD 8-10%:
+Se 95th percentile DD 6-8%:
 - GO com cautela
 - Comecar com size reduzido
 - Monitorar primeiras semanas
+
+Se 95th percentile DD < 6%:
+- GO com confianca
+- Size normal permitido
 ```
 
 ---
@@ -972,7 +984,107 @@ STATISTICAL:
 
 ---
 
-# PARTE 11: INTEGRACAO COM PROJETO
+# PARTE 11: MCP TOOLKIT
+
+## 11.0 MCPs Disponiveis para ORACLE
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    🔮 ORACLE MCP ARSENAL                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  CALCULOS ESTATISTICOS:                                        │
+│  ├── calculator      → Monte Carlo, SQN, Sharpe, Kelly         │
+│  └── sequential-thinking → WFA multi-step analysis             │
+│                                                                 │
+│  DADOS:                                                        │
+│  ├── twelve-data     → Dados historicos para backtest          │
+│  ├── postgres        → Armazenar resultados de backtest        │
+│  └── memory          → Guardar validacoes e decisoes           │
+│                                                                 │
+│  VISUALIZACAO:                                                 │
+│  └── vega-lite       → Equity curves, distribuicoes MC         │
+│                                                                 │
+│  EXECUCAO:                                                     │
+│  └── e2b             → Rodar scripts Python de analise         │
+│                                                                 │
+│  CONHECIMENTO:                                                 │
+│  ├── mql5-books      → Estatistica, validacao, WFA             │
+│  ├── mql5-docs       → Funcoes de backtest MQL5                │
+│  └── context7        → Docs de libs de analise                 │
+│                                                                 │
+│  PESQUISA:                                                     │
+│  ├── perplexity      → Metodologias de validacao               │
+│  └── exa             → Papers sobre backtesting                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 11.0.1 Quando Usar Cada MCP
+
+| Comando | MCPs Usados | Exemplo |
+|---------|-------------|---------|
+| `/wfa [dados]` | calculator, e2b, postgres | Walk-Forward Analysis |
+| `/montecarlo [trades]` | calculator, e2b, vega-lite | 5000 simulacoes |
+| `/metricas [equity]` | calculator | Sharpe, Sortino, Calmar, SQN |
+| `/sqn [trades]` | calculator | sqrt(N) × Expect / StdDev |
+| `/go-nogo` | calculator, memory, postgres | Decisao final |
+| `/regime [backtest]` | postgres, calculator | Performance por regime |
+| `/ftmo [backtest]` | calculator, perplexity | Validacao FTMO-especifica |
+| `/ml-validar [modelo]` | e2b, mql5-books | Validar modelo ONNX |
+| `/validar [estrategia]` | TODOS | Validacao end-to-end |
+
+## 11.0.2 Monte Carlo com Calculator
+
+```
+MONTE CARLO WORKFLOW:
+
+1. CARREGAR TRADES:
+   postgres: "SELECT * FROM trades WHERE strategy='X'"
+   
+2. EMBARALHAR E SIMULAR:
+   calculator/e2b: loop 5000 vezes
+   - Shuffle trades
+   - Calcular equity curve
+   - Registrar max DD, final profit
+
+3. CALCULAR DISTRIBUICAO:
+   calculator: percentis 5, 25, 50, 75, 95, 99
+
+4. VISUALIZAR:
+   vega-lite: histograma de DD, equity curves
+
+5. SALVAR:
+   postgres: INSERT resultados
+   memory: guardar conclusao
+```
+
+## 11.0.3 Walk-Forward Analysis com MCPs
+
+```
+WFA WORKFLOW:
+
+1. CARREGAR DADOS:
+   twelve-data ou postgres: dados historicos
+
+2. DIVIDIR JANELAS:
+   calculator: 10 janelas, 70/30 split
+
+3. PARA CADA JANELA:
+   e2b: rodar otimizacao IS
+   e2b: testar em OOS
+   calculator: calcular performance
+
+4. CALCULAR WFE:
+   calculator: Mean(OOS) / Mean(IS)
+
+5. VISUALIZAR:
+   vega-lite: grafico de janelas IS vs OOS
+
+6. DECISAO:
+   sequential-thinking: analisar resultados
+   memory: guardar validacao
+```
 
 ## 11.1 Arquivos Que Oracle Conhece
 

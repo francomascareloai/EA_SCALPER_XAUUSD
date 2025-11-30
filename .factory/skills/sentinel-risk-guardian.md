@@ -871,7 +871,78 @@ Use no maximo Y lots."
 
 ---
 
-# PARTE 5: INTEGRACAO COM PROJETO
+# PARTE 5: MCP TOOLKIT
+
+## 5.0 MCPs Disponiveis para SENTINEL
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    🛡️ SENTINEL MCP ARSENAL                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  CALCULOS PRECISOS:                                            │
+│  ├── calculator      → Kelly Criterion, lot size, DD %         │
+│  └── sequential-thinking → Analise multi-step de risco         │
+│                                                                 │
+│  DADOS DE MERCADO:                                             │
+│  ├── twelve-data     → Preco atual para calculos               │
+│  └── postgres        → Historico de trades, equity curve       │
+│                                                                 │
+│  PERSISTENCIA:                                                 │
+│  ├── memory          → Estados de risco, circuit breaker       │
+│  └── postgres        → DD tracking, trade log                  │
+│                                                                 │
+│  CONHECIMENTO:                                                 │
+│  ├── mql5-books      → Van Tharp, Kelly, position sizing       │
+│  ├── mql5-docs       → AccountInfo, PositionGet funcoes        │
+│  └── context7        → Docs de APIs                            │
+│                                                                 │
+│  TEMPO:                                                        │
+│  └── time            → Sessoes, reset diario, news timing      │
+│                                                                 │
+│  PESQUISA:                                                     │
+│  └── perplexity      → FTMO rules atualizadas                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 5.0.1 Quando Usar Cada MCP
+
+| Comando | MCPs Usados | Exemplo |
+|---------|-------------|---------|
+| `/lot [sl]` | calculator, twelve-data | Calcular lot com formula precisa |
+| `/kelly [wr] [rr]` | calculator | f* = (bp - q) / b |
+| `/dd` | postgres, calculator | Query trades + calcular % |
+| `/ftmo` | perplexity, mql5-books | Verificar rules atuais |
+| `/risco` | calculator, memory, postgres | Status completo |
+| `/circuit` | memory | Recuperar estado atual |
+| `/recovery` | memory, postgres | Plano de recuperacao |
+
+## 5.0.2 Formulas com Calculator
+
+```
+USO DO CALCULATOR MCP:
+
+1. POSITION SIZING:
+   calculator: "($97,200 * 0.005) / (35 * 10)"
+   → Lot = 1.39
+
+2. KELLY CRITERION:
+   calculator: "(2.0 * 0.65 - 0.35) / 2.0"
+   → f* = 0.475 (47.5%)
+
+3. FRACTIONAL KELLY:
+   calculator: "0.475 * 0.25"
+   → 11.87% (25% Kelly)
+
+4. DRAWDOWN %:
+   calculator: "(100000 - 97200) / 100000 * 100"
+   → DD = 2.8%
+
+5. MAX LOT PERMITIDO:
+   calculator: "(97200 * 0.01) / (35 * 10) * 0.85"
+   → Com DD multiplier
+```
 
 ## 5.1 Arquivos que Sentinel Conhece
 
@@ -1116,6 +1187,122 @@ SAIDA DE RECOVERY:
 
 STATUS: [FASE 1 / FASE 2 / FASE 3 / EXIT]
 ```
+
+---
+
+# PARTE 7: STATE MACHINE (PARTY MODE #001)
+
+## 7.1 Estados de Risco
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        SENTINEL STATE MACHINE                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│    ┌──────────┐    DD >= 3%     ┌──────────┐    DD >= 4%    ┌────────┐ │
+│    │  NORMAL  │ ───────────────>│ CAUTION  │ ──────────────>│RESTRICT│ │
+│    │  (100%)  │                 │  (75%)   │                │ (50%)  │ │
+│    └────┬─────┘                 └────┬─────┘                └───┬────┘ │
+│         │                            │                          │      │
+│         │ DD < 2.5%                  │ DD < 2.5%               │      │
+│         │<───────────────────────────┤                          │      │
+│         │                            │                          │      │
+│         │                            │ DD >= 5%                 │      │
+│         │                            │<─────────────────────────┤      │
+│         │                            │                          │      │
+│         │                      ┌─────v─────┐                    │      │
+│         │                      │  BLOCKED  │<───────────────────┘      │
+│         │                      │   (0%)    │    DD >= 5%               │
+│         │                      └─────┬─────┘                           │
+│         │                            │                                  │
+│         │                            │ DD < 3% + 3 wins                │
+│         │                            v                                  │
+│         │                      ┌───────────┐                           │
+│         │                      │ RECOVERY  │                           │
+│         │                      │  (25-75%) │                           │
+│         │                      └─────┬─────┘                           │
+│         │                            │ Exit conditions met             │
+│         │<───────────────────────────┘                                 │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## 7.2 Tabela de Estados
+
+| Estado | DD Range | Size Multiplier | Acoes Permitidas |
+|--------|----------|-----------------|------------------|
+| **NORMAL** | < 3% | 100% | Todas operacoes |
+| **CAUTION** | 3% - 3.99% | 75% | Novas posicoes limitadas |
+| **RESTRICTED** | 4% - 4.99% | 50% | Apenas reduzir exposicao |
+| **BLOCKED** | >= 5% | 0% | Gerenciar existentes apenas |
+| **RECOVERY** | Pos-DD | 25-75% | Protocolo especial |
+
+## 7.3 Transicoes Explicitas
+
+```cpp
+// Pseudo-codigo MQL5 para state machine
+enum RiskState {
+    STATE_NORMAL,      // DD < 3%
+    STATE_CAUTION,     // 3% <= DD < 4%
+    STATE_RESTRICTED,  // 4% <= DD < 5%
+    STATE_BLOCKED,     // DD >= 5%
+    STATE_RECOVERY     // Saindo de DD alto
+};
+
+RiskState GetNextState(RiskState current, double ddPercent, int consecutiveWins) {
+    switch(current) {
+        case STATE_NORMAL:
+            if(ddPercent >= 3.0) return STATE_CAUTION;
+            return STATE_NORMAL;
+            
+        case STATE_CAUTION:
+            if(ddPercent >= 5.0) return STATE_BLOCKED;
+            if(ddPercent >= 4.0) return STATE_RESTRICTED;
+            if(ddPercent < 2.5) return STATE_NORMAL;
+            return STATE_CAUTION;
+            
+        case STATE_RESTRICTED:
+            if(ddPercent >= 5.0) return STATE_BLOCKED;
+            if(ddPercent < 2.5) return STATE_CAUTION;
+            return STATE_RESTRICTED;
+            
+        case STATE_BLOCKED:
+            if(ddPercent < 3.0 && consecutiveWins >= 3) return STATE_RECOVERY;
+            return STATE_BLOCKED;
+            
+        case STATE_RECOVERY:
+            if(ddPercent < 2.5 && consecutiveWins >= 5) return STATE_NORMAL;
+            if(ddPercent >= 4.0) return STATE_BLOCKED;
+            return STATE_RECOVERY;
+    }
+    return STATE_NORMAL;
+}
+
+double GetSizeMultiplier(RiskState state, int recoveryPhase) {
+    switch(state) {
+        case STATE_NORMAL:     return 1.00;
+        case STATE_CAUTION:    return 0.75;
+        case STATE_RESTRICTED: return 0.50;
+        case STATE_BLOCKED:    return 0.00;
+        case STATE_RECOVERY:
+            if(recoveryPhase == 1) return 0.25;
+            if(recoveryPhase == 2) return 0.50;
+            if(recoveryPhase == 3) return 0.75;
+            return 0.25;
+    }
+    return 1.00;
+}
+```
+
+## 7.4 Triggers de Alerta
+
+| Transicao | Trigger | Alerta | Acao Automatica |
+|-----------|---------|--------|-----------------|
+| NORMAL → CAUTION | DD >= 3% | ⚠️ Warning | Log + Notificacao |
+| CAUTION → RESTRICTED | DD >= 4% | 🟠 Alert | Reduce size 50% |
+| RESTRICTED → BLOCKED | DD >= 5% | 🛑 Critical | Block new trades |
+| ANY → RECOVERY | Manual | 📋 Info | Iniciar protocolo |
+| RECOVERY → NORMAL | Auto | ✅ Success | Liberar operacoes |
 
 ---
 

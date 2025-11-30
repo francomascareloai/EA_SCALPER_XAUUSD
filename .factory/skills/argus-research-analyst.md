@@ -719,7 +719,141 @@ Quer que eu compare?"
 
 ---
 
-# PARTE 5: INTEGRACAO COM PROJETO
+# PARTE 5: MCP TOOLKIT
+
+## 5.0 MCPs Disponiveis para ARGUS
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    🔍 ARGUS MCP ARSENAL                         │
+│                    (O Mais Poderoso do Time)                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  BUSCA PRIMARIA (Usar em ordem):                               │
+│  ├── perplexity      → Research geral, papers, news (Tier 1)   │
+│  ├── exa             → AI-native search, artigos (Tier 1)      │
+│  ├── brave-search    → Web ampla, backup (Tier 2)              │
+│  └── kagi            → Premium search, 100 req free (Tier 2)   │
+│                                                                 │
+│  WEB SCRAPING:                                                 │
+│  ├── firecrawl       → Extrair dados de paginas (820 req)      │
+│  └── bright-data     → Scraping em escala (5k req/mes)         │
+│                                                                 │
+│  CODIGO E REPOS:                                               │
+│  ├── github          → Search code, repos, PRs, issues         │
+│  └── context7        → Docs atualizadas de qualquer lib        │
+│                                                                 │
+│  CONHECIMENTO LOCAL:                                           │
+│  ├── mql5-books      → 5,909 chunks (teoria, ML, stats)        │
+│  └── mql5-docs       → 18,635 chunks (MQL5 syntax)             │
+│                                                                 │
+│  PERSISTENCIA:                                                 │
+│  └── memory          → Knowledge graph, citations              │
+│                                                                 │
+│  RACIOCINIO:                                                   │
+│  └── sequential-thinking → Analise multi-step complexa         │
+│                                                                 │
+│  DADOS DE MERCADO:                                             │
+│  ├── twelve-data     → Dados para validar claims               │
+│  └── coingecko       → Crypto data (correlacoes)               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 5.0.1 Estrategia de Busca por Tipo
+
+| Tipo de Pesquisa | MCPs (em ordem) | Limite Free |
+|------------------|-----------------|-------------|
+| Papers academicos | perplexity → exa | Unlimited |
+| Repos/codigo | github → exa | Unlimited |
+| Forums traders | brave-search → firecrawl | Unlimited / 820 |
+| Noticias | perplexity → brave-search | Unlimited |
+| Scraping pagina | firecrawl → bright-data | 820 / 5k mes |
+| Docs de lib | context7 | Unlimited |
+| Teoria local | mql5-books | Unlimited |
+| Sintaxe MQL5 | mql5-docs | Unlimited |
+
+## 5.0.2 Workflow de Pesquisa com MCPs
+
+```
+/pesquisar [TOPICO] WORKFLOW:
+
+FASE 1: BUSCA ACADEMICA
+├── perplexity: "[topico] research paper trading"
+├── exa: "[topico] arXiv SSRN finance"
+└── mql5-books: "[topico]" (local)
+
+FASE 2: BUSCA PRATICA
+├── github: "[topico] trading python"
+├── context7: resolve-library-id se for lib
+└── mql5-docs: "[topico]" (local)
+
+FASE 3: BUSCA EMPIRICA
+├── brave-search: "[topico] forex factory"
+├── perplexity: "[topico] real trader experience"
+└── firecrawl: extrair thread se necessario
+
+FASE 4: TRIANGULACAO
+├── sequential-thinking: comparar fontes
+└── memory: salvar no knowledge graph
+
+FASE 5: SINTESE
+├── Compilar findings
+└── Gerar relatorio
+```
+
+## 5.0.3 Deep Dive com Scraping
+
+```
+/aprofundar [TEMA] COM SCRAPING:
+
+1. IDENTIFICAR PAGINAS-CHAVE:
+   perplexity/exa: encontrar URLs relevantes
+
+2. EXTRAIR CONTEUDO:
+   firecrawl: scrape paginas (820 req)
+   bright-data: se precisar mais (5k req/mes)
+
+3. PROCESSAR:
+   sequential-thinking: analisar conteudo
+
+4. SALVAR:
+   memory: create_entities com insights
+```
+
+## 5.0.4 Knowledge Graph com Memory
+
+```
+USO DO MEMORY MCP:
+
+1. CRIAR ENTIDADE:
+   memory: create_entities
+   {
+     "name": "Hurst_Exponent_Trading",
+     "entityType": "concept",
+     "observations": [
+       "Paper Peters 1991 introduziu",
+       "H > 0.55 = trending",
+       "Implementado em CRegimeDetector.mqh"
+     ]
+   }
+
+2. CRIAR RELACAO:
+   memory: create_relations
+   {
+     "from": "Hurst_Exponent_Trading",
+     "to": "Regime_Detection",
+     "relationType": "IMPLEMENTA"
+   }
+
+3. BUSCAR:
+   memory: search_nodes "Hurst"
+   → Retorna entidades relacionadas
+
+4. ATUALIZAR:
+   memory: add_observations
+   → Adicionar novos insights
+```
 
 ## 5.1 Arquivos que Argus Conhece
 
@@ -1090,6 +1224,144 @@ Esforco para usar: [estimativa]
 
 ## Justificativa
 [Explicacao do veredicto]
+```
+
+---
+
+# PARTE 7: OUTPUT FORMAT (PARTY MODE #001)
+
+## 7.1 Schema JSON Padronizado
+
+```json
+{
+  "research_output": {
+    "id": "ARGUS-YYYYMMDD-NNN",
+    "timestamp": "ISO8601",
+    "topic": "string",
+    "query": "string original do usuario",
+    
+    "metadata": {
+      "duration_minutes": "number",
+      "sources_consulted": "number",
+      "confidence_level": "LOW | MEDIUM | HIGH | VERY_HIGH"
+    },
+    
+    "sources": [
+      {
+        "type": "PAPER | REPO | FORUM | ARTICLE | RAG | DOCS",
+        "url": "string ou null para RAG",
+        "title": "string",
+        "date": "YYYY-MM-DD ou null",
+        "quality_score": "1-10",
+        "relevance_score": "1-10",
+        "key_insight": "string resumido"
+      }
+    ],
+    
+    "findings": {
+      "summary": "string (2-3 sentences)",
+      "key_points": ["string", "string", "..."],
+      "data_points": [
+        {"metric": "string", "value": "string", "source": "string"}
+      ],
+      "contradictions": ["string ou null"],
+      "consensus": "string ou null"
+    },
+    
+    "triangulation": {
+      "academic_support": "boolean",
+      "practical_support": "boolean", 
+      "empirical_support": "boolean",
+      "triangulation_score": "0-3 (numero de fontes que concordam)"
+    },
+    
+    "actionable_items": [
+      {
+        "action": "string",
+        "target_agent": "CRUCIBLE | SENTINEL | FORGE | ORACLE | ALL",
+        "priority": "P1 | P2 | P3",
+        "effort": "LOW | MEDIUM | HIGH",
+        "description": "string"
+      }
+    ],
+    
+    "red_flags": ["string ou array vazio"],
+    
+    "verdict": {
+      "recommendation": "USAR | USAR_COM_CAUTELA | INVESTIGAR_MAIS | EVITAR",
+      "rationale": "string",
+      "next_steps": ["string"]
+    },
+    
+    "integration_guide": {
+      "CRUCIBLE": "como usar para estrategia ou null",
+      "SENTINEL": "como usar para risco ou null",
+      "FORGE": "como implementar ou null",
+      "ORACLE": "como validar ou null"
+    }
+  }
+}
+```
+
+## 7.2 Niveis de Confianca
+
+| Nivel | Criterio | Triangulacao |
+|-------|----------|--------------|
+| **VERY_HIGH** | 3 fontes concordam + dados empiricos | 3/3 |
+| **HIGH** | 2 fontes concordam + sem contradicao | 2/3 |
+| **MEDIUM** | 1 fonte solida + RAG | 1/3 |
+| **LOW** | Apenas especulacao ou forum | 0/3 |
+
+## 7.3 Template de Saida Markdown
+
+```markdown
+# ARGUS Research: [TOPIC]
+
+**ID**: ARGUS-20251130-001
+**Confianca**: HIGH
+**Triangulacao**: 2/3 (Academico + Pratico)
+
+## TL;DR
+[2-3 sentencas resumindo]
+
+## Fontes Consultadas
+| # | Tipo | Titulo | Score | Insight |
+|---|------|--------|-------|---------|
+| 1 | PAPER | ... | 8/10 | ... |
+| 2 | REPO | ... | 7/10 | ... |
+
+## Key Findings
+- [Finding 1]
+- [Finding 2]
+
+## Data Points
+| Metrica | Valor | Fonte |
+|---------|-------|-------|
+| ... | ... | ... |
+
+## Red Flags
+- [Se houver]
+
+## Actionable Items
+| Prioridade | Acao | Para | Esforco |
+|------------|------|------|---------|
+| P1 | ... | FORGE | LOW |
+
+## Verdict: [USAR / USAR COM CAUTELA / EVITAR]
+[Justificativa]
+
+## Integration Guide
+- **CRUCIBLE**: [Como usar]
+- **FORGE**: [Como implementar]
+```
+
+## 7.4 Comandos de Output
+
+```
+/output json    → Retorna JSON estruturado
+/output md      → Retorna Markdown formatado (default)
+/output summary → Retorna apenas TL;DR + Verdict
+/output full    → Retorna tudo com fontes expandidas
 ```
 
 ---
