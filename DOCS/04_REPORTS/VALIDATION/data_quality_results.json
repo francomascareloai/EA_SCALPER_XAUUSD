@@ -1,0 +1,499 @@
+[
+  {
+    "file": "Bars_2020-2025XAUUSD_ftmo-M5-No Session.csv",
+    "timeframe": "M5",
+    "checks": {
+      "duplicates": {
+        "duplicates": 0,
+        "total_rows": 419195,
+        "duplicate_pct": 0.0,
+        "passed": "True"
+      },
+      "negative_values": {
+        "negative_counts": {
+          "open": 0,
+          "high": 0,
+          "low": 0,
+          "close": 0,
+          "volume": 0
+        },
+        "total_negative": "0",
+        "passed": "True"
+      },
+      "ohlc_sanity": {
+        "issues": {
+          "high_less_than_low": 0,
+          "high_less_than_open": 0,
+          "high_less_than_close": 0,
+          "low_greater_than_open": 0,
+          "low_greater_than_close": 0
+        },
+        "total_issues": 0,
+        "passed": true
+      },
+      "volume_coverage": {
+        "zero_volume_bars": 0,
+        "total_bars": 419195,
+        "non_zero_pct": 100.0,
+        "passed": "True"
+      },
+      "gaps": {
+        "total_gaps_detected": 1531,
+        "normal_weekend_gaps": 295,
+        "suspicious_gaps": 13,
+        "suspicious_gap_details": [
+          {
+            "from": "2020-04-09 23:55:00",
+            "to": "2020-04-13 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2020-12-24 20:40:00",
+            "to": "2020-12-28 01:00:00",
+            "gap_hours": 76.3
+          },
+          {
+            "from": "2020-12-31 23:55:00",
+            "to": "2021-01-04 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2021-04-01 23:55:00",
+            "to": "2021-04-05 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2021-12-23 23:55:00",
+            "to": "2021-12-27 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2022-04-14 23:55:00",
+            "to": "2022-04-18 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2022-12-23 23:55:00",
+            "to": "2022-12-27 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2022-12-30 23:55:00",
+            "to": "2023-01-03 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2023-04-06 23:55:00",
+            "to": "2023-04-10 01:00:00",
+            "gap_hours": 73.1
+          },
+          {
+            "from": "2023-12-22 23:55:00",
+            "to": "2023-12-26 01:00:00",
+            "gap_hours": 73.1
+          }
+        ],
+        "passed": false
+      },
+      "price_range": {
+        "out_of_range_bars": 17177,
+        "valid_range": "$800-$3500",
+        "actual_min": 1451.15,
+        "actual_max": 4381.3,
+        "passed": "False"
+      },
+      "completeness": {
+        "expected_bars_approx": 443725,
+        "actual_bars": 419195,
+        "completeness_pct": 94.47,
+        "passed": true
+      }
+    },
+    "quality_score": 75,
+    "passed": false,
+    "errors": [
+      "17177 bars with prices outside $800-$3500"
+    ],
+    "warnings": [
+      "13 suspicious gaps (>2.5 days) found"
+    ],
+    "total_rows": 419195,
+    "date_range": {
+      "start": "2020-01-02 01:00:00",
+      "end": "2025-11-28 01:55:00"
+    }
+  },
+  {
+    "file": "bars-2020-2025XAUUSD_ftmo-M15-No Session.csv",
+    "timeframe": "M15",
+    "checks": {
+      "duplicates": {
+        "duplicates": 0,
+        "total_rows": 139738,
+        "duplicate_pct": 0.0,
+        "passed": "True"
+      },
+      "negative_values": {
+        "negative_counts": {
+          "open": 0,
+          "high": 0,
+          "low": 0,
+          "close": 0,
+          "volume": 0
+        },
+        "total_negative": "0",
+        "passed": "True"
+      },
+      "ohlc_sanity": {
+        "issues": {
+          "high_less_than_low": 0,
+          "high_less_than_open": 0,
+          "high_less_than_close": 0,
+          "low_greater_than_open": 0,
+          "low_greater_than_close": 0
+        },
+        "total_issues": 0,
+        "passed": true
+      },
+      "volume_coverage": {
+        "zero_volume_bars": 0,
+        "total_bars": 139738,
+        "non_zero_pct": 100.0,
+        "passed": "True"
+      },
+      "gaps": {
+        "total_gaps_detected": 1529,
+        "normal_weekend_gaps": 295,
+        "suspicious_gaps": 13,
+        "suspicious_gap_details": [
+          {
+            "from": "2020-04-09 23:45:00",
+            "to": "2020-04-13 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2020-12-24 20:30:00",
+            "to": "2020-12-28 01:00:00",
+            "gap_hours": 76.5
+          },
+          {
+            "from": "2020-12-31 23:45:00",
+            "to": "2021-01-04 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2021-04-01 23:45:00",
+            "to": "2021-04-05 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2021-12-23 23:45:00",
+            "to": "2021-12-27 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2022-04-14 23:45:00",
+            "to": "2022-04-18 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2022-12-23 23:45:00",
+            "to": "2022-12-27 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2022-12-30 23:45:00",
+            "to": "2023-01-03 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2023-04-06 23:45:00",
+            "to": "2023-04-10 01:00:00",
+            "gap_hours": 73.2
+          },
+          {
+            "from": "2023-12-22 23:45:00",
+            "to": "2023-12-26 01:00:00",
+            "gap_hours": 73.2
+          }
+        ],
+        "passed": false
+      },
+      "price_range": {
+        "out_of_range_bars": 5728,
+        "valid_range": "$800-$3500",
+        "actual_min": 1451.15,
+        "actual_max": 4381.3,
+        "passed": "False"
+      },
+      "completeness": {
+        "expected_bars_approx": 147908,
+        "actual_bars": 139738,
+        "completeness_pct": 94.48,
+        "passed": true
+      }
+    },
+    "quality_score": 75,
+    "passed": false,
+    "errors": [
+      "5728 bars with prices outside $800-$3500"
+    ],
+    "warnings": [
+      "13 suspicious gaps (>2.5 days) found"
+    ],
+    "total_rows": 139738,
+    "date_range": {
+      "start": "2020-01-02 01:00:00",
+      "end": "2025-11-28 01:45:00"
+    }
+  },
+  {
+    "file": "bars-2020-2025XAUUSD_ftmo-H1-No Session.csv",
+    "timeframe": "H1",
+    "checks": {
+      "duplicates": {
+        "duplicates": 0,
+        "total_rows": 34951,
+        "duplicate_pct": 0.0,
+        "passed": "True"
+      },
+      "negative_values": {
+        "negative_counts": {
+          "open": 0,
+          "high": 0,
+          "low": 0,
+          "close": 0,
+          "volume": 0
+        },
+        "total_negative": "0",
+        "passed": "True"
+      },
+      "ohlc_sanity": {
+        "issues": {
+          "high_less_than_low": 0,
+          "high_less_than_open": 0,
+          "high_less_than_close": 0,
+          "low_greater_than_open": 0,
+          "low_greater_than_close": 0
+        },
+        "total_issues": 0,
+        "passed": true
+      },
+      "volume_coverage": {
+        "zero_volume_bars": 0,
+        "total_bars": 34951,
+        "non_zero_pct": 100.0,
+        "passed": "True"
+      },
+      "gaps": {
+        "total_gaps_detected": 349,
+        "normal_weekend_gaps": 295,
+        "suspicious_gaps": 13,
+        "suspicious_gap_details": [
+          {
+            "from": "2020-04-09 23:00:00",
+            "to": "2020-04-13 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2020-12-24 20:00:00",
+            "to": "2020-12-28 01:00:00",
+            "gap_hours": 77.0
+          },
+          {
+            "from": "2020-12-31 23:00:00",
+            "to": "2021-01-04 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2021-04-01 23:00:00",
+            "to": "2021-04-05 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2021-12-23 23:00:00",
+            "to": "2021-12-27 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2022-04-14 23:00:00",
+            "to": "2022-04-18 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2022-12-23 23:00:00",
+            "to": "2022-12-27 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2022-12-30 23:00:00",
+            "to": "2023-01-03 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2023-04-06 23:00:00",
+            "to": "2023-04-10 01:00:00",
+            "gap_hours": 74.0
+          },
+          {
+            "from": "2023-12-22 23:00:00",
+            "to": "2023-12-26 01:00:00",
+            "gap_hours": 74.0
+          }
+        ],
+        "passed": false
+      },
+      "price_range": {
+        "out_of_range_bars": 1434,
+        "valid_range": "$800-$3500",
+        "actual_min": 1451.15,
+        "actual_max": 4381.3,
+        "passed": "False"
+      },
+      "completeness": {
+        "expected_bars_approx": 36977,
+        "actual_bars": 34951,
+        "completeness_pct": 94.52,
+        "passed": true
+      }
+    },
+    "quality_score": 75,
+    "passed": false,
+    "errors": [
+      "1434 bars with prices outside $800-$3500"
+    ],
+    "warnings": [
+      "13 suspicious gaps (>2.5 days) found"
+    ],
+    "total_rows": 34951,
+    "date_range": {
+      "start": "2020-01-02 01:00:00",
+      "end": "2025-11-28 01:00:00"
+    }
+  },
+  {
+    "file": "bars-2020-2025XAUUSD_ftmo-H4-No Session.csv",
+    "timeframe": "M5",
+    "checks": {
+      "duplicates": {
+        "duplicates": 0,
+        "total_rows": 9138,
+        "duplicate_pct": 0.0,
+        "passed": "True"
+      },
+      "negative_values": {
+        "negative_counts": {
+          "open": 0,
+          "high": 0,
+          "low": 0,
+          "close": 0,
+          "volume": 0
+        },
+        "total_negative": "0",
+        "passed": "True"
+      },
+      "ohlc_sanity": {
+        "issues": {
+          "high_less_than_low": 0,
+          "high_less_than_open": 0,
+          "high_less_than_close": 0,
+          "low_greater_than_open": 0,
+          "low_greater_than_close": 0
+        },
+        "total_issues": 0,
+        "passed": true
+      },
+      "volume_coverage": {
+        "zero_volume_bars": 0,
+        "total_bars": 9138,
+        "non_zero_pct": 100.0,
+        "passed": "True"
+      },
+      "gaps": {
+        "total_gaps_detected": 9137,
+        "normal_weekend_gaps": 295,
+        "suspicious_gaps": 13,
+        "suspicious_gap_details": [
+          {
+            "from": "2020-04-09 20:00:00",
+            "to": "2020-04-13 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2020-12-24 20:00:00",
+            "to": "2020-12-28 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2020-12-31 20:00:00",
+            "to": "2021-01-04 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2021-04-01 20:00:00",
+            "to": "2021-04-05 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2021-12-23 20:00:00",
+            "to": "2021-12-27 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2022-04-14 20:00:00",
+            "to": "2022-04-18 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2022-12-23 20:00:00",
+            "to": "2022-12-27 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2022-12-30 20:00:00",
+            "to": "2023-01-03 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2023-04-06 20:00:00",
+            "to": "2023-04-10 00:00:00",
+            "gap_hours": 76.0
+          },
+          {
+            "from": "2023-12-22 20:00:00",
+            "to": "2023-12-26 00:00:00",
+            "gap_hours": 76.0
+          }
+        ],
+        "passed": false
+      },
+      "price_range": {
+        "out_of_range_bars": 376,
+        "valid_range": "$800-$3500",
+        "actual_min": 1451.15,
+        "actual_max": 4381.3,
+        "passed": "False"
+      },
+      "completeness": {
+        "expected_bars_approx": 443725,
+        "actual_bars": 9138,
+        "completeness_pct": 2.06,
+        "passed": false
+      }
+    },
+    "quality_score": 65,
+    "passed": false,
+    "errors": [
+      "376 bars with prices outside $800-$3500"
+    ],
+    "warnings": [
+      "13 suspicious gaps (>2.5 days) found",
+      "Data completeness only 2.06% (target: 90%)"
+    ],
+    "total_rows": 9138,
+    "date_range": {
+      "start": "2020-01-02 00:00:00",
+      "end": "2025-11-28 00:00:00"
+    }
+  }
+]

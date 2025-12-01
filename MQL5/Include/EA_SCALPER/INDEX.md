@@ -1313,6 +1313,7 @@ Profit mensal esperado = 100 × 1.1R × 0.5% = 55%
 
 | Versao | Data | Mudancas |
 |--------|------|----------|
+| **3.31** | **2025-11-30** | **(Codex) Ajuste threshold 70, parser scaler ONNX fixado, reset diario RiskManager via OnTimer** |
 | **3.30** | **2024-11** | **Order Flow Edition: CFootprintAnalyzer, Stacked Imbalance, Absorption** |
 | 3.20 | 2024-11 | MTF Architecture (H1+M15+M5) |
 | 3.10 | 2024-11 | Entry Optimizer SL limits |

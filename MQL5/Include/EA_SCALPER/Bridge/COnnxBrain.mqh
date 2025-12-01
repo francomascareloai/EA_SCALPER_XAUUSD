@@ -9,9 +9,31 @@
 #include "../Core/Definitions.mqh"
 
 // === MODEL CONFIGURATION ===
+// Primary direction model + scaler (files should live in MQL5/Files/Models/ for sandboxed MT5 access)
 #define DIRECTION_MODEL_PATH    "Models\\direction_v2.onnx"
 #define REGIME_MODEL_PATH       "Models\\regime_v2.onnx"
 #define SCALER_PARAMS_PATH      "Models\\scaler_params_v2.json"
+
+// Optional models (not yet delivered) — defined here to prevent compile errors when feature-gated
+#ifndef VOLATILITY_MODEL_PATH
+   #define VOLATILITY_MODEL_PATH "Models\\volatility_v1.onnx"
+#endif
+#ifndef VOLATILITY_SEQ_LEN
+   #define VOLATILITY_SEQ_LEN    60
+#endif
+#ifndef VOLATILITY_FEATURES
+   #define VOLATILITY_FEATURES   8
+#endif
+
+#ifndef FAKEOUT_MODEL_PATH
+   #define FAKEOUT_MODEL_PATH    "Models\\fakeout_v1.onnx"
+#endif
+#ifndef FAKEOUT_SEQ_LEN
+   #define FAKEOUT_SEQ_LEN       40
+#endif
+#ifndef FAKEOUT_FEATURES
+   #define FAKEOUT_FEATURES      6
+#endif
 
 // Feature configuration - 13 features matching Python pipeline
 #define DIRECTION_SEQ_LEN       100   // Sequence length for direction model
@@ -114,13 +136,15 @@ private:
    
    // Internal methods
    bool                 LoadNormalizationParams(string json_path);
+   string               ResolveModelPath(const string relative_path);
    bool                 CollectDirectionFeatures(float &features[]);
    bool                 CollectVolatilityFeatures(float &features[]);
    bool                 CollectFakeoutFeatures(float &features[]);
    double               NormalizeFeature(double value, int feature_idx);
    double               CalculateHurstExponent(const double &prices[], int window);
    double               CalculateShannonEntropy(const double &returns[], int bins);
-   
+   bool                 ParseNormArray(const string &content, const string key, double &target[]);
+
 public:
    COnnxBrain();
    ~COnnxBrain();
@@ -245,10 +269,11 @@ bool COnnxBrain::LoadDirectionModel(string path)
       m_direction_handle = INVALID_HANDLE;
    }
    
-   m_direction_handle = OnnxCreate(path, ONNX_DEFAULT);
+   string resolved = ResolveModelPath(path);
+   m_direction_handle = OnnxCreate(resolved, ONNX_DEFAULT);
    if(m_direction_handle == INVALID_HANDLE)
    {
-      Print("COnnxBrain: Failed to load direction model from ", path);
+      Print("COnnxBrain: Failed to load direction model from ", resolved);
       m_direction_loaded = false;
       return false;
    }
@@ -277,7 +302,8 @@ bool COnnxBrain::LoadVolatilityModel(string path)
       m_volatility_handle = INVALID_HANDLE;
    }
    
-   m_volatility_handle = OnnxCreate(path, ONNX_DEFAULT);
+   string resolved = ResolveModelPath(path);
+   m_volatility_handle = OnnxCreate(resolved, ONNX_DEFAULT);
    if(m_volatility_handle == INVALID_HANDLE)
    {
       m_volatility_loaded = false;
@@ -306,7 +332,8 @@ bool COnnxBrain::LoadFakeoutModel(string path)
       m_fakeout_handle = INVALID_HANDLE;
    }
    
-   m_fakeout_handle = OnnxCreate(path, ONNX_DEFAULT);
+   string resolved = ResolveModelPath(path);
+   m_fakeout_handle = OnnxCreate(resolved, ONNX_DEFAULT);
    if(m_fakeout_handle == INVALID_HANDLE)
    {
       m_fakeout_loaded = false;
@@ -332,81 +359,59 @@ bool COnnxBrain::LoadNormalizationParams(string json_path)
    // Try to read scaler parameters from JSON file
    // Format: {"means": [...], "stds": [...]}
    
-   int file = FileOpen(json_path, FILE_READ | FILE_TXT | FILE_ANSI);
+   string resolved = ResolveModelPath(json_path);
+   int file = FileOpen(resolved, FILE_READ | FILE_TXT | FILE_ANSI);
    if(file == INVALID_HANDLE)
    {
-      Print("COnnxBrain: Scaler params file not found: ", json_path);
+      Print("COnnxBrain: Scaler params file not found: ", resolved);
       return false;
    }
    
    string content = "";
    while(!FileIsEnding(file))
    {
-      content += FileReadString(file);
+      string line = FileReadString(file);
+      if(content == "")
+         content = line;
+      else
+         content += " " + line; // preserve spacing to allow simple parsing
    }
    FileClose(file);
    
-   // Simple JSON parsing for means and stds arrays
-   // This is a simplified parser - in production use proper JSON library
+   // Parse means/stds; fall back to defaults if parsing fails
+   bool ok_means = ParseNormArray(content, "\"means\"", m_norm_params.means);
+   bool ok_stds  = ParseNormArray(content, "\"stds\"",  m_norm_params.stds);
    
-   // Default values based on typical XAUUSD data
-   // Returns: typically -0.001 to 0.001
-   m_norm_params.means[0] = 0.0;      // returns
-   m_norm_params.stds[0] = 0.005;
+   m_norm_params.is_loaded = ok_means && ok_stds;
+   if(m_norm_params.is_loaded)
+   {
+      Print("COnnxBrain: Loaded normalization parameters from ", json_path);
+      return true;
+   }
    
-   // Log returns: similar
-   m_norm_params.means[1] = 0.0;      // log_returns
-   m_norm_params.stds[1] = 0.005;
-   
-   // Range %: typically 0.001 to 0.01
-   m_norm_params.means[2] = 0.003;    // range_pct
-   m_norm_params.stds[2] = 0.002;
-   
-   // RSI values are already 0-100, divide by 100
-   m_norm_params.means[3] = 0.5;      // rsi_m5
-   m_norm_params.stds[3] = 0.2;
-   m_norm_params.means[4] = 0.5;      // rsi_m15
-   m_norm_params.stds[4] = 0.2;
-   m_norm_params.means[5] = 0.5;      // rsi_h1
-   m_norm_params.stds[5] = 0.2;
-   
-   // ATR normalized
-   m_norm_params.means[6] = 0.002;    // atr_norm
-   m_norm_params.stds[6] = 0.001;
-   
-   // MA distance
-   m_norm_params.means[7] = 0.0;      // ma_dist
-   m_norm_params.stds[7] = 0.005;
-   
-   // BB position: already -1 to 1
-   m_norm_params.means[8] = 0.0;      // bb_pos
-   m_norm_params.stds[8] = 1.0;
-   
-   // Hurst: already 0-1
-   m_norm_params.means[9] = 0.5;      // hurst
-   m_norm_params.stds[9] = 0.15;
-   
-   // Entropy: divide by 4
-   m_norm_params.means[10] = 0.5;     // entropy_norm
-   m_norm_params.stds[10] = 0.25;
-   
-   // Session: 0, 1, 2 (categorical)
-   m_norm_params.means[11] = 1.0;     // session
-   m_norm_params.stds[11] = 1.0;
-   
-   // Hour sin/cos: already -1 to 1
-   m_norm_params.means[12] = 0.0;     // hour_sin
-   m_norm_params.stds[12] = 1.0;
-   m_norm_params.means[13] = 0.0;     // hour_cos
-   m_norm_params.stds[13] = 1.0;
-   
-   // OB distance
-   m_norm_params.means[14] = 1.0;     // ob_distance
-   m_norm_params.stds[14] = 1.0;
-   
-   m_norm_params.is_loaded = true;
    Print("COnnxBrain: Using default normalization parameters");
-   return true;
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Resolve model/scaler path with fallbacks                         |
+//+------------------------------------------------------------------+
+string COnnxBrain::ResolveModelPath(const string relative_path)
+{
+   // 1) Preferred: MQL5/Files/ relative path (Tester/Live safe)
+   string files_base = TerminalInfoString(TERMINAL_DATA_PATH) + "\\MQL5\\Files\\";
+   string candidate = files_base + relative_path;
+   if(FileIsExist(candidate)) return candidate;
+
+   // 2) Fallback: relative to working directory (e.g., MQL5/Models in repo)
+   if(FileIsExist(relative_path)) return relative_path;
+
+   // 3) Fallback: Experts folder sibling (common when running from source tree)
+   string expert_base = TerminalInfoString(TERMINAL_DATA_PATH) + "\\MQL5\\Experts\\" + relative_path;
+   if(FileIsExist(expert_base)) return expert_base;
+
+   // 4) Last resort: return requested path (OnnxCreate may still handle it)
+   return relative_path;
 }
 
 double COnnxBrain::NormalizeFeature(double value, int feature_idx)
@@ -760,6 +765,35 @@ double COnnxBrain::CalculateShannonEntropy(const double &returns[], int bins)
    }
    
    return entropy;
+}
+
+//+------------------------------------------------------------------+
+//| Helper: Parse numeric array from simple JSON                     |
+//+------------------------------------------------------------------+
+bool COnnxBrain::ParseNormArray(const string &content, const string key, double &target[])
+{
+   // Find key
+   int key_pos = StringFind(content, key);
+   if(key_pos < 0) return false;
+   
+   int start = StringFind(content, "[", key_pos);
+   int end = StringFind(content, "]", start);
+   if(start < 0 || end < 0 || end <= start) return false;
+   
+   string slice = StringSubstr(content, start + 1, end - start - 1);
+   string parts[];
+   int count = StringSplit(slice, ',', parts);
+   if(count < DIRECTION_FEATURES) return false;
+   
+   ArrayInitialize(target, 0.0);
+   for(int i = 0; i < DIRECTION_FEATURES && i < count; i++)
+   {
+      string trimmed = parts[i];
+      StringTrimLeft(trimmed);
+      StringTrimRight(trimmed);
+      target[i] = StringToDouble(trimmed);
+   }
+   return true;
 }
 
 bool COnnxBrain::CollectVolatilityFeatures(float &features[])

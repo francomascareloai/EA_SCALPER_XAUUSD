@@ -262,10 +262,13 @@ SStructureState CStructureAnalyzer::AnalyzeStructure(string symbol = NULL, int t
    // Detect swing points
    DetectSwingPoints(rates, copied);
    
-   // Detect structure breaks
+   // Determine bias before classifying breaks
+   m_state.bias = DetermineBias();
+   
+   // Detect structure breaks (uses current bias for BOS/CHoCH tagging)
    DetectBreaks(rates, copied);
    
-   // Determine bias
+   // Re-evaluate bias after potential breaks
    m_state.bias = DetermineBias();
    
    // Calculate premium/discount
@@ -758,6 +761,8 @@ void CStructureAnalyzer::AnalyzeMTFStructure(string symbol = NULL)
    int htf_copied = CopyRates(symbol, STRUCT_TF_HTF, 0, m_lookback_bars, htf_rates);
    if(htf_copied >= m_lookback_bars / 2)
    {
+      ZeroMemory(m_state);
+      m_state.bias = BIAS_RANGING;
       // Temporarily store current state
       m_high_count = 0;
       m_low_count = 0;
@@ -786,6 +791,8 @@ void CStructureAnalyzer::AnalyzeMTFStructure(string symbol = NULL)
    int mtf_copied = CopyRates(symbol, STRUCT_TF_MTF, 0, m_lookback_bars, mtf_rates);
    if(mtf_copied >= m_lookback_bars / 2)
    {
+      ZeroMemory(m_state);
+      m_state.bias = BIAS_RANGING;
       m_high_count = 0;
       m_low_count = 0;
       m_break_count = 0;
@@ -813,6 +820,8 @@ void CStructureAnalyzer::AnalyzeMTFStructure(string symbol = NULL)
    int ltf_copied = CopyRates(symbol, STRUCT_TF_LTF, 0, m_lookback_bars, ltf_rates);
    if(ltf_copied >= m_lookback_bars / 2)
    {
+      ZeroMemory(m_state);
+      m_state.bias = BIAS_RANGING;
       m_high_count = 0;
       m_low_count = 0;
       m_break_count = 0;

@@ -2,7 +2,7 @@
 //|                                          CFootprintAnalyzer.mqh |
 //|                           EA_SCALPER_XAUUSD - Singularity Edition |
 //|                                                                  |
-//|  VERSAO 3.0 - FOOTPRINT/CLUSTER CHART COMPLETO                  |
+//|  VERSAO 3.4 - MOMENTUM EDGE (Delta Accel, POC Divergence)        |
 //|                                                                  |
 //|  BASEADO EM:                                                     |
 //|  - ATAS Footprint methodology                                    |
@@ -19,7 +19,7 @@
 //|  7. Trading signal generation                                   |
 //+------------------------------------------------------------------+
 #property copyright "EA_SCALPER_XAUUSD - Singularity Edition"
-#property version   "3.00"
+#property version   "3.40"
 #property strict
 
 #include "../Core/Definitions.mqh"
@@ -107,7 +107,7 @@ struct SStackedImbalance {
 };
 
 //+------------------------------------------------------------------+
-//| Estrutura de Zona de Absorcao                                     |
+//| Estrutura de Zona de Absorcao (v3.3 - Persistent)                 |
 //+------------------------------------------------------------------+
 struct SAbsorptionZone {
    double price;              // Nivel de preco
@@ -115,7 +115,12 @@ struct SAbsorptionZone {
    long   delta;              // Delta (deve ser perto de zero)
    double deltaPercent;       // |delta| / totalVolume * 100
    ENUM_ABSORPTION_TYPE type; // Tipo de absorcao
+   int    confidence;         // Score de confianca 0-100
+   double pricePosition;      // Posicao na barra: 0.0 = low, 1.0 = high
+   double volumeSignificance; // Quao acima da media (1.0 = media, 2.0 = 2x media)
    datetime detectionTime;
+   int    testCount;          // v3.3: Quantas vezes preco testou esta zona
+   bool   broken;             // v3.3: Se preco quebrou a zona
    
    void Reset() {
       price = 0;
@@ -123,7 +128,12 @@ struct SAbsorptionZone {
       delta = 0;
       deltaPercent = 0;
       type = ABSORPTION_NONE;
+      confidence = 0;
+      pricePosition = 0.5;
+      volumeSignificance = 0;
       detectionTime = 0;
+      testCount = 1;
+      broken = false;
    }
 };
 
@@ -156,6 +166,14 @@ struct SFootprintSignal {
    bool   hasBearishDeltaDivergence;
    bool   hasPOCDefense;
    
+   // v3.4: Momentum Edge
+   bool   hasBullishDeltaAcceleration;  // Delta accelerating up (momentum building)
+   bool   hasBearishDeltaAcceleration;  // Delta accelerating down
+   bool   hasBullishPOCDivergence;      // POC rising while price falling = reversal
+   bool   hasBearishPOCDivergence;      // POC falling while price rising = reversal
+   double deltaAcceleration;            // Rate of change of delta (-100 to +100)
+   double pocChangePercent;             // POC movement as % of range
+   
    // Delta info
    long   barDelta;
    long   cumulativeDelta;
@@ -181,6 +199,12 @@ struct SFootprintSignal {
       hasBullishDeltaDivergence = false;
       hasBearishDeltaDivergence = false;
       hasPOCDefense = false;
+      hasBullishDeltaAcceleration = false;
+      hasBearishDeltaAcceleration = false;
+      hasBullishPOCDivergence = false;
+      hasBearishPOCDivergence = false;
+      deltaAcceleration = 0;
+      pocChangePercent = 0;
       barDelta = 0;
       cumulativeDelta = 0;
       deltaPercent = 0;
@@ -233,8 +257,44 @@ private:
    
    // Cache
    bool              m_cacheValid;
+   bool              m_levelsPrepared;
    SFootprintSignal  m_cachedSignal;
    datetime          m_cachedBarTime;
+   datetime          m_preparedBarTime;
+   
+   // Value Area Cache (avoid recalculating 3x)
+   bool              m_valueAreaCacheValid;
+   SValueArea        m_cachedValueArea;
+   
+   // Profiling
+   ulong             m_lastProcessBarUs;   // Last ProcessBarTicks duration (microseconds)
+   int               m_lastTickCount;      // Ticks processed in last bar
+   
+   // v3.3: Dynamic Cluster (ATR-based)
+   double            m_baseClusterSize;    // Original cluster size from Init
+   bool              m_dynamicCluster;     // Enable ATR-based cluster adjustment
+   double            m_atrMultiplier;      // Cluster = ATR * multiplier (default 0.1)
+   double            m_minClusterSize;     // Minimum cluster size
+   double            m_maxClusterSize;     // Maximum cluster size
+   
+   // v3.3: Session Delta Reset
+   bool              m_sessionReset;       // Enable session-aware delta reset
+   int               m_lastResetHour;      // Last hour we reset delta
+   datetime          m_lastResetTime;      // Last reset timestamp
+   
+   // v3.3: Historical Absorptions (persist across bars)
+   SAbsorptionZone   m_historicalAbsorptions[];
+   int               m_historicalAbsCount;
+   int               m_maxHistoricalAbs;   // Max zones to track (default 10)
+   double            m_absorptionMergeDistance; // Merge zones within this distance
+   
+   // v3.4: POC History (for POC divergence detection)
+   double            m_pocHistory[];       // POC prices for last N bars
+   int               m_pocHistoryCount;
+   int               m_maxPocHistory;      // Max POC history (default 5)
+   
+   // v3.4: Delta Acceleration
+   double            m_deltaAcceleration;  // Current delta acceleration (-100 to +100)
    
    // Indicator handles
    int               m_atr_handle;
@@ -255,6 +315,19 @@ private:
    bool              DetectPOCDefense();
    void              CalculateValueArea(SValueArea &va);
    void              SortLevelsByPrice();
+   void              EnsurePrepared();
+   
+   // v3.3: Metodos institucionais
+   void              AdjustClusterToATR();
+   void              CheckSessionReset();
+   void              UpdateHistoricalAbsorptions();
+   void              MergeOrAddAbsorption(const SAbsorptionZone &zone);
+   void              UpdateAbsorptionTests();
+   
+   // v3.4: Momentum Edge
+   void              CalculateDeltaAcceleration();
+   bool              DetectPOCDivergence(bool &bullish, bool &bearish);
+   void              UpdatePOCHistory();
    
 public:
                      CFootprintAnalyzer();
@@ -266,10 +339,25 @@ public:
    void              Deinit();
    
    // Configuracao
-   void              SetClusterSize(double size) { m_clusterSize = size; }
+   void              SetClusterSize(double size) { m_clusterSize = size; m_baseClusterSize = size; }
    void              SetImbalanceRatio(double ratio) { m_imbalanceRatio = ratio; }
    void              SetMinStackedLevels(int levels) { m_minStackedLevels = levels; }
    void              SetAbsorptionThreshold(double pct) { m_absorptionThreshold = pct; }
+   
+   // v3.3: Configuracao institucional
+   void              EnableDynamicCluster(bool enable, double atrMult = 0.1, double minSize = 0.25, double maxSize = 2.0);
+   void              EnableSessionReset(bool enable) { m_sessionReset = enable; }
+   void              SetMaxHistoricalAbsorptions(int max) { m_maxHistoricalAbs = max; }
+   double            GetCurrentClusterSize() const { return m_clusterSize; }
+   int               GetHistoricalAbsorptionCount() const { return m_historicalAbsCount; }
+   SAbsorptionZone   GetHistoricalAbsorption(int index);
+   
+   // v3.4: Momentum Edge API
+   double            GetDeltaAcceleration() const { return m_deltaAcceleration; }
+   bool              HasBullishMomentum();   // Delta accelerating up
+   bool              HasBearishMomentum();   // Delta accelerating down
+   bool              HasBullishPOCDivergence();  // POC up, price down = bullish reversal
+   bool              HasBearishPOCDivergence();  // POC down, price up = bearish reversal
    
    // Processamento
    bool              ProcessBarTicks(int barIndex = 0);
@@ -292,6 +380,7 @@ public:
    // Absorption Zones
    int               GetAbsorptionZoneCount() { return m_absorptionCount; }
    SAbsorptionZone   GetAbsorptionZone(int index);
+   SAbsorptionZone   GetBestAbsorption(ENUM_ABSORPTION_TYPE type);
    bool              HasBuyAbsorption();
    bool              HasSellAbsorption();
    
@@ -304,6 +393,10 @@ public:
    void              PrintDiagnostics();
    void              PrintLevels();
    void              PrintStackedImbalances();
+   
+   // Profiling
+   ulong             GetLastProcessMicroseconds() const { return m_lastProcessBarUs; }
+   int               GetLastTickCount() const { return m_lastTickCount; }
 };
 
 //+------------------------------------------------------------------+
@@ -330,7 +423,35 @@ CFootprintAnalyzer::CFootprintAnalyzer() {
    m_historyCount = 0;
    m_maxHistory = 20;
    m_cacheValid = false;
+   m_levelsPrepared = false;
    m_cachedBarTime = 0;
+   m_preparedBarTime = 0;
+   m_valueAreaCacheValid = false;
+   m_lastProcessBarUs = 0;
+   m_lastTickCount = 0;
+   
+   // v3.3: Dynamic cluster
+   m_baseClusterSize = 0.50;
+   m_dynamicCluster = false;
+   m_atrMultiplier = 0.1;
+   m_minClusterSize = 0.25;
+   m_maxClusterSize = 2.0;
+   
+   // v3.3: Session reset
+   m_sessionReset = false;
+   m_lastResetHour = -1;
+   m_lastResetTime = 0;
+   
+   // v3.3: Historical absorptions
+   m_historicalAbsCount = 0;
+   m_maxHistoricalAbs = 10;
+   m_absorptionMergeDistance = 0.50;
+   
+   // v3.4: POC History and Delta Acceleration
+   m_pocHistoryCount = 0;
+   m_maxPocHistory = 5;
+   m_deltaAcceleration = 0;
+   
    m_atr_handle = INVALID_HANDLE;
 }
 
@@ -349,6 +470,7 @@ bool CFootprintAnalyzer::Init(string symbol = NULL, ENUM_TIMEFRAMES tf = PERIOD_
    m_symbol = (symbol == NULL) ? _Symbol : symbol;
    m_timeframe = tf;
    m_clusterSize = clusterSize;
+   m_baseClusterSize = clusterSize;  // v3.3: Store base size
    m_imbalanceRatio = imbalanceRatio;
    
    // Obtem parametros do simbolo
@@ -362,22 +484,33 @@ bool CFootprintAnalyzer::Init(string symbol = NULL, ENUM_TIMEFRAMES tf = PERIOD_
    if(m_clusterSize < m_tickSize) m_clusterSize = m_tickSize;
    m_clusterSize = MathRound(m_clusterSize / m_tickSize) * m_tickSize;
    
+   // v3.3: Set merge distance based on cluster size
+   m_absorptionMergeDistance = m_clusterSize * 2;
+   
    // Aloca arrays
    ArrayResize(m_levels, m_maxLevels);
    ArrayResize(m_stackedImbalances, 20);
    ArrayResize(m_absorptionZones, 20);
    ArrayResize(m_deltaHistory, m_maxHistory);
    ArrayResize(m_priceHistory, m_maxHistory);
+   ArrayResize(m_historicalAbsorptions, m_maxHistoricalAbs);  // v3.3
+   ArrayResize(m_pocHistory, m_maxPocHistory);               // v3.4
    
    // ATR handle
    m_atr_handle = iATR(m_symbol, m_timeframe, 14);
+   if(m_atr_handle == INVALID_HANDLE)
+   {
+      Print("CFootprintAnalyzer: failed to create ATR handle");
+      return false;
+   }
    
-   Print("CFootprintAnalyzer v3.0 Initialized:");
+   Print("CFootprintAnalyzer v3.4 Initialized (Momentum Edge):");
    Print("  Symbol: ", m_symbol);
    Print("  Timeframe: ", EnumToString(m_timeframe));
-   Print("  Cluster Size: ", m_clusterSize);
+   Print("  Cluster Size: ", m_clusterSize, " (dynamic: ", m_dynamicCluster ? "ON" : "OFF", ")");
    Print("  Imbalance Ratio: ", m_imbalanceRatio, "x (", m_imbalanceRatio * 100, "%)");
    Print("  Min Stacked Levels: ", m_minStackedLevels);
+   Print("  Session Reset: ", m_sessionReset ? "ON" : "OFF");
    
    return true;
 }
@@ -391,6 +524,8 @@ void CFootprintAnalyzer::Deinit() {
    ArrayFree(m_absorptionZones);
    ArrayFree(m_deltaHistory);
    ArrayFree(m_priceHistory);
+   ArrayFree(m_historicalAbsorptions);  // v3.3
+   ArrayFree(m_pocHistory);             // v3.4
    
    if(m_atr_handle != INVALID_HANDLE)
       IndicatorRelease(m_atr_handle);
@@ -455,6 +590,9 @@ void CFootprintAnalyzer::ResetBarData() {
    m_ticksProcessed = 0;
    m_lastPrice = 0;
    m_cacheValid = false;
+   m_valueAreaCacheValid = false;  // Reset VA cache on new bar
+   m_levelsPrepared = false;
+   m_preparedBarTime = 0;
 }
 
 //+------------------------------------------------------------------+
@@ -545,6 +683,8 @@ bool CFootprintAnalyzer::ProcessTick(const MqlTick &tick) {
    m_lastPrice = price;
    m_ticksProcessed++;
    m_cacheValid = false;
+   m_levelsPrepared = false;
+   m_valueAreaCacheValid = false;
    
    return true;
 }
@@ -553,13 +693,25 @@ bool CFootprintAnalyzer::ProcessTick(const MqlTick &tick) {
 //| Processa todos os ticks de uma barra                              |
 //+------------------------------------------------------------------+
 bool CFootprintAnalyzer::ProcessBarTicks(int barIndex = 0) {
+   ulong startUs = GetMicrosecondCount();  // Profiling start
+   
+   // v3.3: Check session reset before processing
+   if(m_sessionReset)
+      CheckSessionReset();
+   
+   // v3.3: Adjust cluster size to ATR before processing
+   if(m_dynamicCluster)
+      AdjustClusterToATR();
+   
    datetime barTime = iTime(m_symbol, m_timeframe, barIndex);
    int barSeconds = PeriodSeconds(m_timeframe);
    datetime barEnd = barTime + barSeconds;
    
    // Se e a mesma barra, nao reprocessa tudo (a menos que seja a barra atual)
-   if(barIndex > 0 && barTime == m_lastBarTime && m_levelCount > 0)
+   if(barIndex > 0 && barTime == m_lastBarTime && m_levelCount > 0) {
+      m_lastProcessBarUs = GetMicrosecondCount() - startUs;
       return true;
+   }
    
    ResetBarData();
    m_lastBarTime = barTime;
@@ -573,11 +725,16 @@ bool CFootprintAnalyzer::ProcessBarTicks(int barIndex = 0) {
       return false;
    }
    
-   // Limita para performance
-   int step = (copied > 20000) ? copied / 20000 : 1;
-   
-   for(int i = 0; i < copied; i += step) {
+   // Process ALL ticks for accuracy (cluster aggregation handles data reduction)
+   // Skip only non-informative ticks (no volume, no price change)
+   double lastTickPrice = 0;
+   for(int i = 0; i < copied; i++) {
+      // Early exit for non-informative ticks
+      if(ticks[i].volume == 0 && ticks[i].last == lastTickPrice && lastTickPrice > 0)
+         continue;
+      
       ProcessTick(ticks[i]);
+      lastTickPrice = (ticks[i].last > 0) ? ticks[i].last : ticks[i].bid;
    }
    
    // Calcula imbalances e padroes
@@ -585,6 +742,22 @@ bool CFootprintAnalyzer::ProcessBarTicks(int barIndex = 0) {
    CalculateDiagonalImbalances();
    DetectStackedImbalances();
    DetectAbsorptionZones();
+   
+   // v3.3: Update historical absorptions and test counts
+   UpdateHistoricalAbsorptions();
+   UpdateAbsorptionTests();
+   
+   // v3.4: Calculate momentum indicators
+   CalculateDeltaAcceleration();
+   UpdatePOCHistory();
+   
+   m_levelsPrepared = true;
+   m_preparedBarTime = m_lastBarTime;
+   m_valueAreaCacheValid = false;
+   
+   // Profiling end
+   m_lastProcessBarUs = GetMicrosecondCount() - startUs;
+   m_lastTickCount = m_ticksProcessed;
    
    return true;
 }
@@ -613,6 +786,28 @@ void CFootprintAnalyzer::SortLevelsByPrice() {
 }
 
 //+------------------------------------------------------------------+
+//| Garante ordenacao e calculos da barra atual                      |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::EnsurePrepared() {
+   if(m_levelCount == 0)
+      return;
+   
+   // Se ja preparado para esta barra, evita recalculo
+   if(m_levelsPrepared && m_preparedBarTime == m_lastBarTime)
+      return;
+   
+   SortLevelsByPrice();
+   CalculateDiagonalImbalances();
+   DetectStackedImbalances();
+   DetectAbsorptionZones();
+   
+   m_levelsPrepared = true;
+   m_preparedBarTime = m_lastBarTime;
+   m_cacheValid = false;           // qualquer recalculo invalida o cache de sinal
+   m_valueAreaCacheValid = false;  // recalcular VA na proxima leitura
+}
+
+//+------------------------------------------------------------------+
 //| Calcula Imbalances DIAGONAIS (estilo ATAS)                        |
 //+------------------------------------------------------------------+
 void CFootprintAnalyzer::CalculateDiagonalImbalances() {
@@ -624,22 +819,27 @@ void CFootprintAnalyzer::CalculateDiagonalImbalances() {
    }
    
    // Calcula imbalances diagonais
-   // Buy Imbalance: Ask[i+1] >= Bid[i] * ratio
-   // Sell Imbalance: Bid[i] >= Ask[i+1] * ratio
-   for(int i = 0; i < m_levelCount - 1; i++) {
-      double askAbove = (double)m_levels[i + 1].askVolume;
-      double bidCurrent = (double)m_levels[i].bidVolume;
-      
-      // Buy Imbalance
-      if(bidCurrent > 0 && askAbove / bidCurrent >= m_imbalanceRatio) {
-         m_levels[i].hasBuyImbalance = true;
-         m_levels[i].imbalanceRatio = askAbove / bidCurrent;
+   // Buy Imbalance: Ask[n] >= Bid[n-1] * ratio  (nível atual vs nível imediatamente abaixo)
+   // Sell Imbalance: Bid[n] >= Ask[n+1] * ratio (nível atual vs nível imediatamente acima)
+   for(int i = 0; i < m_levelCount; i++) {
+      // Buy imbalance (precisa de nível abaixo)
+      if(i > 0) {
+         double bidBelow = (double)m_levels[i - 1].bidVolume;
+         double askHere  = (double)m_levels[i].askVolume;
+         if(bidBelow > 0 && askHere / bidBelow >= m_imbalanceRatio) {
+            m_levels[i].hasBuyImbalance = true;
+            m_levels[i].imbalanceRatio = askHere / bidBelow;
+         }
       }
       
-      // Sell Imbalance
-      if(askAbove > 0 && bidCurrent / askAbove >= m_imbalanceRatio) {
-         m_levels[i].hasSellImbalance = true;
-         m_levels[i].imbalanceRatio = bidCurrent / askAbove;
+      // Sell imbalance (precisa de nível acima)
+      if(i < m_levelCount - 1) {
+         double askAbove = (double)m_levels[i + 1].askVolume;
+         double bidHere  = (double)m_levels[i].bidVolume;
+         if(askAbove > 0 && bidHere / askAbove >= m_imbalanceRatio) {
+            m_levels[i].hasSellImbalance = true;
+            m_levels[i].imbalanceRatio = MathMax(m_levels[i].imbalanceRatio, bidHere / askAbove);
+         }
       }
    }
 }
@@ -728,51 +928,150 @@ void CFootprintAnalyzer::DetectStackedImbalances() {
 }
 
 //+------------------------------------------------------------------+
-//| Detecta Zonas de Absorcao                                         |
+//| Detecta Zonas de Absorcao (v3.2 - Price Context + Bar Direction)  |
+//|                                                                   |
+//| LOGIC:                                                            |
+//| - Absorption = High Volume + Low Net Delta (balanced trading)     |
+//| - BUY ABSORPTION: At lows, sellers absorbed by passive buyers     |
+//| - SELL ABSORPTION: At highs, buyers absorbed by passive sellers   |
+//|                                                                   |
+//| CONFIDENCE SCORING (0-100):                                       |
+//| - Price Position Factor: 35 pts (how extreme in the bar)          |
+//| - Volume Significance:   25 pts (how much above average)          |
+//| - Delta Balance:         25 pts (how close to zero)               |
+//| - Bar Direction Context: 15 pts (absorption WITH bar direction)   |
+//|                                                                   |
+//| BAR DIRECTION BONUS:                                              |
+//| - BUY absorption at LOW of DOWN bar = +15 pts (strong defense)    |
+//| - SELL absorption at HIGH of UP bar = +15 pts (strong defense)    |
+//| - Absorption against bar direction = +0 pts                       |
 //+------------------------------------------------------------------+
 void CFootprintAnalyzer::DetectAbsorptionZones() {
    m_absorptionCount = 0;
    
    if(m_levelCount == 0) return;
    
-   // Calcula volume medio
+   // Get bar OHLC for price context
+   double barOpen  = iOpen(m_symbol, m_timeframe, 0);
+   double barHigh  = iHigh(m_symbol, m_timeframe, 0);
+   double barLow   = iLow(m_symbol, m_timeframe, 0);
+   double barClose = iClose(m_symbol, m_timeframe, 0);
+   double barRange = barHigh - barLow;
+   
+   // Determine bar direction
+   // UP bar: Close > Open (bullish candle)
+   // DOWN bar: Close < Open (bearish candle)
+   bool isUpBar = (barClose > barOpen);
+   bool isDownBar = (barClose < barOpen);
+   
+   // Handle very narrow bars (use delta sign as primary)
+   bool narrowBar = (barRange < m_clusterSize * 2);
+   
+   // Calculate average volume per level
    long totalVol = 0;
    for(int i = 0; i < m_levelCount; i++) {
       totalVol += m_levels[i].bidVolume + m_levels[i].askVolume;
    }
-   double avgVol = (double)totalVol / m_levelCount;
+   double avgVol = (m_levelCount > 0) ? (double)totalVol / m_levelCount : 1.0;
+   if(avgVol < 1.0) avgVol = 1.0;  // Prevent division by zero
    
-   // Procura niveis com alto volume e delta baixo
+   // Scan all levels for absorption candidates
    for(int i = 0; i < m_levelCount && m_absorptionCount < 20; i++) {
       long levelVol = m_levels[i].bidVolume + m_levels[i].askVolume;
       long levelDelta = m_levels[i].delta;
       
-      // Volume significativo?
-      if(levelVol < avgVol * m_volumeMultiplier) continue;
+      // FILTER 1: Volume must be significant (> avg * multiplier)
+      double volSignificance = (double)levelVol / avgVol;
+      if(volSignificance < m_volumeMultiplier) continue;
       
-      // Delta baixo?
-      double deltaPct = (levelVol > 0) ? MathAbs((double)levelDelta / levelVol * 100) : 100;
+      // FILTER 2: Delta must be balanced (|delta%| < threshold)
+      double deltaPct = (levelVol > 0) ? MathAbs((double)levelDelta / levelVol * 100.0) : 100.0;
+      if(deltaPct >= m_absorptionThreshold) continue;
       
-      if(deltaPct < m_absorptionThreshold) {
-         m_absorptionZones[m_absorptionCount].price = m_levels[i].price;
-         m_absorptionZones[m_absorptionCount].totalVolume = levelVol;
-         m_absorptionZones[m_absorptionCount].delta = levelDelta;
-         m_absorptionZones[m_absorptionCount].deltaPercent = deltaPct;
-         m_absorptionZones[m_absorptionCount].detectionTime = TimeCurrent();
-         
-         // Determina tipo
-         // Se preco estava caindo e vendas foram absorvidas = buy absorption
-         // Se preco estava subindo e compras foram absorvidas = sell absorption
-         double currentPrice = SymbolInfoDouble(m_symbol, SYMBOL_BID);
-         if(currentPrice > m_levels[i].price) {
-            m_absorptionZones[m_absorptionCount].type = ABSORPTION_BUY;
+      // ===== ABSORPTION DETECTED - Calculate confidence and type =====
+      
+      // Calculate price position (0.0 = at low, 1.0 = at high)
+      double pricePos = 0.5;  // Default to middle
+      if(!narrowBar && barRange > 0) {
+         pricePos = (m_levels[i].price - barLow) / barRange;
+         pricePos = MathMax(0.0, MathMin(1.0, pricePos));  // Clamp 0-1
+      }
+      
+      // ===== DETERMINE TYPE (before confidence scoring) =====
+      ENUM_ABSORPTION_TYPE absType = ABSORPTION_NONE;
+      
+      if(narrowBar) {
+         // Narrow bar: Use delta sign as tiebreaker
+         // Negative delta = sellers aggressive = BUY absorption
+         absType = (levelDelta < 0) ? ABSORPTION_BUY : ABSORPTION_SELL;
+      }
+      else {
+         // Normal bar: Use price position as primary
+         // At LOWS (pricePos < 0.5) = BUY absorption (buyers defending low)
+         // At HIGHS (pricePos >= 0.5) = SELL absorption (sellers defending high)
+         if(pricePos < 0.4) {
+            absType = ABSORPTION_BUY;
+         }
+         else if(pricePos > 0.6) {
+            absType = ABSORPTION_SELL;
          }
          else {
-            m_absorptionZones[m_absorptionCount].type = ABSORPTION_SELL;
+            // Middle zone: Use delta sign as tiebreaker
+            absType = (levelDelta < 0) ? ABSORPTION_BUY : ABSORPTION_SELL;
          }
-         
-         m_absorptionCount++;
       }
+      
+      // ===== CONFIDENCE SCORING (now includes bar direction) =====
+      int confidence = 0;
+      
+      // Factor 1: Price Position (35 pts max)
+      // Extreme positions (< 0.2 or > 0.8) get full points
+      double extremity = MathAbs(pricePos - 0.5) * 2.0;  // 0 at center, 1 at extremes
+      confidence += (int)(extremity * 35.0);
+      
+      // Factor 2: Volume Significance (25 pts max)
+      // Cap at 5x average for scoring
+      double volScore = MathMin(volSignificance / 5.0, 1.0);
+      confidence += (int)(volScore * 25.0);
+      
+      // Factor 3: Delta Balance (25 pts max)
+      // Perfect balance (0%) = 25 pts, threshold% = 0 pts
+      double deltaScore = 1.0 - (deltaPct / m_absorptionThreshold);
+      deltaScore = MathMax(0.0, deltaScore);
+      confidence += (int)(deltaScore * 25.0);
+      
+      // Factor 4: Bar Direction Context (15 pts max)
+      // BUY absorption at LOW of DOWN bar = strong defense signal (+15)
+      // SELL absorption at HIGH of UP bar = strong defense signal (+15)
+      // Absorption aligns with bar direction = weak signal (+0)
+      int barDirBonus = 0;
+      if(absType == ABSORPTION_BUY && pricePos < 0.3 && isDownBar) {
+         // BUY absorption at LOW of bearish bar = buyers defending aggressively
+         barDirBonus = 15;
+      }
+      else if(absType == ABSORPTION_SELL && pricePos > 0.7 && isUpBar) {
+         // SELL absorption at HIGH of bullish bar = sellers defending aggressively
+         barDirBonus = 15;
+      }
+      else if((absType == ABSORPTION_BUY && pricePos < 0.3) || 
+              (absType == ABSORPTION_SELL && pricePos > 0.7)) {
+         // Correct position but neutral bar direction = partial bonus
+         barDirBonus = 7;
+      }
+      confidence += barDirBonus;
+      
+      // Store the absorption zone
+      m_absorptionZones[m_absorptionCount].price = m_levels[i].price;
+      m_absorptionZones[m_absorptionCount].totalVolume = levelVol;
+      m_absorptionZones[m_absorptionCount].delta = levelDelta;
+      m_absorptionZones[m_absorptionCount].deltaPercent = deltaPct;
+      m_absorptionZones[m_absorptionCount].type = absType;
+      m_absorptionZones[m_absorptionCount].confidence = confidence;
+      m_absorptionZones[m_absorptionCount].pricePosition = pricePos;
+      m_absorptionZones[m_absorptionCount].volumeSignificance = volSignificance;
+      m_absorptionZones[m_absorptionCount].detectionTime = TimeCurrent();
+      
+      m_absorptionCount++;
    }
 }
 
@@ -847,6 +1146,8 @@ bool CFootprintAnalyzer::DetectDeltaDivergence(bool &bullish, bool &bearish) {
 //| Detecta POC Defense                                               |
 //+------------------------------------------------------------------+
 bool CFootprintAnalyzer::DetectPOCDefense() {
+   EnsurePrepared();
+   
    SValueArea va;
    CalculateValueArea(va);
    
@@ -865,16 +1166,27 @@ bool CFootprintAnalyzer::DetectPOCDefense() {
 }
 
 //+------------------------------------------------------------------+
-//| Calcula Value Area                                                |
+//| Calcula Value Area (with caching to avoid 3x recalculation)       |
 //+------------------------------------------------------------------+
 void CFootprintAnalyzer::CalculateValueArea(SValueArea &va) {
+   // Return cached value if valid
+   if(m_valueAreaCacheValid) {
+      va = m_cachedValueArea;
+      return;
+   }
+   
    va.poc = 0;
    va.vahigh = 0;
    va.valow = 0;
    va.pocVolume = 0;
    va.totalVolume = 0;
    
-   if(m_levelCount == 0) return;
+   if(m_levelCount == 0) {
+      // Cache empty result
+      m_cachedValueArea = va;
+      m_valueAreaCacheValid = true;
+      return;
+   }
    
    // Encontra POC
    int pocIdx = 0;
@@ -922,6 +1234,10 @@ void CFootprintAnalyzer::CalculateValueArea(SValueArea &va) {
       }
       else break;
    }
+   
+   // Store in cache
+   m_cachedValueArea = va;
+   m_valueAreaCacheValid = true;
 }
 
 //+------------------------------------------------------------------+
@@ -946,6 +1262,7 @@ long CFootprintAnalyzer::GetCumulativeDelta() {
 //| Obtem POC                                                         |
 //+------------------------------------------------------------------+
 double CFootprintAnalyzer::GetPOC() {
+   EnsurePrepared();
    SValueArea va;
    CalculateValueArea(va);
    return va.poc;
@@ -956,6 +1273,7 @@ double CFootprintAnalyzer::GetPOC() {
 //+------------------------------------------------------------------+
 SValueArea CFootprintAnalyzer::GetValueArea() {
    SValueArea va;
+   EnsurePrepared();
    CalculateValueArea(va);
    return va;
 }
@@ -983,25 +1301,40 @@ bool CFootprintAnalyzer::HasStackedSellImbalance() {
 }
 
 //+------------------------------------------------------------------+
-//| Verifica se tem Buy Absorption                                    |
+//| Verifica se tem Buy Absorption (confidence > 50)                  |
 //+------------------------------------------------------------------+
 bool CFootprintAnalyzer::HasBuyAbsorption() {
    for(int i = 0; i < m_absorptionCount; i++) {
-      if(m_absorptionZones[i].type == ABSORPTION_BUY)
+      if(m_absorptionZones[i].type == ABSORPTION_BUY && m_absorptionZones[i].confidence >= 50)
          return true;
    }
    return false;
 }
 
 //+------------------------------------------------------------------+
-//| Verifica se tem Sell Absorption                                   |
+//| Verifica se tem Sell Absorption (confidence > 50)                 |
 //+------------------------------------------------------------------+
 bool CFootprintAnalyzer::HasSellAbsorption() {
    for(int i = 0; i < m_absorptionCount; i++) {
-      if(m_absorptionZones[i].type == ABSORPTION_SELL)
+      if(m_absorptionZones[i].type == ABSORPTION_SELL && m_absorptionZones[i].confidence >= 50)
          return true;
    }
    return false;
+}
+
+//+------------------------------------------------------------------+
+//| Retorna melhor absorcao por tipo (maior confidence)               |
+//+------------------------------------------------------------------+
+SAbsorptionZone CFootprintAnalyzer::GetBestAbsorption(ENUM_ABSORPTION_TYPE type) {
+   SAbsorptionZone best;
+   best.Reset();
+   
+   for(int i = 0; i < m_absorptionCount; i++) {
+      if(m_absorptionZones[i].type == type && m_absorptionZones[i].confidence > best.confidence) {
+         best = m_absorptionZones[i];
+      }
+   }
+   return best;
 }
 
 //+------------------------------------------------------------------+
@@ -1062,8 +1395,11 @@ int CFootprintAnalyzer::GetConfluenceScore() {
 //| Obtem sinal de trading completo                                   |
 //+------------------------------------------------------------------+
 SFootprintSignal CFootprintAnalyzer::GetSignal() {
+   // Garante que niveis estao ordenados e padroes calculados
+   EnsurePrepared();
+   
    // Retorna cache se valido
-   if(m_cacheValid && m_cachedBarTime == m_lastBarTime)
+   if(m_cacheValid && m_cachedBarTime == m_lastBarTime && m_levelsPrepared && m_preparedBarTime == m_lastBarTime)
       return m_cachedSignal;
    
    m_cachedSignal.Reset();
@@ -1099,6 +1435,16 @@ SFootprintSignal CFootprintAnalyzer::GetSignal() {
    
    m_cachedSignal.hasPOCDefense = DetectPOCDefense();
    
+   // v3.4: Momentum Edge indicators
+   m_cachedSignal.deltaAcceleration = m_deltaAcceleration;
+   m_cachedSignal.hasBullishDeltaAcceleration = (m_deltaAcceleration > 20);
+   m_cachedSignal.hasBearishDeltaAcceleration = (m_deltaAcceleration < -20);
+   
+   bool bullPOCDiv, bearPOCDiv;
+   DetectPOCDivergence(bullPOCDiv, bearPOCDiv);
+   m_cachedSignal.hasBullishPOCDivergence = bullPOCDiv;
+   m_cachedSignal.hasBearishPOCDivergence = bearPOCDiv;
+   
    // Calcula score
    int buyScore = 0;
    int sellScore = 0;
@@ -1128,6 +1474,14 @@ SFootprintSignal CFootprintAnalyzer::GetSignal() {
       if(m_cachedSignal.barDelta > 0) buyScore += 10;
       else sellScore += 10;
    }
+   
+   // v3.4: Delta Acceleration (peso alto - momentum antes do preco)
+   if(m_cachedSignal.hasBullishDeltaAcceleration) buyScore += 20;
+   if(m_cachedSignal.hasBearishDeltaAcceleration) sellScore += 20;
+   
+   // v3.4: POC Divergence (peso alto - reversao confiavel)
+   if(m_cachedSignal.hasBullishPOCDivergence) buyScore += 18;
+   if(m_cachedSignal.hasBearishPOCDivergence) sellScore += 18;
    
    // Determina sinal
    int netScore = buyScore - sellScore;
@@ -1160,7 +1514,7 @@ SFootprintSignal CFootprintAnalyzer::GetSignal() {
 void CFootprintAnalyzer::PrintDiagnostics() {
    SFootprintSignal sig = GetSignal();
    
-   Print("=== FOOTPRINT ANALYZER v3.0 DIAGNOSTICS ===");
+   Print("=== FOOTPRINT ANALYZER v3.1 DIAGNOSTICS ===");
    Print("Symbol: ", m_symbol, " | TF: ", EnumToString(m_timeframe));
    Print("Cluster Size: ", m_clusterSize, " | Levels: ", m_levelCount);
    Print("");
@@ -1230,5 +1584,340 @@ void CFootprintAnalyzer::PrintStackedImbalances() {
             m_stackedImbalances[i].avgRatio));
    }
    Print("==========================");
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Enable Dynamic Cluster Configuration                        |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::EnableDynamicCluster(bool enable, double atrMult = 0.1, 
+                                               double minSize = 0.25, double maxSize = 2.0) {
+   m_dynamicCluster = enable;
+   m_atrMultiplier = atrMult;
+   m_minClusterSize = minSize;
+   m_maxClusterSize = maxSize;
+   
+   if(enable)
+      Print("CFootprintAnalyzer: Dynamic cluster ENABLED (ATR*", atrMult, 
+            ", min=", minSize, ", max=", maxSize, ")");
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Adjust Cluster Size Based on ATR                            |
+//| - High volatility (NFP/FOMC): Larger clusters                     |
+//| - Low volatility: Smaller clusters for precision                  |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::AdjustClusterToATR() {
+   if(m_atr_handle == INVALID_HANDLE) return;
+   
+   double atr[];
+   if(CopyBuffer(m_atr_handle, 0, 0, 1, atr) <= 0) return;
+   
+   // Calculate dynamic cluster: ATR * multiplier
+   double dynamicCluster = atr[0] * m_atrMultiplier;
+   
+   // Clamp to min/max bounds
+   dynamicCluster = MathMax(m_minClusterSize, MathMin(m_maxClusterSize, dynamicCluster));
+   
+   // Round to tick size
+   dynamicCluster = MathRound(dynamicCluster / m_tickSize) * m_tickSize;
+   
+   // Only update if significantly different (>10% change)
+   if(MathAbs(dynamicCluster - m_clusterSize) / m_clusterSize > 0.1) {
+      double oldCluster = m_clusterSize;
+      m_clusterSize = dynamicCluster;
+      m_absorptionMergeDistance = m_clusterSize * 2;
+      Print("CFootprintAnalyzer: Cluster adjusted ", oldCluster, " -> ", m_clusterSize, 
+            " (ATR=", DoubleToString(atr[0], 2), ")");
+   }
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Check Session Reset (London 07:00, NY 13:00 GMT)            |
+//| - Resets cumulative delta at session boundaries                   |
+//| - Prevents delta overflow and stale context                       |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::CheckSessionReset() {
+   MqlDateTime dt;
+   TimeToStruct(TimeGMT(), dt);
+   int currentHour = dt.hour;
+   
+   // Reset at London open (07:00 GMT) and NY open (13:00 GMT)
+   bool shouldReset = false;
+   
+   if((currentHour == 7 || currentHour == 13) && currentHour != m_lastResetHour) {
+      shouldReset = true;
+   }
+   
+   // Also reset if cumulative delta exceeds safe bounds (prevent overflow)
+   if(MathAbs(m_cumulativeDelta) > 1000000000) {  // 1 billion
+      shouldReset = true;
+      Print("CFootprintAnalyzer: Delta overflow protection triggered");
+   }
+   
+   if(shouldReset) {
+      long oldDelta = m_cumulativeDelta;
+      m_cumulativeDelta = 0;
+      m_lastResetHour = currentHour;
+      m_lastResetTime = TimeCurrent();
+      Print("CFootprintAnalyzer: Session delta reset at ", currentHour, ":00 GMT (was: ", oldDelta, ")");
+   }
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Update Historical Absorptions                               |
+//| - Persists significant absorption zones across bars               |
+//| - Merges nearby zones, tracks test counts                         |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::UpdateHistoricalAbsorptions() {
+   // Add current bar's high-confidence absorptions to history
+   for(int i = 0; i < m_absorptionCount; i++) {
+      if(m_absorptionZones[i].confidence >= 60) {  // Only track strong absorptions
+         MergeOrAddAbsorption(m_absorptionZones[i]);
+      }
+   }
+   
+   // Remove old or broken zones (older than 50 bars or broken)
+   datetime cutoff = TimeCurrent() - PeriodSeconds(m_timeframe) * 50;
+   
+   for(int i = m_historicalAbsCount - 1; i >= 0; i--) {
+      if(m_historicalAbsorptions[i].broken || m_historicalAbsorptions[i].detectionTime < cutoff) {
+         // Shift remaining elements
+         for(int j = i; j < m_historicalAbsCount - 1; j++) {
+            m_historicalAbsorptions[j] = m_historicalAbsorptions[j + 1];
+         }
+         m_historicalAbsCount--;
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Merge or Add Absorption Zone                                |
+//| - If zone exists nearby, merge (increase confidence/testCount)    |
+//| - Otherwise add as new zone                                       |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::MergeOrAddAbsorption(const SAbsorptionZone &zone) {
+   // Check if similar zone already exists
+   for(int i = 0; i < m_historicalAbsCount; i++) {
+      if(m_historicalAbsorptions[i].type == zone.type &&
+         MathAbs(m_historicalAbsorptions[i].price - zone.price) < m_absorptionMergeDistance) {
+         // Merge: Update with stronger confidence
+         if(zone.confidence > m_historicalAbsorptions[i].confidence) {
+            m_historicalAbsorptions[i].confidence = zone.confidence;
+            m_historicalAbsorptions[i].totalVolume = zone.totalVolume;
+         }
+         m_historicalAbsorptions[i].testCount++;
+         m_historicalAbsorptions[i].detectionTime = zone.detectionTime;  // Update time
+         return;
+      }
+   }
+   
+   // Add new zone if space available
+   if(m_historicalAbsCount < m_maxHistoricalAbs) {
+      m_historicalAbsorptions[m_historicalAbsCount] = zone;
+      m_historicalAbsCount++;
+   }
+   else {
+      // Replace weakest zone
+      int weakestIdx = 0;
+      int weakestScore = m_historicalAbsorptions[0].confidence * m_historicalAbsorptions[0].testCount;
+      
+      for(int i = 1; i < m_historicalAbsCount; i++) {
+         int score = m_historicalAbsorptions[i].confidence * m_historicalAbsorptions[i].testCount;
+         if(score < weakestScore) {
+            weakestScore = score;
+            weakestIdx = i;
+         }
+      }
+      
+      // Only replace if new zone is stronger
+      if(zone.confidence > m_historicalAbsorptions[weakestIdx].confidence) {
+         m_historicalAbsorptions[weakestIdx] = zone;
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Update Absorption Zone Tests                                |
+//| - Checks if current price tested any historical zones             |
+//| - Marks zones as broken if price went through                     |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::UpdateAbsorptionTests() {
+   double currentBid = SymbolInfoDouble(m_symbol, SYMBOL_BID);
+   double barHigh = iHigh(m_symbol, m_timeframe, 0);
+   double barLow = iLow(m_symbol, m_timeframe, 0);
+   
+   for(int i = 0; i < m_historicalAbsCount; i++) {
+      if(m_historicalAbsorptions[i].broken) continue;
+      
+      double zonePrice = m_historicalAbsorptions[i].price;
+      
+      // Check if price touched the zone
+      if(barLow <= zonePrice && barHigh >= zonePrice) {
+         m_historicalAbsorptions[i].testCount++;
+         
+         // Check if zone was broken (price closed through it)
+         double barClose = iClose(m_symbol, m_timeframe, 0);
+         
+         if(m_historicalAbsorptions[i].type == ABSORPTION_BUY) {
+            // BUY absorption at low - broken if close < zone
+            if(barClose < zonePrice - m_clusterSize) {
+               m_historicalAbsorptions[i].broken = true;
+            }
+         }
+         else {
+            // SELL absorption at high - broken if close > zone  
+            if(barClose > zonePrice + m_clusterSize) {
+               m_historicalAbsorptions[i].broken = true;
+            }
+         }
+      }
+   }
+}
+
+//+------------------------------------------------------------------+
+//| v3.3: Get Historical Absorption by Index                          |
+//+------------------------------------------------------------------+
+SAbsorptionZone CFootprintAnalyzer::GetHistoricalAbsorption(int index) {
+   SAbsorptionZone empty;
+   empty.Reset();
+   
+   if(index < 0 || index >= m_historicalAbsCount)
+      return empty;
+   
+   return m_historicalAbsorptions[index];
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Calculate Delta Acceleration                                 |
+//| - Rate of change of bar delta between consecutive bars             |
+//| - Positive = momentum building UP (bullish)                        |
+//| - Negative = momentum building DOWN (bearish)                      |
+//| - Range: -100 to +100 (normalized)                                 |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::CalculateDeltaAcceleration() {
+   m_deltaAcceleration = 0;
+   
+   if(m_historyCount < 2) return;
+   
+   // Get last 3 bar deltas (current + 2 previous)
+   long currentDelta = GetBarDelta();
+   long prevDelta1 = m_deltaHistory[m_historyCount - 1];
+   long prevDelta2 = (m_historyCount >= 2) ? m_deltaHistory[m_historyCount - 2] : prevDelta1;
+   
+   // Calculate velocity (rate of change)
+   double velocity1 = (double)(currentDelta - prevDelta1);
+   double velocity2 = (double)(prevDelta1 - prevDelta2);
+   
+   // Calculate acceleration (rate of change of velocity)
+   double acceleration = velocity1 - velocity2;
+   
+   // Normalize to -100 to +100 range
+   // Use average bar volume as reference for normalization
+   long totalVol = 0;
+   for(int i = 0; i < m_levelCount; i++) {
+      totalVol += m_levels[i].bidVolume + m_levels[i].askVolume;
+   }
+   
+   if(totalVol > 0) {
+      // Normalize: acceleration as percentage of total volume
+      m_deltaAcceleration = (acceleration / (double)totalVol) * 100.0;
+      
+      // Clamp to -100 to +100
+      m_deltaAcceleration = MathMax(-100.0, MathMin(100.0, m_deltaAcceleration));
+   }
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Update POC History                                           |
+//| - Stores POC from each bar for divergence detection                |
+//+------------------------------------------------------------------+
+void CFootprintAnalyzer::UpdatePOCHistory() {
+   if(m_levelCount == 0) return;
+   
+   // Calculate current POC
+   SValueArea va;
+   CalculateValueArea(va);
+   
+   if(va.poc == 0) return;
+   
+   // Shift history if full
+   if(m_pocHistoryCount >= m_maxPocHistory) {
+      for(int i = 0; i < m_maxPocHistory - 1; i++) {
+         m_pocHistory[i] = m_pocHistory[i + 1];
+      }
+      m_pocHistoryCount = m_maxPocHistory - 1;
+   }
+   
+   // Add current POC
+   m_pocHistory[m_pocHistoryCount] = va.poc;
+   m_pocHistoryCount++;
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Detect POC Divergence                                        |
+//| - Bullish: POC rising while price falling (buyers accumulating)    |
+//| - Bearish: POC falling while price rising (sellers distributing)   |
+//| - More reliable than raw delta divergence                          |
+//+------------------------------------------------------------------+
+bool CFootprintAnalyzer::DetectPOCDivergence(bool &bullish, bool &bearish) {
+   bullish = false;
+   bearish = false;
+   
+   if(m_pocHistoryCount < 3 || m_historyCount < 3) return false;
+   
+   int lastPOC = m_pocHistoryCount - 1;
+   int last = m_historyCount - 1;
+   
+   // Get POC trend (last 3 bars)
+   double pocTrend = m_pocHistory[lastPOC] - m_pocHistory[lastPOC - 2];
+   
+   // Get price trend (last 3 bars)
+   double priceTrend = m_priceHistory[last] - m_priceHistory[last - 2];
+   
+   // Bullish POC Divergence: POC rising while price falling
+   // Interpretation: Buyers are accumulating at higher prices despite price falling
+   if(pocTrend > m_clusterSize && priceTrend < -m_clusterSize) {
+      bullish = true;
+   }
+   
+   // Bearish POC Divergence: POC falling while price rising  
+   // Interpretation: Sellers are distributing at lower prices despite price rising
+   if(pocTrend < -m_clusterSize && priceTrend > m_clusterSize) {
+      bearish = true;
+   }
+   
+   return bullish || bearish;
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Has Bullish Momentum (Delta Acceleration > threshold)        |
+//+------------------------------------------------------------------+
+bool CFootprintAnalyzer::HasBullishMomentum() {
+   return m_deltaAcceleration > 20;  // Threshold: +20%
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Has Bearish Momentum (Delta Acceleration < threshold)        |
+//+------------------------------------------------------------------+
+bool CFootprintAnalyzer::HasBearishMomentum() {
+   return m_deltaAcceleration < -20;  // Threshold: -20%
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Has Bullish POC Divergence                                   |
+//+------------------------------------------------------------------+
+bool CFootprintAnalyzer::HasBullishPOCDivergence() {
+   bool bull, bear;
+   DetectPOCDivergence(bull, bear);
+   return bull;
+}
+
+//+------------------------------------------------------------------+
+//| v3.4: Has Bearish POC Divergence                                   |
+//+------------------------------------------------------------------+
+bool CFootprintAnalyzer::HasBearishPOCDivergence() {
+   bool bull, bear;
+   DetectPOCDivergence(bull, bear);
+   return bear;
 }
 //+------------------------------------------------------------------+

@@ -1,0 +1,29 @@
+{
+  "model_type": "lstm",
+  "seq_length": 10,
+  "n_features": 15,
+  "feature_cols": [
+    "returns",
+    "log_returns",
+    "range_pct",
+    "body_pct",
+    "upper_shadow_pct",
+    "rsi_m5",
+    "rsi_m15",
+    "rsi_h1",
+    "hurst",
+    "entropy",
+    "regime_code",
+    "session_code",
+    "hour_sin",
+    "atr_norm",
+    "vol_ratio"
+  ],
+  "hidden_size": 64,
+  "input_shape": [
+    1,
+    10,
+    15
+  ],
+  "opset_version": 11
+}

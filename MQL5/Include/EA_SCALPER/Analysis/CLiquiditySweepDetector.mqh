@@ -125,7 +125,7 @@ private:
    void              AddBSLPool(double level, datetime time, bool is_equal);
    void              AddSSLPool(double level, datetime time, bool is_equal);
    void              CheckForSweeps(MqlRates &rates[], double atr);
-   bool              ValidateSweep(MqlRates &rates[], SLiquidityPool &pool, int sweep_bar, double atr);
+   bool              ValidateSweep(MqlRates &rates[], SLiquidityPool &pool, int sweep_bar, double atr, int &bars_beyond_out, double &sweep_depth_out);
    void              CleanupOldPools();
    double            CalculatePoolStrength(SLiquidityPool &pool);
    
@@ -526,7 +526,8 @@ void CLiquiditySweepDetector::CheckForSweeps(MqlRates &rates[], double atr)
       {
          if(rates[j].high > m_bsl_pools[i].level + m_min_sweep_depth)
          {
-            if(ValidateSweep(rates, m_bsl_pools[i], j, atr))
+            int bars_beyond = 0; double depth = 0;
+            if(ValidateSweep(rates, m_bsl_pools[i], j, atr, bars_beyond, depth))
             {
                m_bsl_pools[i].is_swept = true;
                m_bsl_pools[i].sweep_time = rates[j].time;
@@ -540,6 +541,7 @@ void CLiquiditySweepDetector::CheckForSweeps(MqlRates &rates[], double atr)
                sweep.sweep_time = rates[j].time;
                sweep.sweep_bar = j;
                sweep.is_valid_sweep = true;
+               sweep.bars_beyond = bars_beyond;
                
                // Check rejection
                double upper_wick = rates[j].high - MathMax(rates[j].open, rates[j].close);
@@ -567,7 +569,8 @@ void CLiquiditySweepDetector::CheckForSweeps(MqlRates &rates[], double atr)
       {
          if(rates[j].low < m_ssl_pools[i].level - m_min_sweep_depth)
          {
-            if(ValidateSweep(rates, m_ssl_pools[i], j, atr))
+            int bars_beyond = 0; double depth = 0;
+            if(ValidateSweep(rates, m_ssl_pools[i], j, atr, bars_beyond, depth))
             {
                m_ssl_pools[i].is_swept = true;
                m_ssl_pools[i].sweep_time = rates[j].time;
@@ -580,6 +583,7 @@ void CLiquiditySweepDetector::CheckForSweeps(MqlRates &rates[], double atr)
                sweep.sweep_time = rates[j].time;
                sweep.sweep_bar = j;
                sweep.is_valid_sweep = true;
+               sweep.bars_beyond = bars_beyond;
                
                double lower_wick = MathMin(rates[j].open, rates[j].close) - rates[j].low;
                double body = MathAbs(rates[j].close - rates[j].open);
@@ -601,10 +605,11 @@ void CLiquiditySweepDetector::CheckForSweeps(MqlRates &rates[], double atr)
 //+------------------------------------------------------------------+
 //| Validate a sweep                                                  |
 //+------------------------------------------------------------------+
-bool CLiquiditySweepDetector::ValidateSweep(MqlRates &rates[], SLiquidityPool &pool, int sweep_bar, double atr)
+bool CLiquiditySweepDetector::ValidateSweep(MqlRates &rates[], SLiquidityPool &pool, int sweep_bar, double atr, int &bars_beyond_out, double &sweep_depth_out)
 {
    // Count how many bars stayed beyond
    int bars_beyond = 0;
+   double sweep_depth = 0;
    
    if(pool.type == LIQUIDITY_BSL)
    {
@@ -615,6 +620,7 @@ bool CLiquiditySweepDetector::ValidateSweep(MqlRates &rates[], SLiquidityPool &p
          else
             break;
       }
+      sweep_depth = rates[sweep_bar].high - pool.level;
    }
    else // SSL
    {
@@ -625,10 +631,19 @@ bool CLiquiditySweepDetector::ValidateSweep(MqlRates &rates[], SLiquidityPool &p
          else
             break;
       }
+      sweep_depth = pool.level - rates[sweep_bar].low;
    }
    
+   // Require a meaningful probe beyond the level (depth vs ATR and configured minimum)
+   if(sweep_depth < m_min_sweep_depth) return false;
+   if(atr > 0 && sweep_depth < atr * 0.1) return false; // at least 0.1 ATR
+   
    // For a valid fake sweep, price should not stay beyond too long
-   return (bars_beyond <= m_max_bars_beyond);
+   if(bars_beyond > m_max_bars_beyond) return false;
+   
+   bars_beyond_out = bars_beyond;
+   sweep_depth_out = sweep_depth;
+   return true;
 }
 
 //+------------------------------------------------------------------+
@@ -841,16 +856,10 @@ int CLiquiditySweepDetector::GetSweepScore()
    if(!HasRecentSweep(10)) return 0;
    
    SSweepEvent sweep = GetMostRecentSweep();
-   int score = 0;
+   if(!(sweep.is_valid_sweep && sweep.has_rejection && sweep.returned_inside))
+      return 0;
    
-   // Valid sweep (20 points)
-   if(sweep.is_valid_sweep) score += 20;
-   
-   // Rejection candle (25 points)
-   if(sweep.has_rejection) score += 25;
-   
-   // Returned inside (20 points)
-   if(sweep.returned_inside) score += 20;
+   int score = 20; // base for valid/rejected/returned
    
    // Equal level (stronger pool) (15 points)
    if(sweep.pool.is_equal_level) score += 15;
@@ -858,8 +867,14 @@ int CLiquiditySweepDetector::GetSweepScore()
    // Multiple touches (10 points)
    if(sweep.pool.touch_count >= 3) score += 10;
    
-   // Sweep depth (10 points)
-   if(sweep.sweep_depth > 10) score += 10;
+   // Sweep depth (price units) relative to ATR approximated by _Point
+   if(sweep.sweep_depth > m_min_sweep_depth * 2) score += 10;
+   
+   // Rejection size bonus
+   if(sweep.rejection_size > sweep.sweep_depth * 0.5) score += 15;
+   
+   // Return inside bonus already counted; add slight bonus for fast return
+   if(sweep.bars_beyond <= 1) score += 10;
    
    return MathMin(100, score);
 }

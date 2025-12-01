@@ -156,3 +156,8 @@ _ARCHIVE/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local data (not tracked, large/reproducible)
+data/processed/
+data/features/
+data/segments/

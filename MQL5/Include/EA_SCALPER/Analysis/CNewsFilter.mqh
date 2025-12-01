@@ -330,6 +330,8 @@ bool CNewsFilter::IsInBlackoutWindow()
          continue;
       if(m_events[i].impact == NEWS_IMPACT_LOW)
          continue;
+      if((m_events[i].impact == NEWS_IMPACT_HIGH || m_events[i].impact == NEWS_IMPACT_CRITICAL) && !m_block_high_impact)
+         continue;
       
       datetime event_time = m_events[i].event_time;
       datetime blackout_start = event_time - m_events[i].buffer_before_min * 60;

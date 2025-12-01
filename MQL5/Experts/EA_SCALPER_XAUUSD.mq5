@@ -34,6 +34,7 @@
 #include <EA_SCALPER/Core/Definitions.mqh>
 #include <EA_SCALPER/Risk/FTMO_RiskManager.mqh>
 #include <EA_SCALPER/Signal/SignalScoringModule.mqh>
+#include <EA_SCALPER/Signal/CConfluenceScorer.mqh>
 #include <EA_SCALPER/Execution/TradeExecutor.mqh>
 #include <EA_SCALPER/Execution/CTradeManager.mqh>
 
@@ -53,23 +54,23 @@
 //--- Order Flow / Footprint Analysis (NEW v3.30)
 #include <EA_SCALPER/Analysis/CFootprintAnalyzer.mqh>
 
-//--- Signal Modules
-#include <EA_SCALPER/Signal/CConfluenceScorer.mqh>
+//--- Signal Modules (CConfluenceScorer moved to Core Includes for dependency order)
 
 //--- Bridge (Phase 2)
 //#include <EA_SCALPER/Bridge/PythonBridge.mqh>
+#include <EA_SCALPER/Bridge/COnnxBrain.mqh>
 
 //--- Input Parameters: Risk Management
 input group "=== Risk Management (FTMO) ==="
 input double   InpRiskPerTrade      = 0.5;      // Risk Per Trade (%)
 input double   InpMaxDailyLoss      = 5.0;      // Max Daily Loss (%)
-input double   InpSoftStop          = 3.5;      // Soft Stop Level (%)
+input double   InpSoftStop          = 4.0;      // Soft Stop Level (%)
 input double   InpMaxTotalLoss      = 10.0;     // Max Total Loss (%)
 input int      InpMaxTradesPerDay   = 20;       // Max Trades Per Day
 
 //--- Input Parameters: Scoring Engine
 input group "=== Scoring Engine ==="
-input int      InpExecutionThreshold = 85;      // Execution Score Threshold (0-100)
+input int      InpExecutionThreshold = 50;      // Execution Score Threshold (DEFAULT: 50 for testing)
 input double   InpWeightTech        = 0.6;      // Weight: Technical
 input double   InpWeightFund        = 0.25;     // Weight: Fundamental
 input double   InpWeightSent        = 0.15;     // Weight: Sentiment
@@ -82,8 +83,8 @@ input string   InpTradeComment      = "SINGULARITY"; // Trade Comment
 
 //--- Input Parameters: Session Filter
 input group "=== Session & Time Filters ==="
-input bool     InpAllowAsian        = false;    // Allow Asian Session
-input bool     InpAllowLateNY       = false;    // Allow Late NY (17:00+)
+input bool     InpAllowAsian        = true;     // Allow Asian Session (DEFAULT: ON for testing)
+input bool     InpAllowLateNY       = true;     // Allow Late NY (DEFAULT: ON for testing)
 input int      InpGMTOffset         = 0;        // Broker GMT Offset
 input int      InpFridayCloseHour   = 14;       // Friday Close Hour (GMT)
 
@@ -93,19 +94,32 @@ input bool     InpNewsFilterEnabled = true;     // Enable News Filter
 input bool     InpBlockHighImpact   = true;     // Block High-Impact News
 input bool     InpBlockMediumImpact = false;    // Block Medium-Impact News
 
+//--- Input Parameters: Machine Learning / Safeguards
+input group "=== Machine Learning (ONNX) ==="
+input bool     InpUseML             = false;    // Enable ONNX Direction Model
+input double   InpMLThreshold       = 0.65;     // Min confidence to accept ML signal
+input int      InpMLCacheSeconds    = 60;       // Cache horizon for ML predictions
+input bool     InpLogML             = false;    // Log ML outputs for debugging
+input int      InpMaxSpreadPoints   = 80;       // Gate 1: Max spread (points) to trade
+
 //--- Input Parameters: Entry Optimization
 input group "=== Entry Optimization ==="
 input double   InpMinRR             = 1.5;      // Minimum R:R Ratio
 input double   InpTargetRR          = 2.5;      // Target R:R Ratio
 input int      InpMaxWaitBars       = 10;       // Max Bars to Wait for Entry
 
+//--- Input Parameters: Debug Mode
+input group "=== Debug Mode (Diagnostics) ==="
+input bool     InpDebugMode         = true;     // Enable Debug Logging (DEFAULT: ON)
+input int      InpDebugInterval     = 30;       // Debug Log Interval (seconds)
+
 //--- Input Parameters: Multi-Timeframe (NEW v3.20)
 input group "=== Multi-Timeframe Settings ==="
-input bool     InpUseMTF            = true;     // Enable MTF Architecture
-input double   InpMinMTFConfluence  = 60.0;     // Min MTF Confluence Score
-input bool     InpRequireHTFAlign   = true;     // Require H1 Trend Alignment
-input bool     InpRequireMTFZone    = true;     // Require M15 Structure Zone
-input bool     InpRequireLTFConfirm = true;     // Require M5 Confirmation
+input bool     InpUseMTF            = false;    // Enable MTF Architecture (DEFAULT: OFF for testing)
+input double   InpMinMTFConfluence  = 50.0;     // Min MTF Confluence Score (relaxed)
+input bool     InpRequireHTFAlign   = false;    // Require H1 Trend Alignment (DEFAULT: OFF)
+input bool     InpRequireMTFZone    = false;    // Require M15 Structure Zone (DEFAULT: OFF)
+input bool     InpRequireLTFConfirm = false;    // Require M5 Confirmation (DEFAULT: OFF)
 
 //--- Global Objects (Core)
 CFTMO_RiskManager    g_RiskManager;
@@ -127,8 +141,18 @@ CEntryOptimizer         g_EntryOpt;
 CEliteFVGDetector       g_FVG;
 CConfluenceScorer       g_Confluence;
 
+// v3.31: Footprint/Order Flow Analyzer (FORGE genius upgrade)
+CFootprintAnalyzer      g_Footprint;
+
+//--- ML Brain
+COnnxBrain              g_OnnxBrain;
+bool                    g_MLEnabled = false;
+
 //--- Global State
 bool g_IsEmergencyMode = false;
+
+// v4.1: Current regime strategy (GENIUS)
+SRegimeStrategy         g_CurrentStrategy;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -162,6 +186,15 @@ int OnInit()
    }
    g_TradeManager.SetManagementMode(MGMT_PARTIAL_TP);
    g_TradeManager.ConfigurePartials(1.5, 2.5, 0.40, 0.50);  // 40% at 1.5R, 30% at 2.5R
+   
+   // v4.2 GENIUS: Attach analyzers for intelligent trade management
+   // Structure-based trailing: Never trail through valid swing levels
+   g_TradeManager.AttachStructureAnalyzer(&g_Structure);
+   g_TradeManager.SetStructureTrailBuffer(0.2);  // 0.2 ATR buffer from swing level
+   
+   // Footprint exit: Detect absorption/exhaustion signals for early exits
+   g_TradeManager.AttachFootprintAnalyzer(&g_Footprint);
+   g_TradeManager.SetAbsorptionExitConfidence(60);  // Min 60% confidence for exit signal
 
    // 5. Initialize Multi-Timeframe Manager (NEW v3.20)
    if(InpUseMTF)
@@ -221,18 +254,76 @@ int OnInit()
    g_EntryOpt.SetTargetRR(InpTargetRR);
    g_EntryOpt.SetMaxWaitBars(InpMaxWaitBars);
    
-   // 7. Connect Confluence Scorer to all detectors
+   // v3.31: Initialize Footprint Analyzer (FORGE fix - was missing!)
+   if(!g_Footprint.Init(_Symbol, PERIOD_M5, 0.50, 3.0))
+   {
+      Print("Warning: Footprint analyzer initialization issue");
+   }
+   else
+   {
+      // v3.3: Enable institutional-grade features
+      g_Footprint.EnableDynamicCluster(true, 0.1, 0.25, 2.0);  // ATR-based cluster sizing
+      g_Footprint.EnableSessionReset(true);                     // Reset delta at London/NY open
+      Print("Footprint v3.4 initialized: M5 cluster=dynamic(ATR*0.1), session_reset=ON");
+   }
+   
+   // 7. Connect Confluence Scorer to all detectors (v3.31: 9 factors)
    g_Confluence.AttachRegimeDetector(&g_Regime);
    g_Confluence.AttachStructureAnalyzer(&g_Structure);
    g_Confluence.AttachSweepDetector(&g_Sweep);
    g_Confluence.AttachAMDTracker(&g_AMD);
    g_Confluence.AttachOBDetector(g_ScoringEngine.GetOBDetector());
    g_Confluence.AttachFVGDetector(&g_FVG);
+   
+   // v3.31: Attach MTF and Footprint (FORGE genius upgrade)
+   g_Confluence.AttachMTFManager(&g_MTF);
+   g_Confluence.AttachFootprint(&g_Footprint);
+   
    g_Confluence.SetMinScore(70);       // Tier B minimum
-   g_Confluence.SetMinConfluences(3);  // At least 3 factors
+   g_Confluence.SetMinConfluences(3);  // At least 3 factors (can be higher with 9 available)
+   
+   // v4.2 GENIUS: Bayesian Learning - Connect CTradeManager to CConfluenceScorer
+   // This enables self-improving priors based on actual trade outcomes
+   // TODO: Fix compilation - AttachConfluenceScorer not being recognized
+   // g_TradeManager.AttachConfluenceScorer(&g_Confluence);
    
    // 8. Timer for slow-lane updates
    EventSetTimer(1);
+
+   // 9. Initialize ML Brain (optional)
+   g_MLEnabled = InpUseML;
+   if(g_MLEnabled)
+   {
+      if(!g_OnnxBrain.Initialize())
+      {
+         Print("Warning: ONNX brain failed to initialize - ML disabled");
+         g_MLEnabled = false;
+      }
+      else
+      {
+         g_OnnxBrain.SetCacheTime(InpMLCacheSeconds);
+         Print("ONNX brain enabled with threshold=", DoubleToString(InpMLThreshold, 2));
+      }
+   }
+
+   // v4.2: Initialize regime strategy at startup (GENIUS refinement)
+   // This ensures strategy is ready even before first H1 bar change
+   SRegimeAnalysis init_regime = g_Regime.AnalyzeRegime(_Symbol, PERIOD_H1);
+   if(init_regime.is_valid)
+   {
+      g_CurrentStrategy = g_Regime.GetCurrentStrategy();
+      g_RiskManager.SetRegimeMultiplier(init_regime.size_multiplier);
+      Print("[Regime v4.2] Initial strategy: ", g_CurrentStrategy.philosophy);
+      Print("  Entry mode: ", EnumToString(g_CurrentStrategy.entry_mode),
+            " | Min confluence: ", g_CurrentStrategy.min_confluence,
+            " | Risk: ", DoubleToString(g_CurrentStrategy.risk_percent * 100, 1), "%");
+   }
+   else
+   {
+      // Default to conservative if regime analysis fails at startup
+      g_CurrentStrategy.Reset();
+      Print("[Regime v4.2] Regime analysis failed at init - using conservative defaults");
+   }
 
    Print("=== Singularity MTF Edition Initialized Successfully ===");
    Print("Execution TF: M5 | Structure TF: M15 | Direction TF: H1");
@@ -252,6 +343,7 @@ void OnDeinit(const int reason)
    g_MTF.Deinit();
    g_AMD.Deinitialize();
    g_Sweep.Deinitialize();
+   g_OnnxBrain.Deinitialize();
    
    Print("EA_SCALPER_XAUUSD v3.30 Singularity Order Flow Deinitialized. Reason: ", reason);
 }
@@ -261,6 +353,68 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+   //=== DEBUG: Periodic status dump ===
+   static datetime last_debug_log = 0;
+   bool debug_now = InpDebugMode && (TimeCurrent() - last_debug_log >= InpDebugInterval);
+   
+   if(debug_now)
+   {
+      last_debug_log = TimeCurrent();
+      
+      // Collect ALL gate statuses
+      int spread_pts = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+      bool spread_ok = (spread_pts <= InpMaxSpreadPoints);
+      bool session_ok = g_Session.IsTradingAllowed();
+      bool news_ok = g_News.IsTradingAllowed();
+      bool risk_ok = g_RiskManager.CanOpenNewTrade();
+      bool has_trade = g_TradeManager.HasActiveTrade();
+      
+      // MTF status
+      SMTFConfluence mtf_conf = g_MTF.GetConfluence();
+      bool htf_ok = mtf_conf.htf_aligned;
+      bool mtf_align_ok = (mtf_conf.alignment >= MTF_ALIGN_GOOD);
+      
+      // Regime status
+      SRegimeStrategy regime = g_Regime.GetCurrentStrategy();
+      bool regime_ok = (regime.entry_mode != ENTRY_MODE_DISABLED);
+      
+      // Confluence
+      SConfluenceResult conf = g_Confluence.CalculateConfluence();
+      int score = (int)conf.total_score;
+      bool score_ok = (score >= InpExecutionThreshold);
+      
+      // AMD Phase
+      ENUM_AMD_PHASE amd = g_AMD.GetCurrentPhase();
+      bool amd_ok = (amd == AMD_PHASE_DISTRIBUTION);
+      
+      Print("=== DEBUG STATUS @ ", TimeToString(TimeCurrent(), TIME_DATE|TIME_MINUTES), " ===");
+      PrintFormat("  Spread: %d pts [%s]", spread_pts, spread_ok ? "OK" : "BLOCKED");
+      PrintFormat("  Session: %s [%s]", g_Session.GetSessionName(), session_ok ? "OK" : "BLOCKED");
+      PrintFormat("  News: %s [%s]", g_News.GetCurrentStatus(), news_ok ? "OK" : "BLOCKED");
+      PrintFormat("  Risk: [%s]", risk_ok ? "OK" : "BLOCKED");
+      PrintFormat("  Has Trade: [%s]", has_trade ? "YES-SKIP" : "NO-OK");
+      PrintFormat("  HTF Align: [%s]", htf_ok ? "OK" : "BLOCKED");
+      PrintFormat("  MTF Align: %s [%s]", EnumToString(mtf_conf.alignment), mtf_align_ok ? "OK" : "BLOCKED");
+      PrintFormat("  Regime: %s [%s]", regime.philosophy, regime_ok ? "OK" : "BLOCKED");
+      PrintFormat("  Score: %d/%d [%s]", score, InpExecutionThreshold, score_ok ? "OK" : "LOW");
+      PrintFormat("  AMD Phase: %s [%s]", EnumToString(amd), amd_ok ? "OK" : "WAITING");
+      PrintFormat("  Direction: %s | Valid: %s", EnumToString(conf.direction), conf.is_valid ? "YES" : "NO");
+      Print("=== END DEBUG ===");
+   }
+   
+   //=== GATE 1: Spread Guard ===
+   int spread_points = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
+   if(spread_points > InpMaxSpreadPoints)
+   {
+      static datetime last_spread_log = 0;
+      if(TimeCurrent() - last_spread_log > 300)
+      {
+         if(InpDebugMode) Print("[BLOCKED] Spread too high: ", spread_points, " > ", InpMaxSpreadPoints);
+         last_spread_log = TimeCurrent();
+      }
+      return;
+   }
+
    // Always refresh risk state so daily reset can recover from emergency
    g_RiskManager.OnTick();
    
@@ -289,6 +443,29 @@ void OnTick()
    
    // Skip new trade logic if we already have a position
    if(g_TradeManager.HasActiveTrade()) return;
+
+   //=== GATE 2: ML Direction (ONNX) ===
+   ENUM_SIGNAL_TYPE ml_signal = SIGNAL_NONE;
+   double ml_conf = 0.0;
+   if(g_MLEnabled)
+   {
+      ml_signal = g_OnnxBrain.GetMLSignal(InpMLThreshold);
+      ml_conf = g_OnnxBrain.GetMLConfidence();
+      if(ml_signal == SIGNAL_NONE)
+      {
+         static datetime last_ml_log = 0;
+         if(InpLogML && TimeCurrent() - last_ml_log > 120)
+         {
+            Print("[ML] No confident signal | conf=", DoubleToString(ml_conf, 2));
+            last_ml_log = TimeCurrent();
+         }
+         return; // Do not trade without ML confirmation
+      }
+      else if(InpLogML)
+      {
+         PrintFormat("[ML] Signal=%s conf=%.2f", EnumToString(ml_signal), ml_conf);
+      }
+   }
 
    //=== GATE 3: Session Filter ===
    if(!g_Session.IsTradingAllowed())
@@ -321,9 +498,6 @@ void OnTick()
    //=== GATE 6: Multi-Timeframe Analysis (NEW v3.20) ===
    if(InpUseMTF)
    {
-      // Update MTF Manager (H1, M15, M5)
-      g_MTF.Update();
-      
       // Check HTF (H1) direction - NEVER trade against H1 trend
       SMTFConfluence mtf_conf_htf = g_MTF.GetConfluence();
       if(InpRequireHTFAlign && !mtf_conf_htf.htf_aligned)
@@ -338,28 +512,19 @@ void OnTick()
       }
    }
 
-   //=== SIGNAL GENERATION ===
-   // Update analysis modules
-   g_Sweep.Update();
-   g_AMD.Update();
+   //=== SIGNAL GENERATION (v3.31: Using CConfluenceScorer - 9 factors) ===
+   // Analysis modules are updated on timer to reduce per-tick load
    
-   // Refresh FVGs on new M15 bar to avoid heavy per-tick detection
-   static datetime last_fvg_bar = 0;
-   datetime m15_bar = iTime(_Symbol, PERIOD_M15, 0);
-   if(m15_bar != last_fvg_bar)
-   {
-      g_FVG.DetectEliteFairValueGaps();
-      last_fvg_bar = m15_bar;
-   }
-   
-   // Calculate confluence score
-   int score = g_ScoringEngine.CalculateScore();
+   // v3.31: Calculate confluence using the REAL brain (FORGE genius upgrade)
+   SConfluenceResult conf_result = g_Confluence.CalculateConfluence();
+   int score = (int)conf_result.total_score;
    
    // Check minimum score threshold
    if(score < InpExecutionThreshold) return;
-   
+
    //=== GATE 7: AMD Cycle Check ===
    // Only trade in DISTRIBUTION phase (after manipulation)
+   // NOTE: This is also checked by CConfluenceScorer but kept for explicit control
    ENUM_AMD_PHASE amd_phase = g_AMD.GetCurrentPhase();
    if(amd_phase == AMD_PHASE_ACCUMULATION || amd_phase == AMD_PHASE_MANIPULATION)
    {
@@ -368,10 +533,30 @@ void OnTick()
    }
    
    //=== ENTRY OPTIMIZATION (M5 precision) ===
-   ENUM_ORDER_TYPE direction = g_ScoringEngine.GetDirection();
-   ENUM_SIGNAL_TYPE signal = (direction == ORDER_TYPE_BUY) ? SIGNAL_BUY : SIGNAL_SELL;
+   // v3.31: Get direction from CConfluenceScorer (includes MTF + Footprint voting)
+   ENUM_SIGNAL_TYPE signal = conf_result.direction;
    
    if(signal == SIGNAL_NONE) return;
+   
+   // v3.31: Also check validity from CConfluenceScorer
+   if(!conf_result.is_valid) return;
+
+   // Align with ML direction if enabled
+   if(g_MLEnabled)
+   {
+      if(ml_signal == SIGNAL_NONE) return;
+      // v3.31: Compare directly with SIGNAL_TYPE (not ORDER_TYPE)
+      if(ml_signal != signal)
+      {
+         static datetime last_mismatch = 0;
+         if(TimeCurrent() - last_mismatch > 300)
+         {
+            Print("[ML] Direction mismatch. ML=", EnumToString(ml_signal), " | ConfluenceDir=", EnumToString(signal));
+            last_mismatch = TimeCurrent();
+         }
+         return;
+      }
+   }
    
    // Pull best order block zone from scoring module if available
    double ob_low = 0, ob_high = 0;
@@ -494,6 +679,80 @@ void OnTick()
       return;
    }
    
+   //=== v4.2: ENTRY MODE FILTERING (GENIUS) ===
+   // Different regimes require different entry approaches
+   switch(g_CurrentStrategy.entry_mode)
+   {
+      case ENTRY_MODE_BREAKOUT:
+         // Standard breakout entry - current logic is fine
+         break;
+         
+      case ENTRY_MODE_PULLBACK:
+         // Require price to be pulling back INTO structure (FVG/OB)
+         if(has_ob && signal == SIGNAL_BUY && current_price > (ob_high + ob_low) / 2)
+         {
+            static datetime last_pb_log = 0;
+            if(TimeCurrent() - last_pb_log > 300)
+            {
+               Print("[Entry v4.2] PULLBACK mode: Waiting for pullback to OB zone");
+               last_pb_log = TimeCurrent();
+            }
+            return;
+         }
+         if(has_ob && signal == SIGNAL_SELL && current_price < (ob_high + ob_low) / 2)
+         {
+            return; // Wait for pullback
+         }
+         break;
+         
+      case ENTRY_MODE_MEAN_REVERT:
+         // Only enter at sweep levels (extremes)
+         if(signal == SIGNAL_BUY && sweep_level <= 0)
+         {
+            static datetime last_mr_log = 0;
+            if(TimeCurrent() - last_mr_log > 300)
+            {
+               Print("[Entry v4.2] MEAN_REVERT mode: Waiting for sweep of lows");
+               last_mr_log = TimeCurrent();
+            }
+            return;
+         }
+         if(signal == SIGNAL_SELL && sweep_level <= 0)
+         {
+            return; // Wait for sweep
+         }
+         break;
+         
+      case ENTRY_MODE_CONFIRMATION:
+         // Require extra confirmation bars
+         if(g_CurrentStrategy.confirmation_bars > 1)
+         {
+            bool confirmed = true;
+            for(int cb = 1; cb <= g_CurrentStrategy.confirmation_bars; cb++)
+            {
+               double bar_close = iClose(_Symbol, PERIOD_M5, cb);
+               double bar_open = iOpen(_Symbol, PERIOD_M5, cb);
+               if(signal == SIGNAL_BUY && bar_close < bar_open) confirmed = false;
+               if(signal == SIGNAL_SELL && bar_close > bar_open) confirmed = false;
+            }
+            if(!confirmed)
+            {
+               static datetime last_conf_log = 0;
+               if(TimeCurrent() - last_conf_log > 300)
+               {
+                  Print("[Entry v4.2] CONFIRMATION mode: Waiting for confirming bars");
+                  last_conf_log = TimeCurrent();
+               }
+               return;
+            }
+         }
+         break;
+         
+      case ENTRY_MODE_DISABLED:
+         return; // Safety net
+   }
+
+   
    //=== EXECUTION ===
    // Check if we should enter now or wait
    if(!g_EntryOpt.ShouldEnterNow(current_price))
@@ -504,18 +763,66 @@ void OnTick()
    
    // Calculate position size
    double slPoints = MathAbs(current_price - entry.stop_loss) / _Point;
+   
+   //=== v4.2: OVERRIDE TPs WITH REGIME STRATEGY R-MULTIPLES (GENIUS) ===
+   // Calculate TPs based on regime strategy instead of CEntryOptimizer defaults
+   if(g_CurrentStrategy.tp1_r > 0)
+   {
+      double risk_price = MathAbs(current_price - entry.stop_loss);  // Risk in price units
+      
+      // Calculate new TPs based on R-multiples
+      double tp1_offset = risk_price * g_CurrentStrategy.tp1_r;
+      double tp2_offset = risk_price * g_CurrentStrategy.tp2_r;
+      double tp3_offset = risk_price * g_CurrentStrategy.tp3_r;
+      
+      // Override entry TPs
+      if(signal == SIGNAL_BUY)
+      {
+         entry.take_profit_1 = current_price + tp1_offset;
+         entry.take_profit_2 = current_price + tp2_offset;
+         entry.take_profit_3 = current_price + tp3_offset;
+      }
+      else
+      {
+         entry.take_profit_1 = current_price - tp1_offset;
+         entry.take_profit_2 = current_price - tp2_offset;
+         entry.take_profit_3 = current_price - tp3_offset;
+      }
+      
+      // Recalculate R:R with new TP1
+      entry.risk_reward = g_CurrentStrategy.tp1_r;
+      
+      // Log the override
+      static datetime last_tp_log = 0;
+      if(TimeCurrent() - last_tp_log > 600)
+      {
+         Print("[TP v4.2] Regime TPs applied: TP1=", DoubleToString(g_CurrentStrategy.tp1_r, 1), 
+               "R TP2=", DoubleToString(g_CurrentStrategy.tp2_r, 1), 
+               "R TP3=", DoubleToString(g_CurrentStrategy.tp3_r, 1), "R");
+         last_tp_log = TimeCurrent();
+      }
+   }
+
    double lotSize = g_RiskManager.CalculateLotSize(slPoints);
    
    if(lotSize <= 0) return;
    
-   // Apply MTF position sizing multiplier (NEW v3.20)
+   // v3.31: Apply position sizing from CConfluenceScorer (includes regime + MTF)
+   double conf_size_mult = conf_result.position_size_mult;
+   if(conf_size_mult < 1.0 && conf_size_mult > 0)
+   {
+      lotSize *= conf_size_mult;
+      Print("[Confluence] Position size adjusted to ", DoubleToString(conf_size_mult*100, 0), "% (regime/MTF adjustment)");
+   }
+   
+   // Also apply MTF multiplier if different (belt and suspenders)
    if(InpUseMTF)
    {
       double mtf_mult = g_MTF.GetPositionSizeMultiplier();
-      if(mtf_mult < 1.0)
+      if(mtf_mult < conf_size_mult && mtf_mult > 0)
       {
-         lotSize *= mtf_mult;
-         Print("[MTF] Position size adjusted to ", DoubleToString(mtf_mult*100, 0), "% due to partial alignment");
+         lotSize *= (mtf_mult / conf_size_mult);  // Only apply the difference
+         Print("[MTF] Additional position size adjustment to ", DoubleToString(mtf_mult*100, 0), "%");
       }
    }
    
@@ -523,16 +830,34 @@ void OnTick()
    double minLot = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
    if(lotSize < minLot) lotSize = minLot;
    
-   // Open trade with multiple TPs
-   string reason = StringFormat("Score:%d AMD:%s RR:%.1f MTF:%s", 
-                                score, EnumToString(amd_phase), entry.risk_reward,
-                                InpUseMTF ? g_MTF.GetAnalysisSummary() : "OFF");
+   // v3.31: Enhanced trade reason with confluence details
+   string reason = StringFormat("Score:%d/%d Conf:%d/9 Q:%s AMD:%s RR:%.1f", 
+                                score, InpExecutionThreshold,
+                                conf_result.total_confluences,
+                                g_Confluence.QualityToString(conf_result.quality),
+                                EnumToString(amd_phase), entry.risk_reward);
+   
+   // v4.1: Apply regime-adaptive strategy to trade manager (GENIUS)
+   g_TradeManager.ApplyRegimeStrategy(g_CurrentStrategy);
+   
+   // v4.1: Apply regime-based risk percent (overrides input if regime dictates lower risk)
+   if(g_CurrentStrategy.risk_percent > 0 && g_CurrentStrategy.risk_percent < InpRiskPerTrade / 100.0)
+   {
+      double regime_lots = g_RiskManager.CalculateLotSizeWithRisk(slPoints, g_CurrentStrategy.risk_percent * 100);
+      if(regime_lots > 0 && regime_lots < lotSize)
+      {
+         Print("[Regime v4.1] Risk adjusted from ", DoubleToString(InpRiskPerTrade, 2), 
+               "% to ", DoubleToString(g_CurrentStrategy.risk_percent * 100, 2), 
+               "% | Lot: ", DoubleToString(lotSize, 2), " -> ", DoubleToString(regime_lots, 2));
+         lotSize = regime_lots;
+      }
+   }
    
    if(g_TradeManager.OpenTradeWithTPs(signal, lotSize, entry.stop_loss,
                                        entry.take_profit_1, entry.take_profit_2, entry.take_profit_3,
                                        score, reason))
    {
-      Print("=== TRADE EXECUTED (v3.30 Order Flow) ===");
+      Print("=== TRADE EXECUTED (v3.31 FORGE Genius Edition) ===");
       Print("Direction: ", (signal == SIGNAL_BUY ? "BUY" : "SELL"));
       Print("Entry: ", current_price, " | SL: ", entry.stop_loss);
       Print("TP1: ", entry.take_profit_1, " (40%)");
@@ -540,8 +865,10 @@ void OnTick()
       Print("TP3: ", entry.take_profit_3, " (trail 30%)");
       Print("R:R: ", DoubleToString(entry.risk_reward, 2));
       Print("Lot: ", lotSize);
+      Print("Confluence Score: ", score, " | Quality: ", g_Confluence.QualityToString(conf_result.quality));
+      Print("Factors: ", conf_result.total_confluences, "/9 | MTF:", DoubleToString(conf_result.mtf_score,1), " | FP:", DoubleToString(conf_result.footprint_score,1));
       if(InpUseMTF) Print("MTF: ", g_MTF.GetAnalysisSummary());
-      Print("==================================");
+      Print("============================================");
       
       g_RiskManager.OnTradeExecuted();
    }
@@ -562,7 +889,25 @@ void OnTimer()
    // Regime/HTF updates on new H1 bar
    if(h1_bar != last_h1_bar)
    {
-      g_Regime.AnalyzeRegime(_Symbol, PERIOD_H1);
+      SRegimeAnalysis regime = g_Regime.AnalyzeRegime(_Symbol, PERIOD_H1);
+      if(regime.is_valid)
+      {
+         g_RiskManager.SetRegimeMultiplier(regime.size_multiplier);
+         
+         // v4.1: Update current regime strategy (GENIUS)
+         g_CurrentStrategy = g_Regime.GetCurrentStrategy();
+         
+         // Log regime strategy change
+         static ENUM_MARKET_REGIME last_regime = REGIME_UNKNOWN;
+         if(regime.regime != last_regime)
+         {
+            Print("[Regime v4.1] Strategy changed to: ", g_CurrentStrategy.philosophy);
+            Print("  Entry mode: ", EnumToString(g_CurrentStrategy.entry_mode),
+                  " | Min confluence: ", g_CurrentStrategy.min_confluence,
+                  " | Risk: ", DoubleToString(g_CurrentStrategy.risk_percent * 100, 1), "%");
+            last_regime = regime.regime;
+         }
+      }
       last_h1_bar = h1_bar;
    }
    
@@ -571,7 +916,21 @@ void OnTimer()
    {
       g_Structure.AnalyzeStructure(_Symbol, PERIOD_M15);
       last_m15_bar = m15_bar;
+      
+      // Refresh FVGs on new M15 bar to avoid heavy per-tick detection
+      g_FVG.DetectEliteFairValueGaps();
    }
+   
+   // Update sweep and AMD cycle (1s timer)
+   g_Sweep.Update();
+   g_AMD.Update();
+   
+   // v3.31: Update Footprint analyzer (FORGE fix - was missing!)
+   g_Footprint.Update();
+   
+   // Update MTF manager once per timer tick (uses cached indicator buffers)
+   if(InpUseMTF)
+      g_MTF.Update();
    
    // Check for new day (reset daily counters)
    static int last_day = 0;
@@ -580,7 +939,7 @@ void OnTimer()
    if(dt.day != last_day)
    {
       last_day = dt.day;
-      // g_RiskManager.OnNewDay();  // TODO: Add to FTMO_RiskManager
+      g_RiskManager.OnNewDay();
       g_News.RefreshSchedule();
       Print("=== NEW TRADING DAY ===");
       Print("Session: ", g_Session.GetSessionName());

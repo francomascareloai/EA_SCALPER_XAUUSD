@@ -1,0 +1,38 @@
+{
+  "strategy": "MA Crossover (10/50)",
+  "period": "2020-01-01 to 2024-12-31",
+  "initial_balance": 100000,
+  "final_balance": 47889.39,
+  "total_trades": 9915,
+  "winning_trades": 3114,
+  "losing_trades": 6801,
+  "win_rate": 31.41,
+  "total_pnl_pips": -5872.6,
+  "total_pnl_dollars": -52110.61,
+  "total_pnl_percent": -52.11,
+  "avg_win_pips": 58.5,
+  "avg_loss_pips": 27.7,
+  "profit_factor": 0.97,
+  "max_drawdown_pct": 83.37,
+  "max_drawdown_dollars": 88854.0,
+  "sharpe_ratio": -0.48,
+  "expectancy_pips": -0.59,
+  "by_exit_reason": {
+    "TP": {
+      "count": 769,
+      "pct": 7.7559253656076645
+    },
+    "SL": {
+      "count": 344,
+      "pct": 3.469490670700958
+    },
+    "SIGNAL": {
+      "count": 8802,
+      "pct": 88.77458396369138
+    }
+  },
+  "long_trades": 4957,
+  "short_trades": 4958,
+  "long_win_rate": 32.2,
+  "short_win_rate": 30.62
+}

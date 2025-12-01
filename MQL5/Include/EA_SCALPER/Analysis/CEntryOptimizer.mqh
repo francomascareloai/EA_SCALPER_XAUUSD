@@ -113,10 +113,10 @@ private:
    int               m_max_wait_bars;           // Max bars to wait for entry
    double            m_sl_buffer_atr;           // SL buffer in ATR units
    
-   // XAUUSD SCALPING LIMITS (in points)
-   double            m_max_sl_points;           // Maximum SL distance (default: 50 points = $50)
-   double            m_min_sl_points;           // Minimum SL distance (default: 15 points = $15)
-   double            m_default_sl_points;       // Default SL when no sweep level (default: 30 points)
+   // XAUUSD SCALPING LIMITS (em points; 1 point = _Point)
+   double            m_max_sl_points;           // Max distance in points
+   double            m_min_sl_points;           // Min distance in points
+   double            m_default_sl_points;       // Default SL distance in points
    
    // State
    SOptimalEntry     m_current_entry;
@@ -133,7 +133,11 @@ private:
    
 public:
    CEntryOptimizer();
-   ~CEntryOptimizer() {}
+   ~CEntryOptimizer() 
+   { 
+      if(m_atr_handle != INVALID_HANDLE) 
+         IndicatorRelease(m_atr_handle); 
+   }
    
    // Initialization - MTF v3.20: M5 for precision entries
    bool              Initialize(string symbol = NULL, ENUM_TIMEFRAMES tf = PERIOD_M5);
@@ -195,9 +199,11 @@ CEntryOptimizer::CEntryOptimizer()
    m_sl_buffer_atr = 0.2;          // 0.2 ATR buffer for SL
    
    // XAUUSD SCALPING LIMITS - CRITICAL FOR PROP FIRMS
-   m_max_sl_points = 50.0;         // Max 50 points SL ($50 per ounce)
-   m_min_sl_points = 15.0;         // Min 15 points SL ($15 per ounce)
-   m_default_sl_points = 30.0;     // Default 30 points if no structure
+   // Valores são em points (1 point = _Point). Para XAUUSD (_Point=0.01),
+   // 5000 points = $50, 1500 = $15, 3000 = $30.
+   m_max_sl_points = 5000.0;       // Max ~$50
+   m_min_sl_points = 1500.0;       // Min ~$15
+   m_default_sl_points = 3000.0;   // Default ~$30 se não houver estrutura
    
    m_atr_handle = INVALID_HANDLE;
    m_current_entry.Reset();
@@ -278,10 +284,11 @@ SOptimalEntry CEntryOptimizer::OptimizeForBuy(double fvg_low, double fvg_high,
    bool has_fvg = (fvg_low > 0 && fvg_high > 0 && fvg_high > fvg_low);
    bool has_ob = (ob_low > 0 && ob_high > 0 && ob_high > ob_low);
    
-   // Calculate point value for limits
-   double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   if(point == 0) point = 0.01;  // Default for XAUUSD
-   
+   // Distancias em preco a partir de pontos configurados
+   double max_sl_price = m_max_sl_points * _Point;
+   double min_sl_price = m_min_sl_points * _Point;
+   double default_sl_price = m_default_sl_points * _Point;
+
    // PRIORITY 1: FVG 50% fill (best entry)
    if(has_fvg && fvg_low < current_price)
    {
@@ -299,11 +306,11 @@ SOptimalEntry CEntryOptimizer::OptimizeForBuy(double fvg_low, double fvg_high,
       double raw_sl = (sweep_low > 0) ? sweep_low - (atr * m_sl_buffer_atr) : 0;
       double sl_distance = entry.optimal_price - raw_sl;
       
-      // Clamp SL distance between min and max
-      if(sl_distance > m_max_sl_points || raw_sl <= 0)
-         entry.stop_loss = entry.optimal_price - m_default_sl_points;
-      else if(sl_distance < m_min_sl_points)
-         entry.stop_loss = entry.optimal_price - m_min_sl_points;
+      // Clamp SL distance between min and max (prices, not “points”)
+      if(raw_sl <= 0 || sl_distance > max_sl_price)
+         entry.stop_loss = entry.optimal_price - default_sl_price;
+      else if(sl_distance < min_sl_price)
+         entry.stop_loss = entry.optimal_price - min_sl_price;
       else
          entry.stop_loss = raw_sl;
       
@@ -337,10 +344,10 @@ SOptimalEntry CEntryOptimizer::OptimizeForBuy(double fvg_low, double fvg_high,
       
       double sl_distance = entry.optimal_price - raw_sl;
       
-      if(sl_distance > m_max_sl_points || raw_sl <= 0)
-         entry.stop_loss = entry.optimal_price - m_default_sl_points;
-      else if(sl_distance < m_min_sl_points)
-         entry.stop_loss = entry.optimal_price - m_min_sl_points;
+      if(raw_sl <= 0 || sl_distance > max_sl_price)
+         entry.stop_loss = entry.optimal_price - default_sl_price;
+      else if(sl_distance < min_sl_price)
+         entry.stop_loss = entry.optimal_price - min_sl_price;
       else
          entry.stop_loss = raw_sl;
       
@@ -363,7 +370,7 @@ SOptimalEntry CEntryOptimizer::OptimizeForBuy(double fvg_low, double fvg_high,
       entry.zone_type = "MARKET";
       
       // Use default scalping SL for market entries
-      entry.stop_loss = current_price - m_default_sl_points;
+      entry.stop_loss = current_price - default_sl_price;
       
       double risk = current_price - entry.stop_loss;
       entry.take_profit_1 = current_price + risk * 1.5;
@@ -397,9 +404,9 @@ SOptimalEntry CEntryOptimizer::OptimizeForSell(double fvg_low, double fvg_high,
    bool has_fvg = (fvg_low > 0 && fvg_high > 0 && fvg_high > fvg_low);
    bool has_ob = (ob_low > 0 && ob_high > 0 && ob_high > ob_low);
    
-   // Calculate point value for limits
-   double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
-   if(point == 0) point = 0.01;  // Default for XAUUSD
+   double max_sl_price = m_max_sl_points * _Point;
+   double min_sl_price = m_min_sl_points * _Point;
+   double default_sl_price = m_default_sl_points * _Point;
    
    // PRIORITY 1: FVG 50% fill
    if(has_fvg && fvg_high > current_price)
@@ -418,11 +425,11 @@ SOptimalEntry CEntryOptimizer::OptimizeForSell(double fvg_low, double fvg_high,
       double raw_sl = (sweep_high > 0) ? sweep_high + (atr * m_sl_buffer_atr) : 0;
       double sl_distance = raw_sl - entry.optimal_price;
       
-      // Clamp SL distance between min and max
-      if(sl_distance > m_max_sl_points || raw_sl <= 0)
-         entry.stop_loss = entry.optimal_price + m_default_sl_points;
-      else if(sl_distance < m_min_sl_points)
-         entry.stop_loss = entry.optimal_price + m_min_sl_points;
+      // Clamp SL distance between min and max (prices, não “points” crus)
+      if(raw_sl <= 0 || sl_distance > max_sl_price)
+         entry.stop_loss = entry.optimal_price + default_sl_price;
+      else if(sl_distance < min_sl_price)
+         entry.stop_loss = entry.optimal_price + min_sl_price;
       else
          entry.stop_loss = raw_sl;
       
@@ -455,10 +462,10 @@ SOptimalEntry CEntryOptimizer::OptimizeForSell(double fvg_low, double fvg_high,
       
       double sl_distance = raw_sl - entry.optimal_price;
       
-      if(sl_distance > m_max_sl_points || raw_sl <= 0)
-         entry.stop_loss = entry.optimal_price + m_default_sl_points;
-      else if(sl_distance < m_min_sl_points)
-         entry.stop_loss = entry.optimal_price + m_min_sl_points;
+      if(raw_sl <= 0 || sl_distance > max_sl_price)
+         entry.stop_loss = entry.optimal_price + default_sl_price;
+      else if(sl_distance < min_sl_price)
+         entry.stop_loss = entry.optimal_price + min_sl_price;
       else
          entry.stop_loss = raw_sl;
       
@@ -481,7 +488,7 @@ SOptimalEntry CEntryOptimizer::OptimizeForSell(double fvg_low, double fvg_high,
       entry.zone_type = "MARKET";
       
       // Use default scalping SL for market entries
-      entry.stop_loss = current_price + m_default_sl_points;
+      entry.stop_loss = current_price + default_sl_price;
       
       double risk = entry.stop_loss - current_price;
       entry.take_profit_1 = current_price - risk * 1.5;

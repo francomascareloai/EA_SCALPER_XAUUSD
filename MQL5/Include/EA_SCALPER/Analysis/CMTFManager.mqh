@@ -159,6 +159,16 @@ struct SLTFAnalysis
    }
 };
 
+//--- MTF Session Type Enum (GENIUS v3.2) - Prefixed to avoid collision with CSessionFilter
+enum ENUM_MTF_SESSION
+{
+   MTF_SESSION_OVERLAP = 4,     // London/NY Overlap (best)
+   MTF_SESSION_LONDON = 3,      // London session
+   MTF_SESSION_NEWYORK = 2,     // New York session
+   MTF_SESSION_ASIAN = 1,       // Asian session (low liquidity)
+   MTF_SESSION_DEAD = 0         // Dead zone (avoid)
+};
+
 //--- MTF Confluence Result
 struct SMTFConfluence
 {
@@ -182,8 +192,13 @@ struct SMTFConfluence
    bool               htf_aligned;         // H1 supports direction
    bool               mtf_structure;       // M15 has OB/FVG zone
    bool               ltf_confirmed;       // M5 confirmation
-   bool               session_ok;          // Active session
+   bool               session_ok;          // Active session (quality >= 0.5)
    int                confluence_count;    // Number of factors aligned
+   
+   // v3.2 GENIUS: Session quality scoring (not binary)
+   double             session_quality;     // 0.0-1.0 quality score
+   ENUM_MTF_SESSION   session_type;        // Current session type
+   bool               has_momentum_divergence; // M15 vs H1 momentum divergence
    
    string             reason;              // Trade reason
    
@@ -205,6 +220,10 @@ struct SMTFConfluence
       ltf_confirmed = false;
       session_ok = false;
       confluence_count = 0;
+      // v3.2 GENIUS fields
+      session_quality = 0.0;
+      session_type = MTF_SESSION_DEAD;
+      has_momentum_divergence = false;
       reason = "";
    }
 };
@@ -212,6 +231,8 @@ struct SMTFConfluence
 //+------------------------------------------------------------------+
 //| CMTFManager - Multi-Timeframe Analysis Manager                   |
 //+------------------------------------------------------------------+
+// NOTE: ADAPTIVE_TF moved to Phase 2 (requires WFA validation first)
+// NOTE: BAYESIAN scoring already implemented in CConfluenceScorer v3.31
 class CMTFManager
 {
 private:
@@ -229,6 +250,7 @@ private:
    int               m_htf_atr_handle;
    int               m_htf_rsi_handle;
    int               m_mtf_atr_handle;
+   int               m_mtf_rsi_handle;     // v3.2 GENIUS: M15 RSI for divergence detection
    int               m_ltf_rsi_handle;
    int               m_ltf_atr_handle;
    
@@ -241,6 +263,7 @@ private:
    double            m_min_trend_strength;  // Min trend strength to confirm
    double            m_min_confluence;      // Min confluence score
    int               m_lookback_bars;       // Bars to analyze
+   int               m_gmt_offset;          // v3.2 GENIUS: Broker GMT offset (hours)
    
    // Private methods
    void              AnalyzeHTF();
@@ -248,8 +271,14 @@ private:
    void              AnalyzeLTF();
    ENUM_MTF_TREND    DetermineTrend(double ma_fast, double ma_slow, double price, double atr);
    double            CalculateTrendStrength(ENUM_TIMEFRAMES tf);
+   double            CalculateHurstExponent(ENUM_TIMEFRAMES tf, int periods = 50);
    void              FindSwingPoints(ENUM_TIMEFRAMES tf, double &swing_high, double &swing_low);
    bool              DetectConfirmationCandle(ENUM_SIGNAL_TYPE expected_direction);
+   bool              CheckPriceNearSwingLevel(double price, double swing_level, double atr);
+   
+   // v3.2 GENIUS: Session quality and momentum divergence
+   double            CalculateSessionQuality(ENUM_MTF_SESSION &session_type);
+   bool              HasMomentumDivergence();
    
 public:
                      CMTFManager();
@@ -275,7 +304,7 @@ public:
    bool              IsHTFBullish() const { return m_htf.trend == MTF_TREND_BULLISH; }
    bool              IsHTFBearish() const { return m_htf.trend == MTF_TREND_BEARISH; }
    bool              IsTrending() const { return m_htf.is_trending; }
-   bool              HasMTFStructure() const { return m_mtf.has_active_ob || m_mtf.has_active_fvg; }
+   bool              HasMTFStructure() const { return m_mtf.has_active_ob || m_mtf.has_active_fvg || m_mtf.has_liquidity_pool; }
    bool              HasLTFConfirmation(ENUM_SIGNAL_TYPE direction);
    
    // Trade permission
@@ -293,9 +322,17 @@ public:
    // Setters
    void              SetMinTrendStrength(double strength) { m_min_trend_strength = strength; }
    void              SetMinConfluence(double conf) { m_min_confluence = conf; }
+   void              SetGMTOffset(int offset) { m_gmt_offset = offset; } // v3.2 GENIUS
+   
+   // v3.2 GENIUS: Session quality getters
+   double            GetSessionQuality() const { return m_confluence.session_quality; }
+   ENUM_MTF_SESSION  GetSessionType() const { return m_confluence.session_type; }
+   bool              IsInActiveSession() const { return m_confluence.session_ok; }
+   bool              HasMTFDivergence() const { return m_confluence.has_momentum_divergence; }
    
    // Utility
    string            GetAnalysisSummary();
+   string            SessionTypeToString(ENUM_MTF_SESSION session); // v3.2 GENIUS
 };
 
 //+------------------------------------------------------------------+
@@ -312,10 +349,11 @@ CMTFManager::CMTFManager()
    m_htf_ma20_handle = INVALID_HANDLE;
    m_htf_ma50_handle = INVALID_HANDLE;
    m_htf_atr_handle = INVALID_HANDLE;
-      m_htf_rsi_handle = INVALID_HANDLE;
-      m_mtf_atr_handle = INVALID_HANDLE;
-      m_ltf_rsi_handle = INVALID_HANDLE;
-      m_ltf_atr_handle = INVALID_HANDLE;
+   m_htf_rsi_handle = INVALID_HANDLE;
+   m_mtf_atr_handle = INVALID_HANDLE;
+   m_mtf_rsi_handle = INVALID_HANDLE;  // v3.2 GENIUS
+   m_ltf_rsi_handle = INVALID_HANDLE;
+   m_ltf_atr_handle = INVALID_HANDLE;
    
    m_htf_last_bar = 0;
    m_mtf_last_bar = 0;
@@ -324,6 +362,7 @@ CMTFManager::CMTFManager()
    m_min_trend_strength = 30.0;
    m_min_confluence = 60.0;
    m_lookback_bars = 100;
+   m_gmt_offset = 0;  // v3.2 GENIUS: Default 0 (assume broker is GMT)
 }
 
 //+------------------------------------------------------------------+
@@ -349,6 +388,7 @@ bool CMTFManager::Init(string symbol)
    
    // Create M15 indicators
    m_mtf_atr_handle = iATR(m_symbol, MTF_MTF, 14);
+   m_mtf_rsi_handle = iRSI(m_symbol, MTF_MTF, 14, PRICE_CLOSE);  // v3.2 GENIUS: M15 RSI for divergence
    
    // Create M5 indicators
    m_ltf_rsi_handle = iRSI(m_symbol, MTF_LTF, 14, PRICE_CLOSE);
@@ -360,6 +400,7 @@ bool CMTFManager::Init(string symbol)
       m_htf_atr_handle == INVALID_HANDLE ||
       m_htf_rsi_handle == INVALID_HANDLE ||
       m_mtf_atr_handle == INVALID_HANDLE ||
+      m_mtf_rsi_handle == INVALID_HANDLE ||  // v3.2 GENIUS
       m_ltf_rsi_handle == INVALID_HANDLE ||
       m_ltf_atr_handle == INVALID_HANDLE)
    {
@@ -367,8 +408,8 @@ bool CMTFManager::Init(string symbol)
       return false;
    }
    
-   Print("[MTF] Manager initialized for ", m_symbol);
-   Print("[MTF] HTF=H1, MTF=M15, LTF=M5");
+   Print("[MTF] Manager v3.2 GENIUS initialized for ", m_symbol);
+   Print("[MTF] HTF=H1, MTF=M15, LTF=M5 | Session Quality + Momentum Divergence enabled");
    return true;
 }
 
@@ -382,6 +423,7 @@ void CMTFManager::Deinit()
    if(m_htf_atr_handle != INVALID_HANDLE) IndicatorRelease(m_htf_atr_handle);
    if(m_htf_rsi_handle != INVALID_HANDLE) IndicatorRelease(m_htf_rsi_handle);
    if(m_mtf_atr_handle != INVALID_HANDLE) IndicatorRelease(m_mtf_atr_handle);
+   if(m_mtf_rsi_handle != INVALID_HANDLE) IndicatorRelease(m_mtf_rsi_handle);  // v3.2 GENIUS
    if(m_ltf_rsi_handle != INVALID_HANDLE) IndicatorRelease(m_ltf_rsi_handle);
    if(m_ltf_atr_handle != INVALID_HANDLE) IndicatorRelease(m_ltf_atr_handle);
 }
@@ -418,6 +460,45 @@ void CMTFManager::Update()
 }
 
 //+------------------------------------------------------------------+
+//| Update HTF only (call on new H1 bar)                             |
+//+------------------------------------------------------------------+
+void CMTFManager::UpdateHTF()
+{
+   datetime htf_bar = iTime(m_symbol, MTF_HTF, 0);
+   if(htf_bar != m_htf_last_bar)
+   {
+      AnalyzeHTF();
+      m_htf_last_bar = htf_bar;
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Update MTF only (call on new M15 bar)                            |
+//+------------------------------------------------------------------+
+void CMTFManager::UpdateMTF()
+{
+   datetime mtf_bar = iTime(m_symbol, MTF_MTF, 0);
+   if(mtf_bar != m_mtf_last_bar)
+   {
+      AnalyzeMTF();
+      m_mtf_last_bar = mtf_bar;
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Update LTF only (call on new M5 bar or every tick)               |
+//+------------------------------------------------------------------+
+void CMTFManager::UpdateLTF()
+{
+   datetime ltf_bar = iTime(m_symbol, MTF_LTF, 0);
+   if(ltf_bar != m_ltf_last_bar)
+   {
+      AnalyzeLTF();
+      m_ltf_last_bar = ltf_bar;
+   }
+}
+
+//+------------------------------------------------------------------+
 //| Analyze H1 (HTF)                                                  |
 //+------------------------------------------------------------------+
 void CMTFManager::AnalyzeHTF()
@@ -434,20 +515,37 @@ void CMTFManager::AnalyzeHTF()
    if(CopyBuffer(m_htf_rsi_handle, 0, 0, 3, rsi) < 3) return;
    
    double close = iClose(m_symbol, MTF_HTF, 0);
+   double atr_val = atr[0];
+   if(atr_val <= 0)
+   {
+      // Sem volatilidade util: considera neutro e nao-trending
+      m_htf.ma_20 = ma20[0];
+      m_htf.ma_50 = ma50[0];
+      m_htf.atr = atr_val;
+      m_htf.rsi = rsi[0];
+      m_htf.trend = MTF_TREND_NEUTRAL;
+      m_htf.trend_strength = 0;
+      m_htf.is_trending = false;
+      m_htf.last_update = TimeCurrent();
+      return;
+   }
    
    // Store values
    m_htf.ma_20 = ma20[0];
    m_htf.ma_50 = ma50[0];
-   m_htf.atr = atr[0];
+   m_htf.atr = atr_val;
    m_htf.rsi = rsi[0];
    
    // Determine trend
-   m_htf.trend = DetermineTrend(ma20[0], ma50[0], close, atr[0]);
+   m_htf.trend = DetermineTrend(ma20[0], ma50[0], close, atr_val);
    m_htf.trend_strength = CalculateTrendStrength(MTF_HTF);
    
-   // Is trending? (based on MA separation)
-   double ma_separation = MathAbs(ma20[0] - ma50[0]) / atr[0];
-   m_htf.is_trending = (ma_separation > 1.0); // MAs separated by > 1 ATR
+   // Calculate Hurst exponent for regime detection
+   m_htf.hurst = CalculateHurstExponent(MTF_HTF, 50);
+   
+   // Is trending? (Hurst > 0.55 = persistent/trending, combined with MA separation)
+   double ma_separation = MathAbs(ma20[0] - ma50[0]) / atr_val;
+   m_htf.is_trending = (m_htf.hurst > 0.55 && ma_separation > 0.5) || (ma_separation > 1.5);
    
    // Find swing points
    FindSwingPoints(MTF_HTF, m_htf.swing_high, m_htf.swing_low);
@@ -500,11 +598,30 @@ void CMTFManager::AnalyzeMTF()
    else
       m_mtf.bos_bearish = false;
    
-   // Note: OB/FVG detection will be done by their respective modules
-   // Here we just check if we're in a zone
-   m_mtf.has_active_ob = (m_mtf.bos_bullish || m_mtf.bos_bearish);  // heuristic until detectors wire in
-   m_mtf.has_active_fvg = false; // Will be set by CFVGDetector
-   m_mtf.has_liquidity_pool = false; // Will be set by CLiquiditySweepDetector
+   // Structure presence: use dedicated detectors if available (OB/FVG flags)
+   // FALLBACK: If no external flags set, check price proximity to swing levels
+   if(!m_mtf.has_active_ob && !m_mtf.has_active_fvg)
+   {
+      double mtf_atr = atr[0];
+      double current_bid = SymbolInfoDouble(m_symbol, SYMBOL_BID);
+      
+      // Fallback zone detection: price near M15 swing level = potential structure
+      bool near_swing_high = CheckPriceNearSwingLevel(current_bid, m_mtf.last_swing_high, mtf_atr);
+      bool near_swing_low = CheckPriceNearSwingLevel(current_bid, m_mtf.last_swing_low, mtf_atr);
+      
+      // Set internal structure flag if near key level AND aligned with HTF trend
+      if(m_htf.trend == MTF_TREND_BULLISH && near_swing_low)
+         m_mtf.has_liquidity_pool = true;  // Potential demand zone
+      else if(m_htf.trend == MTF_TREND_BEARISH && near_swing_high)
+         m_mtf.has_liquidity_pool = true;  // Potential supply zone
+      
+      // Store swing levels as pseudo-OB levels for entry optimization
+      if(near_swing_low || near_swing_high)
+      {
+         m_mtf.nearest_ob_high = m_mtf.last_swing_high;
+         m_mtf.nearest_ob_low = m_mtf.last_swing_low;
+      }
+   }
    
    m_mtf.last_update = TimeCurrent();
 }
@@ -549,8 +666,15 @@ void CMTFManager::AnalyzeLTF()
                             m_ltf.pin_bar_bullish || m_ltf.pin_bar_bearish;
    
    // Calculate momentum
-   double close_5 = iClose(m_symbol, MTF_LTF, 5);
-   m_ltf.momentum = (close1 - close_5) / close_5 * 100;
+   double closes5[];
+   ArraySetAsSeries(closes5, true);
+   if(CopyClose(m_symbol, MTF_LTF, 0, 6, closes5) < 6)
+      return;
+   double close_5 = closes5[5];
+   if(close_5 != 0)
+      m_ltf.momentum = (close1 - close_5) / close_5 * 100;
+   else
+      m_ltf.momentum = 0;
    
    // Is momentum aligned with HTF trend?
    if(m_htf.trend == MTF_TREND_BULLISH && m_ltf.momentum > 0)
@@ -601,7 +725,7 @@ ENUM_MTF_TREND CMTFManager::DetermineTrend(double ma_fast, double ma_slow, doubl
 }
 
 //+------------------------------------------------------------------+
-//| Calculate trend strength                                          |
+//| Calculate trend strength (improved: MA slope + directional move) |
 //+------------------------------------------------------------------+
 double CMTFManager::CalculateTrendStrength(ENUM_TIMEFRAMES tf)
 {
@@ -609,17 +733,101 @@ double CMTFManager::CalculateTrendStrength(ENUM_TIMEFRAMES tf)
    ArraySetAsSeries(closes, true);
    if(CopyClose(m_symbol, tf, 0, 20, closes) < 20) return 0;
    
+   // Component 1: Directional bar count (0-50 points)
    int up_count = 0;
    int down_count = 0;
-   
    for(int i = 0; i < 19; i++)
    {
       if(closes[i] > closes[i+1]) up_count++;
       else if(closes[i] < closes[i+1]) down_count++;
    }
+   double dir_score = MathAbs(up_count - down_count) / 19.0 * 50;
    
-   double strength = MathAbs(up_count - down_count) / 19.0 * 100;
-   return strength;
+   // Component 2: Price movement relative to range (0-50 points)
+   double highest = closes[ArrayMaximum(closes)];
+   double lowest = closes[ArrayMinimum(closes)];
+   double range = highest - lowest;
+   double net_move = MathAbs(closes[0] - closes[19]);
+   double move_score = 0;
+   if(range > 0)
+      move_score = (net_move / range) * 50;
+   
+   double strength = dir_score + move_score;
+   return MathMin(strength, 100.0);
+}
+
+//+------------------------------------------------------------------+
+//| Calculate Hurst Exponent using R/S Analysis                       |
+//| H > 0.5 = Trending (persistent), H < 0.5 = Mean-reverting        |
+//+------------------------------------------------------------------+
+double CMTFManager::CalculateHurstExponent(ENUM_TIMEFRAMES tf, int periods)
+{
+   double closes[];
+   ArraySetAsSeries(closes, true);
+   if(CopyClose(m_symbol, tf, 0, periods, closes) < periods) return 0.5;
+   
+   // Reverse to chronological order for R/S calculation
+   double prices[];
+   ArrayResize(prices, periods);
+   for(int i = 0; i < periods; i++)
+      prices[i] = closes[periods - 1 - i];
+   
+   // Calculate returns
+   double returns[];
+   ArrayResize(returns, periods - 1);
+   for(int i = 0; i < periods - 1; i++)
+   {
+      if(prices[i] > 0)
+         returns[i] = MathLog(prices[i + 1] / prices[i]);
+      else
+         returns[i] = 0;
+   }
+   
+   int n = periods - 1;
+   if(n < 10) return 0.5;
+   
+   // Calculate mean of returns
+   double sum = 0;
+   for(int i = 0; i < n; i++)
+      sum += returns[i];
+   double mean = sum / n;
+   
+   // Calculate cumulative deviations from mean
+   double cumdev[];
+   ArrayResize(cumdev, n);
+   double running_sum = 0;
+   for(int i = 0; i < n; i++)
+   {
+      running_sum += (returns[i] - mean);
+      cumdev[i] = running_sum;
+   }
+   
+   // Range R = max(cumdev) - min(cumdev)
+   double R = cumdev[ArrayMaximum(cumdev)] - cumdev[ArrayMinimum(cumdev)];
+   
+   // Standard deviation S
+   double sq_sum = 0;
+   for(int i = 0; i < n; i++)
+      sq_sum += MathPow(returns[i] - mean, 2);
+   double S = MathSqrt(sq_sum / (n - 1));  // Bessel's correction for sample std dev
+   
+   // Hurst = log(R/S) / log(n)
+   if(S <= 0 || R <= 0) return 0.5;
+   double RS = R / S;
+   double H = MathLog(RS) / MathLog((double)n);
+   
+   // Clamp to valid range [0, 1]
+   return MathMax(0.0, MathMin(1.0, H));
+}
+
+//+------------------------------------------------------------------+
+//| Check if price is near a swing level (within 0.5 ATR)            |
+//+------------------------------------------------------------------+
+bool CMTFManager::CheckPriceNearSwingLevel(double price, double swing_level, double atr)
+{
+   if(atr <= 0) return false;
+   double distance = MathAbs(price - swing_level);
+   return (distance <= atr * 0.5);
 }
 
 //+------------------------------------------------------------------+
@@ -683,15 +891,22 @@ SMTFConfluence CMTFManager::GetConfluence()
       confluence_count++;
    }
    
-   // Check MTF structure
-   if(m_mtf.has_active_ob || m_mtf.has_active_fvg)
+   // Check MTF structure (OB, FVG, or fallback liquidity pool near swing)
+   if(m_mtf.has_active_ob || m_mtf.has_active_fvg || m_mtf.has_liquidity_pool)
    {
       m_confluence.mtf_structure = true;
       confluence_count++;
    }
    
    // Check LTF confirmation
-   if(m_ltf.has_confirmation && m_ltf.momentum_aligned)
+   bool ltf_bull_conf = (m_ltf.bullish_engulf || m_ltf.pin_bar_bullish) &&
+                        (m_ltf.momentum > 0) &&
+                        (m_htf.trend == MTF_TREND_BULLISH);
+   bool ltf_bear_conf = (m_ltf.bearish_engulf || m_ltf.pin_bar_bearish) &&
+                        (m_ltf.momentum < 0) &&
+                        (m_htf.trend == MTF_TREND_BEARISH);
+
+   if(ltf_bull_conf || ltf_bear_conf)
    {
       m_confluence.ltf_confirmed = true;
       confluence_count++;
@@ -739,9 +954,36 @@ SMTFConfluence CMTFManager::GetConfluence()
       }
    }
    
-   // Calculate confidence
-   m_confluence.confidence = confluence_count * 25.0 + m_htf.trend_strength * 0.25;
-   if(m_confluence.confidence > 100) m_confluence.confidence = 100;
+   // v3.2 GENIUS: Calculate session quality (not binary)
+   ENUM_MTF_SESSION session_type;
+   double session_quality = CalculateSessionQuality(session_type);
+   m_confluence.session_quality = session_quality;
+   m_confluence.session_type = session_type;
+   m_confluence.session_ok = (session_quality >= 0.5);  // Tradeable if quality >= 50%
+   
+   // v3.2 GENIUS: Check for momentum divergence (M15 vs H1)
+   m_confluence.has_momentum_divergence = HasMomentumDivergence();
+   
+   // Calculate confidence (0-100 scale)
+   // Base: HTF aligned (30) + MTF structure (35) + LTF confirmed (35) = 100 max
+   double conf = 0;
+   if(m_confluence.htf_aligned) conf += 30.0;
+   if(m_confluence.mtf_structure) conf += 35.0;
+   if(m_confluence.ltf_confirmed) conf += 35.0;
+   // Bonus for trend strength (up to +10, but cap at 100)
+   conf += MathMin(m_htf.trend_strength * 0.1, 10.0);
+   
+   // v3.2 GENIUS: Session quality adjustment
+   // Reduce confidence if outside core sessions (but don't zero it)
+   if(session_quality < 1.0)
+      conf *= (0.5 + session_quality * 0.5);  // Range: 50%-100% of base conf
+   
+   // v3.2 GENIUS: Momentum divergence penalty
+   // If M15 is showing opposite momentum to H1, reduce confidence by 15%
+   if(m_confluence.has_momentum_divergence)
+      conf *= 0.85;
+   
+   m_confluence.confidence = MathMin(conf, 100.0);
    
    return m_confluence;
 }
@@ -753,7 +995,9 @@ bool CMTFManager::CanTradeLong()
 {
    if(m_htf.trend != MTF_TREND_BULLISH) return false;
    if(!m_htf.is_trending) return false;
+   if(m_htf.trend_strength < m_min_trend_strength) return false;
    if(m_confluence.alignment < MTF_ALIGN_GOOD) return false;
+   if(m_confluence.confidence < m_min_confluence) return false;
    if(!m_ltf.momentum_aligned) return false;
    
    return true;
@@ -766,7 +1010,9 @@ bool CMTFManager::CanTradeShort()
 {
    if(m_htf.trend != MTF_TREND_BEARISH) return false;
    if(!m_htf.is_trending) return false;
+   if(m_htf.trend_strength < m_min_trend_strength) return false;
    if(m_confluence.alignment < MTF_ALIGN_GOOD) return false;
+   if(m_confluence.confidence < m_min_confluence) return false;
    if(!m_ltf.momentum_aligned) return false;
    
    return true;
@@ -786,21 +1032,128 @@ bool CMTFManager::HasLTFConfirmation(ENUM_SIGNAL_TYPE direction)
 }
 
 //+------------------------------------------------------------------+
-//| Get analysis summary                                              |
+//| v3.2 GENIUS: Calculate session quality based on time             |
+//| Returns quality score 0.0-1.0 and sets session type              |
+//| Sessions based on GMT with configurable offset                   |
+//+------------------------------------------------------------------+
+double CMTFManager::CalculateSessionQuality(ENUM_MTF_SESSION &session_type)
+{
+   MqlDateTime dt;
+   TimeToStruct(TimeCurrent(), dt);
+   
+   // Apply GMT offset (broker time to GMT)
+   int gmt_hour = (dt.hour - m_gmt_offset + 24) % 24;
+   
+   // Session definitions (GMT):
+   // ASIAN:    00:00 - 07:00 (Tokyo 00-08, Hong Kong)
+   // LONDON:   07:00 - 16:00 (Core 08-16)
+   // OVERLAP:  13:00 - 16:00 (London + NY best liquidity)
+   // NY:       13:00 - 21:00 (Core 13-21)
+   // DEAD:     21:00 - 00:00 (Low liquidity)
+   
+   // Check for overlap first (highest priority)
+   if(gmt_hour >= 13 && gmt_hour < 16)
+   {
+      session_type = MTF_SESSION_OVERLAP;
+      return 1.0;  // Perfect liquidity
+   }
+   
+   // London (non-overlap)
+   if(gmt_hour >= 7 && gmt_hour < 13)
+   {
+      session_type = MTF_SESSION_LONDON;
+      return 0.85;  // Excellent liquidity
+   }
+   
+   // NY (non-overlap)
+   if(gmt_hour >= 16 && gmt_hour < 21)
+   {
+      session_type = MTF_SESSION_NEWYORK;
+      return 0.85;  // Excellent liquidity
+   }
+   
+   // Asian
+   if(gmt_hour >= 0 && gmt_hour < 7)
+   {
+      session_type = MTF_SESSION_ASIAN;
+      return 0.40;  // Low liquidity, wide spreads
+   }
+   
+   // Dead zone (21:00 - 00:00)
+   session_type = MTF_SESSION_DEAD;
+   return 0.25;  // Avoid trading
+}
+
+//+------------------------------------------------------------------+
+//| v3.2 GENIUS: Detect momentum divergence between M15 and H1       |
+//| Returns true if M15 RSI opposes H1 trend direction               |
+//| This is a WARNING sign - trade with caution                      |
+//+------------------------------------------------------------------+
+bool CMTFManager::HasMomentumDivergence()
+{
+   // If no H1 trend, no divergence possible
+   if(m_htf.trend == MTF_TREND_NEUTRAL || m_htf.trend == MTF_TREND_RANGING)
+      return false;
+   
+   // Get M15 RSI
+   double rsi_m15[];
+   ArraySetAsSeries(rsi_m15, true);
+   if(m_mtf_rsi_handle == INVALID_HANDLE) return false;
+   if(CopyBuffer(m_mtf_rsi_handle, 0, 0, 1, rsi_m15) < 1) return false;
+   
+   double mtf_rsi = rsi_m15[0];
+   
+   // Divergence detection:
+   // H1 BULLISH but M15 RSI < 45 = BEARISH divergence (momentum weakening)
+   // H1 BEARISH but M15 RSI > 55 = BULLISH divergence (momentum weakening)
+   
+   if(m_htf.trend == MTF_TREND_BULLISH && mtf_rsi < 45.0)
+      return true;  // H1 up, but M15 momentum is down
+   
+   if(m_htf.trend == MTF_TREND_BEARISH && mtf_rsi > 55.0)
+      return true;  // H1 down, but M15 momentum is up
+   
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| v3.2 GENIUS: Convert session type to string                      |
+//+------------------------------------------------------------------+
+string CMTFManager::SessionTypeToString(ENUM_MTF_SESSION session)
+{
+   switch(session)
+   {
+      case MTF_SESSION_OVERLAP:  return "OVERLAP";
+      case MTF_SESSION_LONDON:   return "LONDON";
+      case MTF_SESSION_NEWYORK:  return "NY";
+      case MTF_SESSION_ASIAN:    return "ASIAN";
+      case MTF_SESSION_DEAD:     return "DEAD";
+      default:                   return "UNKNOWN";
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Get analysis summary (v3.2 GENIUS: includes session info)        |
 //+------------------------------------------------------------------+
 string CMTFManager::GetAnalysisSummary()
 {
    string htf_str = (m_htf.trend == MTF_TREND_BULLISH) ? "BULLISH" :
                     (m_htf.trend == MTF_TREND_BEARISH) ? "BEARISH" : "NEUTRAL";
    string mtf_str = (m_mtf.has_active_ob) ? "OB Active" : 
-                    (m_mtf.has_active_fvg) ? "FVG Active" : "No Structure";
+                    (m_mtf.has_active_fvg) ? "FVG Active" : 
+                    (m_mtf.has_liquidity_pool) ? "Swing Zone" : "No Structure";
    string ltf_str = (m_ltf.has_confirmation) ? "CONFIRMED" : "No Confirmation";
    
    string align_str = (m_confluence.alignment == MTF_ALIGN_PERFECT) ? "PERFECT" :
                       (m_confluence.alignment == MTF_ALIGN_GOOD) ? "GOOD" :
                       (m_confluence.alignment == MTF_ALIGN_WEAK) ? "WEAK" : "NONE";
    
-   return StringFormat("[MTF] H1:%s | M15:%s | M5:%s | Align:%s (%.0f%%)",
-                       htf_str, mtf_str, ltf_str, align_str, m_confluence.confidence);
+   // v3.2 GENIUS: Add session and divergence info
+   string session_str = SessionTypeToString(m_confluence.session_type);
+   string div_str = m_confluence.has_momentum_divergence ? " [DIV!]" : "";
+   
+   return StringFormat("[MTF v3.2] H1:%s | M15:%s | M5:%s | Align:%s (%.0f%%) | Session:%s(%.0f%%)%s",
+                       htf_str, mtf_str, ltf_str, align_str, m_confluence.confidence,
+                       session_str, m_confluence.session_quality * 100, div_str);
 }
 //+------------------------------------------------------------------+

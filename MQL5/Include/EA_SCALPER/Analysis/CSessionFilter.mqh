@@ -176,34 +176,34 @@ CSessionFilter::CSessionFilter()
    m_asian.quality = SESSION_QUALITY_BLOCKED;
    m_asian.name = "Asian";
    
-   // London Session: 07:00-12:00 GMT
+   // London Session: 07:00-16:00 GMT (spec)
    m_london.start_hour = 7;
    m_london.start_minute = 0;
-   m_london.end_hour = 12;
+   m_london.end_hour = 16;
    m_london.end_minute = 0;
    m_london.quality = SESSION_QUALITY_HIGH;
    m_london.name = "London";
    
-   // London/NY Overlap: 12:00-15:00 GMT
+   // London/NY Overlap: 12:00-16:00 GMT
    m_overlap.start_hour = 12;
    m_overlap.start_minute = 0;
-   m_overlap.end_hour = 15;
+   m_overlap.end_hour = 16;
    m_overlap.end_minute = 0;
    m_overlap.quality = SESSION_QUALITY_PRIME;
    m_overlap.name = "London/NY Overlap";
    
-   // NY Session: 15:00-17:00 GMT
-   m_ny.start_hour = 15;
+   // NY Session: 16:00-21:00 GMT (post-overlap continuation)
+   m_ny.start_hour = 16;
    m_ny.start_minute = 0;
-   m_ny.end_hour = 17;
+   m_ny.end_hour = 21;
    m_ny.end_minute = 0;
    m_ny.quality = SESSION_QUALITY_MEDIUM;
    m_ny.name = "New York";
    
-   // Late NY: 17:00-21:00 GMT
-   m_late.start_hour = 17;
+   // Late NY: 21:00-00:00 GMT
+   m_late.start_hour = 21;
    m_late.start_minute = 0;
-   m_late.end_hour = 21;
+   m_late.end_hour = 0;   // crosses midnight
    m_late.end_minute = 0;
    m_late.quality = SESSION_QUALITY_LOW;
    m_late.name = "Late NY";

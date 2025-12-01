@@ -107,18 +107,62 @@ bool CTradeExecutor::ExecuteTrade(ENUM_ORDER_TYPE type, double volume, double sl
 {
    string final_comment = m_comment + " S:" + IntegerToString(score);
    
-   if(type == ORDER_TYPE_BUY)
+    // Spread and distance guards
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   double spread_pts = (ask - bid) / point;
+   int stops_lvl = (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   int freeze_lvl = (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL);
+   double min_dist = MathMax(stops_lvl, freeze_lvl) * point;
+   double max_spread_pts = m_slippage * 2;
+   if(spread_pts > max_spread_pts)
    {
-      double price = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-      return m_trade.Buy(volume, _Symbol, price, sl, tp, final_comment);
-   }
-   else if(type == ORDER_TYPE_SELL)
-   {
-      double price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-      return m_trade.Sell(volume, _Symbol, price, sl, tp, final_comment);
+      Print("TradeExecutor: spread too wide (", spread_pts, " pts) > max ", max_spread_pts, " pts. Aborting.");
+      return false;
    }
    
+   double price = (type == ORDER_TYPE_BUY) ? ask : bid;
+   if(MathAbs(price - sl) < min_dist || MathAbs(tp - price) < min_dist)
+   {
+      Print("TradeExecutor: SL/TP inside stop/freeze distance (", min_dist/point, " pts). Aborting.");
+      return false;
+   }
+   
+   int attempts = 0;
+   while(attempts < 2)
+   {
+      bool ok = false;
+      if(type == ORDER_TYPE_BUY)
+         ok = m_trade.Buy(volume, _Symbol, price, sl, tp, final_comment);
+      else if(type == ORDER_TYPE_SELL)
+         ok = m_trade.Sell(volume, _Symbol, price, sl, tp, final_comment);
+      else
+         return false;
+
+      if(ok) return true;
+
+      int rc = (int)m_trade.ResultRetcode();
+      if(rc == TRADE_RETCODE_REQUOTE || rc == TRADE_RETCODE_PRICE_CHANGED)
+      {
+         MqlTick tick;
+         if(SymbolInfoTick(_Symbol, tick))
+         {
+            bid = tick.bid;
+            ask = tick.ask;
+            price = (type == ORDER_TYPE_BUY) ? ask : bid;
+         }
+         attempts++;
+         continue;
+      }
+
+      Print("TradeExecutor: order failed - ", m_trade.ResultRetcodeDescription(), " (retcode ", rc, ")");
+      return false;
+   }
+   
+   Print("TradeExecutor: order failed after retries (retcode ", m_trade.ResultRetcode(), ")");
    return false;
+   
 }
 
 //+------------------------------------------------------------------+
@@ -128,12 +172,11 @@ void CTradeExecutor::ManagePositions()
 {
    for(int i = PositionsTotal() - 1; i >= 0; i--)
    {
-      if(PositionSelectByTicket(PositionGetTicket(i)))
+      ulong ticket = PositionGetTicket(i);
+      if(PositionSelectByTicket(ticket))
       {
          if(PositionGetString(POSITION_SYMBOL) == _Symbol && PositionGetInteger(POSITION_MAGIC) == m_magic_number)
          {
-            ulong ticket = PositionGetInteger(POSITION_TICKET);
-            
             if(m_use_breakeven) ApplyBreakEven(ticket);
             if(m_use_trailing) ApplyTrailingStop(ticket);
          }
@@ -147,11 +190,15 @@ void CTradeExecutor::ManagePositions()
 void CTradeExecutor::ApplyBreakEven(ulong ticket)
 {
    if(!PositionSelectByTicket(ticket)) return;
+   if(m_breakeven_trigger <= 0) return;
    
    double open_price = PositionGetDouble(POSITION_PRICE_OPEN);
    double current_sl = PositionGetDouble(POSITION_SL);
    double current_price = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   int stops_lvl = (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   int freeze_lvl = (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL);
+   double min_dist = MathMax(stops_lvl, freeze_lvl) * point;
    
    if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
    {
@@ -160,9 +207,11 @@ void CTradeExecutor::ApplyBreakEven(ulong ticket)
       {
          // Check if SL is already at or above BE
          double new_sl = open_price + m_breakeven_offset * point;
+         if((current_price - new_sl) < min_dist) return; // freeze / stops guard
          if(current_sl < new_sl || current_sl == 0)
          {
-            m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP));
+            if(!m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP)))
+               Print("TradeExecutor: BE modify failed - ", m_trade.ResultRetcodeDescription(), " (retcode ", m_trade.ResultRetcode(), ")");
          }
       }
    }
@@ -171,9 +220,11 @@ void CTradeExecutor::ApplyBreakEven(ulong ticket)
       if(current_price <= open_price - m_breakeven_trigger * point)
       {
          double new_sl = open_price - m_breakeven_offset * point;
+         if((new_sl - current_price) < min_dist) return; // freeze / stops guard
          if(current_sl > new_sl || current_sl == 0)
          {
-            m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP));
+            if(!m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP)))
+               Print("TradeExecutor: BE modify failed - ", m_trade.ResultRetcodeDescription(), " (retcode ", m_trade.ResultRetcode(), ")");
          }
       }
    }
@@ -185,10 +236,14 @@ void CTradeExecutor::ApplyBreakEven(ulong ticket)
 void CTradeExecutor::ApplyTrailingStop(ulong ticket)
 {
    if(!PositionSelectByTicket(ticket)) return;
+   if(m_trailing_start <= 0 || m_trailing_step <= 0) return;
    
    double current_sl = PositionGetDouble(POSITION_SL);
    double current_price = (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) ? SymbolInfoDouble(_Symbol, SYMBOL_BID) : SymbolInfoDouble(_Symbol, SYMBOL_ASK);
    double point = SymbolInfoDouble(_Symbol, SYMBOL_POINT);
+   int stops_lvl = (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_STOPS_LEVEL);
+   int freeze_lvl = (int)SymbolInfoInteger(_Symbol, SYMBOL_TRADE_FREEZE_LEVEL);
+   double min_dist = MathMax(stops_lvl, freeze_lvl) * point;
    
    if(PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
    {
@@ -197,9 +252,10 @@ void CTradeExecutor::ApplyTrailingStop(ulong ticket)
       if(new_sl > current_sl)
       {
          // Only update if step is met
-         if(new_sl - current_sl >= m_trailing_step * point)
+         if(new_sl - current_sl >= m_trailing_step * point && (current_price - new_sl) >= min_dist)
          {
-             m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP));
+            if(!m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP)))
+               Print("TradeExecutor: trail update failed - ", m_trade.ResultRetcodeDescription(), " (retcode ", m_trade.ResultRetcode(), ")");
          }
       }
    }
@@ -209,9 +265,10 @@ void CTradeExecutor::ApplyTrailingStop(ulong ticket)
       
       if(new_sl < current_sl || current_sl == 0)
       {
-         if(current_sl == 0 || current_sl - new_sl >= m_trailing_step * point)
+         if((current_sl == 0 || current_sl - new_sl >= m_trailing_step * point) && (new_sl - current_price) >= min_dist)
          {
-            m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP));
+            if(!m_trade.PositionModify(ticket, new_sl, PositionGetDouble(POSITION_TP)))
+               Print("TradeExecutor: trail update failed - ", m_trade.ResultRetcodeDescription(), " (retcode ", m_trade.ResultRetcode(), ")");
          }
       }
    }

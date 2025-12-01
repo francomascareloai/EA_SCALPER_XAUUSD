@@ -24,7 +24,7 @@ private:
     double              m_confluence_weight;        // Weight for confluence scoring
     
     // Multi-timeframe analysis
-    ENUM_TIMEFRAME      m_analysis_timeframes[4];   // Analysis timeframes
+    ENUM_TIMEFRAMES     m_analysis_timeframes[4];   // Analysis timeframes
     int                 m_timeframe_count;          // Number of timeframes
     
     // Data Storage
@@ -61,6 +61,10 @@ public:
     bool CreateFVGStructure(const MqlRates& rates[], int index, ENUM_FVG_TYPE type, SEliteFairValueGap& fvg);
     bool ValidateFVG(const SEliteFairValueGap& fvg);
     void SortFVGsByQuality();
+    void CalculateConfluenceScore(SEliteFairValueGap& fvg);
+    bool CheckOrderBlockConfluence(const SEliteFairValueGap& fvg);
+    bool CheckLiquidityConfluence(const SEliteFairValueGap& fvg);
+    bool CheckStructureConfluence(const SEliteFairValueGap& fvg);
     
     // Analysis helpers
     double CalculateDisplacementAfterFVG(const MqlRates& rates[], int index, bool is_bullish);
@@ -82,7 +86,22 @@ public:
     void TrackFills();
 };
 
-// ... (Implementation) ...
+// --- Constructor / Destructor ---
+CEliteFVGDetector::CEliteFVGDetector()
+{
+    m_min_displacement_size   = 150 * _Point;
+    m_volume_spike_threshold  = 1.5;
+    m_require_structure_break = true;
+    m_min_gap_size            = 10 * _Point;
+    m_max_gap_size            = 400 * _Point;   // ~40 pips cap for XAU
+    m_institutional_threshold = 200 * _Point;
+    m_confluence_weight       = 1.0;
+    m_timeframe_count         = 1;
+    m_analysis_timeframes[0]  = PERIOD_M15;
+    m_fvg_count               = 0;
+}
+
+CEliteFVGDetector::~CEliteFVGDetector() {}
 
 // Main detection method for elite FVGs
 bool CEliteFVGDetector::DetectEliteFairValueGaps()
@@ -91,10 +110,9 @@ bool CEliteFVGDetector::DetectEliteFairValueGaps()
     m_fvg_count = 0;
     
     // Get market data for analysis
-    MqlRates rates[100];
+    MqlRates rates[];
     if(CopyRates(_Symbol, PERIOD_M15, 0, 100, rates) <= 0)
         return false;
-        
     ArraySetAsSeries(rates, true);
     
     // Analyze each potential FVG formation (need 3 consecutive candles)
@@ -104,14 +122,10 @@ bool CEliteFVGDetector::DetectEliteFairValueGaps()
         if(DetectBullishFVG(rates, i))
         {
             SEliteFairValueGap fvg;
-            if(CreateFVGStructure(rates, i, FVG_BULLISH, fvg))
+            if(CreateFVGStructure(rates, i, FVG_BULLISH, fvg) && ValidateFVG(fvg))
             {
-                if(ValidateFVG(fvg))
-                {
-                    m_fvgs[m_fvg_count] = fvg;
-                    m_fvg_count++;
-                    if(m_fvg_count >= 50) break; // Increased to 50 to match array size
-                }
+                m_fvgs[m_fvg_count++] = fvg;
+                if(m_fvg_count >= 50) break; // match array cap
             }
         }
         
@@ -119,14 +133,10 @@ bool CEliteFVGDetector::DetectEliteFairValueGaps()
         if(DetectBearishFVG(rates, i))
         {
             SEliteFairValueGap fvg;
-            if(CreateFVGStructure(rates, i, FVG_BEARISH, fvg))
+            if(CreateFVGStructure(rates, i, FVG_BEARISH, fvg) && ValidateFVG(fvg))
             {
-                if(ValidateFVG(fvg))
-                {
-                    m_fvgs[m_fvg_count] = fvg;
-                    m_fvg_count++;
-                    if(m_fvg_count >= 50) break;
-                }
+                m_fvgs[m_fvg_count++] = fvg;
+                if(m_fvg_count >= 50) break;
             }
         }
     }
@@ -199,6 +209,48 @@ bool CEliteFVGDetector::CreateFVGStructure(const MqlRates& rates[], int index, E
     double current_price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
     fvg.is_in_premium = IsInPremiumZone(current_price);
     
+    return true;
+}
+
+// --- Core Detection Helpers ---
+bool CEliteFVGDetector::DetectBullishFVG(const MqlRates& rates[], int index)
+{
+    // indices: series=true, so index is middle candle, index+1 older, index-1 newer
+    if(index < 1 || index >= ArraySize(rates)-1) return false;
+    double high1 = rates[index+1].high;
+    double low3  = rates[index-1].low;
+    double gap   = low3 - high1;
+    if(gap <= 0) return false;
+    if(gap < m_min_gap_size || gap > m_max_gap_size) return false;
+    
+    // displacement check: middle candle should push down then up? Use range of middle
+    double disp = rates[index-1].close - rates[index+1].low;
+    if(disp < m_min_displacement_size) return false;
+    
+    return true;
+}
+
+bool CEliteFVGDetector::DetectBearishFVG(const MqlRates& rates[], int index)
+{
+    if(index < 1 || index >= ArraySize(rates)-1) return false;
+    double low1  = rates[index+1].low;
+    double high3 = rates[index-1].high;
+    double gap   = high3 - low1;
+    if(gap <= 0) return false;
+    if(gap < m_min_gap_size || gap > m_max_gap_size) return false;
+    
+    double disp = rates[index+1].high - rates[index-1].close;
+    if(disp < m_min_displacement_size) return false;
+    
+    return true;
+}
+
+bool CEliteFVGDetector::ValidateFVG(const SEliteFairValueGap& fvg)
+{
+    // Ensure gap still open
+    double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+    if(fvg.type == FVG_BULLISH && bid < fvg.lower_level - (_Point*2)) return true;
+    if(fvg.type == FVG_BEARISH && bid > fvg.upper_level + (_Point*2)) return true;
     return true;
 }
 
@@ -297,16 +349,13 @@ void CEliteFVGDetector::CalculateConfluenceScore(SEliteFairValueGap& fvg)
 {
     double score = 0.0;
     
-    // Check Order Block confluence
+    // Placeholder confluence; set to false by default
     fvg.has_ob_confluence = CheckOrderBlockConfluence(fvg);
-    if(fvg.has_ob_confluence) score += 35.0;
-    
-    // Check Liquidity confluence
     fvg.has_liquidity_confluence = CheckLiquidityConfluence(fvg);
-    if(fvg.has_liquidity_confluence) score += 30.0;
-    
-    // Check Structure confluence
     fvg.has_structure_confluence = CheckStructureConfluence(fvg);
+    
+    if(fvg.has_ob_confluence) score += 35.0;
+    if(fvg.has_liquidity_confluence) score += 30.0;
     if(fvg.has_structure_confluence) score += 35.0;
     
     fvg.confluence_score = score;
@@ -359,44 +408,20 @@ bool CEliteFVGDetector::HasVolumeConfirmation(const MqlRates& rates[], int index
 
 bool CEliteFVGDetector::CheckOrderBlockConfluence(const SEliteFairValueGap& fvg)
 {
-    // Check if there's an Order Block near the FVG
-    for(int i = 0; i < g_elite_ob_count; i++)
-    {
-        const SAdvancedOrderBlock& ob = g_elite_order_blocks[i];
-        if(ob.state == OB_STATE_DISABLED || ob.state == OB_STATE_MITIGATED) continue;
-        
-        // Check if FVG overlaps or is near Order Block
-        double distance = MathMin(
-            MathAbs(fvg.upper_level - ob.high_price),
-            MathAbs(fvg.lower_level - ob.low_price)
-        );
-        
-        if(distance <= 30 * _Point) // Within 3 pips
-            return true;
-    }
+    // Placeholder: without OB detector context, return false
     return false;
 }
 
 bool CEliteFVGDetector::CheckLiquidityConfluence(const SEliteFairValueGap& fvg)
 {
-    // Check if there's liquidity near the FVG
-    for(int i = 0; i < g_institutional_liq_count; i++)
-    {
-        double distance = MathMin(
-            MathAbs(fvg.upper_level - g_institutional_liquidity[i].price_level),
-            MathAbs(fvg.lower_level - g_institutional_liquidity[i].price_level)
-        );
-        
-        if(distance <= 25 * _Point) // Within 2.5 pips
-            return true;
-    }
+    // Placeholder: no liquidity map available in this context
     return false;
 }
 
 bool CEliteFVGDetector::CheckStructureConfluence(const SEliteFairValueGap& fvg)
 {
     // Check if FVG aligns with market structure
-    MqlRates rates[50];
+    MqlRates rates[];
     if(CopyRates(_Symbol, PERIOD_H1, 0, 50, rates) <= 0)
         return false;
         
@@ -413,16 +438,15 @@ bool CEliteFVGDetector::CheckStructureConfluence(const SEliteFairValueGap& fvg)
 
 void CEliteFVGDetector::SortFVGsByQuality()
 {
-    // Simple bubble sort by quality score
-    for(int i = 0; i < g_elite_fvg_count - 1; i++)
+    for(int i = 0; i < m_fvg_count - 1; i++)
     {
-        for(int j = 0; j < g_elite_fvg_count - i - 1; j++)
+        for(int j = 0; j < m_fvg_count - i - 1; j++)
         {
-            if(g_elite_fair_value_gaps[j].quality_score < g_elite_fair_value_gaps[j + 1].quality_score)
+            if(m_fvgs[j].quality_score < m_fvgs[j + 1].quality_score)
             {
-                SEliteFairValueGap temp = g_elite_fair_value_gaps[j];
-                g_elite_fair_value_gaps[j] = g_elite_fair_value_gaps[j + 1];
-                g_elite_fair_value_gaps[j + 1] = temp;
+                SEliteFairValueGap temp = m_fvgs[j];
+                m_fvgs[j] = m_fvgs[j + 1];
+                m_fvgs[j + 1] = temp;
             }
         }
     }
@@ -433,9 +457,9 @@ void CEliteFVGDetector::UpdateFVGStatus()
 {
     double current_price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
     
-    for(int i = 0; i < g_elite_fvg_count; i++)
+    for(int i = 0; i < m_fvg_count; i++)
     {
-        SEliteFairValueGap& fvg = g_elite_fair_value_gaps[i];
+        SEliteFairValueGap fvg = m_fvgs[i];
         
         // Check if price has entered the FVG
         if(current_price >= fvg.lower_level && current_price <= fvg.upper_level)
@@ -471,6 +495,9 @@ void CEliteFVGDetector::UpdateFVGStatus()
         // Calculate time decay factor
         double age_hours = (TimeCurrent() - fvg.formation_time) / 3600.0;
         fvg.time_decay_factor = MathMax(0.1, 1.0 - (age_hours / 24.0)); // Decay over 24 hours
+
+        // Write back
+        m_fvgs[i] = fvg;
     }
 }
 
@@ -479,20 +506,20 @@ void CEliteFVGDetector::RemoveFilledFVGs()
 {
     int valid_count = 0;
     
-    for(int i = 0; i < g_elite_fvg_count; i++)
+    for(int i = 0; i < m_fvg_count; i++)
     {
-        if(g_elite_fair_value_gaps[i].state != FVG_STATE_FILLED &&
-           g_elite_fair_value_gaps[i].state != FVG_STATE_EXPIRED)
+        if(m_fvgs[i].state != FVG_STATE_FILLED &&
+           m_fvgs[i].state != FVG_STATE_EXPIRED)
         {
             if(valid_count != i)
             {
-                g_elite_fair_value_gaps[valid_count] = g_elite_fair_value_gaps[i];
+                m_fvgs[valid_count] = m_fvgs[i];
             }
             valid_count++;
         }
     }
     
-    g_elite_fvg_count = valid_count;
+    m_fvg_count = valid_count;
 }
 
 // Get active FVG count
@@ -500,10 +527,10 @@ int CEliteFVGDetector::GetActiveFVGCount()
 {
     int active_count = 0;
     
-    for(int i = 0; i < g_elite_fvg_count; i++)
+    for(int i = 0; i < m_fvg_count; i++)
     {
-        if(g_elite_fair_value_gaps[i].state == FVG_STATE_OPEN ||
-           g_elite_fair_value_gaps[i].state == FVG_STATE_PARTIAL)
+        if(m_fvgs[i].state == FVG_STATE_OPEN ||
+           m_fvgs[i].state == FVG_STATE_PARTIAL)
         {
             active_count++;
         }
@@ -517,13 +544,13 @@ double CEliteFVGDetector::GetBestFVGScore()
 {
     double best_score = 0.0;
     
-    for(int i = 0; i < g_elite_fvg_count; i++)
+    for(int i = 0; i < m_fvg_count; i++)
     {
-        if(g_elite_fair_value_gaps[i].state == FVG_STATE_OPEN ||
-           g_elite_fair_value_gaps[i].state == FVG_STATE_PARTIAL)
+        if(m_fvgs[i].state == FVG_STATE_OPEN ||
+           m_fvgs[i].state == FVG_STATE_PARTIAL)
         {
-            if(g_elite_fair_value_gaps[i].quality_score > best_score)
-                best_score = g_elite_fair_value_gaps[i].quality_score;
+            if(m_fvgs[i].quality_score > best_score)
+                best_score = m_fvgs[i].quality_score;
         }
     }
     

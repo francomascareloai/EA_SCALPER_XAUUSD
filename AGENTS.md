@@ -95,6 +95,34 @@ DOCS/
 | **ALL** | Progress updates | `DOCS/02_IMPLEMENTATION/PROGRESS.md` |
 | **ALL** | Party Mode sessions | `DOCS/01_AGENTS/PARTY_MODE/` |
 
+### Bug Fix Log (OBRIGATORIO)
+
+```
+ARQUIVO: MQL5/Experts/BUGFIX_LOG.md
+├── Localizacao OFICIAL para documentar bugs e correcoes
+├── TODOS agentes de codigo (FORGE principalmente) DEVEM usar
+└── Formato padronizado por data e contexto
+```
+
+| Agente | Quando Usar BUGFIX_LOG.md |
+|--------|---------------------------|
+| ⚒️ **FORGE** | Apos QUALQUER bug fix em codigo MQL5/Python |
+| 🔮 **ORACLE** | Bugs encontrados durante validacao de backtest |
+| 🛡️ **SENTINEL** | Bugs em logica de risco/FTMO |
+
+**Formato de Entrada:**
+```
+YYYY-MM-DD (AGENTE contexto)
+- Modulo: descricao do bug corrigido e motivo.
+```
+
+**Exemplo:**
+```
+2025-12-01 (FORGE risk/execution audit)
+- RiskManager: healed zero/negative equity baselines to prevent divide-by-zero.
+- TradeManager: SL/TP directional validation added to block invalid placements.
+```
+
 ### Naming Conventions
 
 | Tipo | Pattern | Exemplo |
@@ -140,6 +168,7 @@ DOCS/
 │  └── time            → Reset diario, news timing                           │
 │                                                                             │
 │  ⚒️ FORGE (Codigo)                                                          │
+│  ├── metaeditor64    → COMPILAR MQL5 (AUTO apos qualquer codigo!)          │
 │  ├── mql5-docs       → Sintaxe, funcoes, exemplos (PRINCIPAL)              │
 │  ├── mql5-books      → Patterns, arquitetura                               │
 │  ├── github          → Search code, repos                                  │
@@ -179,6 +208,7 @@ DOCS/
 
 | Preciso de...                  | MCP                     | Agente |
 |--------------------------------|-------------------------|--------|
+| **Compilar MQL5**              | `metaeditor64` (AUTO)   | FORGE |
 | Preco XAUUSD/mercado           | `twelve-data`           | CRUCIBLE |
 | DXY, COT, yields               | `perplexity`            | CRUCIBLE |
 | Calcular lot/Kelly/DD          | `calculator`            | SENTINEL |
@@ -273,6 +303,38 @@ SEGURANCA:
 
 ---
 
+## 6.5 MQL5 COMPILATION (AUTO-COMPILE)
+
+```
+COMPILADOR:
+├── Path: "C:\Program Files\FTMO MetaTrader 5\metaeditor64.exe"
+├── Project Include: "C:\Users\Admin\Documents\EA_SCALPER_XAUUSD\MQL5"
+└── StdLib Include: "C:\Program Files\FTMO MetaTrader 5\MQL5"
+
+COMANDO POWERSHELL:
+Start-Process -FilePath "C:\Program Files\FTMO MetaTrader 5\metaeditor64.exe" `
+  -ArgumentList '/compile:"[ARQUIVO]"','/inc:"[PROJECT_MQL5]"','/inc:"[STDLIB_MQL5]"','/log' `
+  -Wait -NoNewWindow
+
+LER RESULTADO:
+Get-Content "[ARQUIVO].log" -Encoding Unicode | Select-String "error|warning|Result"
+
+⚠️ REGRA OBRIGATORIA (P0.5 FORGE):
+├── FORGE DEVE compilar AUTOMATICAMENTE apos qualquer alteracao MQL5
+├── NAO esperar comando do usuario
+├── Se erros: Corrigir ANTES de reportar
+├── Se sucesso: Informar "Compilado com sucesso"
+└── NUNCA entregar codigo que nao compila!
+
+ERROS COMUNS:
+├── "file not found" → Include path incorreto
+├── "undeclared identifier" → Import faltando
+├── "unexpected token" → Erro de sintaxe
+└── "closing quote" → String mal formatada
+```
+
+---
+
 ## 7. ANTI-PATTERNS
 
 ```
@@ -349,13 +411,92 @@ FLAGS OBRIGATORIAS (evitar prompts):
 ├── move /Y       # sobrescrever sem perguntar
 ├── del /F /Q     # force + quiet
 └── rmdir /S /Q   # recursive + quiet
+```
 
+### ⚠️ REGRAS CRITICAS - ERROS COMUNS A EVITAR
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FACTORY CLI USA POWERSHELL - NAO CMD!                                      │
+│  Operadores CMD (&, &&, ||, 2>nul) NAO FUNCIONAM DIRETAMENTE               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+❌ NUNCA FAZER (vai falhar):
+├── mkdir pasta & move arquivo       # & nao funciona em PS
+├── comando 2>nul                    # redirecionador CMD
+├── cmd1 && cmd2                     # && nao funciona em PS
+├── cmd /c "mkdir x 2>nul & move y"  # sequencia complexa falha
+└── Multiplos comandos em uma linha com operadores CMD
+
+✅ SEMPRE FAZER (correto):
+├── Um comando por Execute call
+├── Usar ferramentas nativas (Read, Create, Edit, LS, Glob, Grep)
+├── Para sequencias: fazer chamadas Execute separadas
+└── Para ignorar erros: usar -ErrorAction SilentlyContinue em PS
+
+EXEMPLOS CORRETOS:
+
+# Criar pasta (ignorar se existe):
+New-Item -ItemType Directory -Path "pasta" -Force
+
+# Mover arquivo:  
+Move-Item -Path "origem" -Destination "destino" -Force
+
+# Copiar:
+Copy-Item -Path "origem" -Destination "destino" -Force
+
+# Deletar arquivo/pasta:
+Remove-Item -Path "alvo" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Se PRECISA usar CMD (evitar quando possivel):
+cmd /c "comando_simples"           # OK: comando unico
+cmd /c "mkdir pasta"               # OK
+cmd /c "move /Y src dst"           # OK: move simples
+
+# NUNCA encadear com & ou && dentro de cmd /c:
+# cmd /c "mkdir x & move y"        # FALHA!
+```
+
+### PREFERIR FERRAMENTAS FACTORY
+
+```
+Em vez de comandos shell, usar:
+
+| Preciso de...        | Usar ferramenta  | NAO usar          |
+|----------------------|------------------|-------------------|
+| Criar arquivo        | Create tool      | echo > arquivo    |
+| Ler arquivo          | Read tool        | type, cat         |
+| Editar arquivo       | Edit tool        | sed, awk          |
+| Listar diretorio     | LS tool          | dir, ls           |
+| Buscar arquivos      | Glob tool        | dir /s, find      |
+| Buscar texto         | Grep tool        | findstr, grep     |
+| Criar pasta          | mkdir simples    | mkdir & outros    |
+| Mover/copiar         | 1 comando por vez| sequencias        |
+
+REGRA: Se pode fazer com ferramenta Factory, NAO use shell.
+```
+
+### SEQUENCIAS DE OPERACOES
+
+```
+ERRADO - Tudo em um comando:
+Execute: mkdir pasta & move arq1 pasta & move arq2 pasta
+
+CERTO - Comandos separados:
+Execute #1: New-Item -ItemType Directory -Path "pasta" -Force
+Execute #2: Move-Item -Path "arq1" -Destination "pasta" -Force  
+Execute #3: Move-Item -Path "arq2" -Destination "pasta" -Force
+
+Ou melhor ainda - usar Python/script se for complexo.
+```
+
+```
 NUNCA USAR (nao existem no Windows):
 ├── grep, find, ls, cat, rm, touch, which, python3
-└── && em PowerShell (usar: cmd /c "a && b")
+└── && ou & diretamente no PowerShell
 
 ENCODING UTF-8:
-└── cmd /c "chcp 65001"
+└── [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 ```
 
 ---

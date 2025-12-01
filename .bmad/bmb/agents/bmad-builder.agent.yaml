@@ -4,7 +4,7 @@
 agent:
   webskip: true
   metadata:
-    id: "{bmad_folder}/bmb/agents/bmad-builder.md"
+    id: "bmad-builder"
     name: BMad Builder
     title: BMad Builder
     icon: 🧙

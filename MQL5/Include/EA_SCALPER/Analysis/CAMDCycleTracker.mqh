@@ -533,6 +533,7 @@ bool CAMDCycleTracker::DetectDistribution(MqlRates &rates[], double atr)
    
    // Look for displacement in distribution direction
    double displacement = 0;
+   int    window = 10; // examine last 10 bars after manipulation for displacement
    
    if(dist_dir == SIGNAL_BUY)
    {
@@ -540,7 +541,7 @@ bool CAMDCycleTracker::DetectDistribution(MqlRates &rates[], double atr)
       // Find lowest low after manipulation
       double lowest = rates[0].low;
       int lowest_bar = 0;
-      for(int i = 0; i < 5; i++)
+      for(int i = 0; i < window; i++)
       {
          if(rates[i].low < lowest)
          {
@@ -560,10 +561,10 @@ bool CAMDCycleTracker::DetectDistribution(MqlRates &rates[], double atr)
          m_current_cycle.distribution.displacement_atr = displacement / atr;
          m_current_cycle.distribution.start_time = rates[lowest_bar].time;
          
-         // Check for CHoCH (Higher Low after Lower Low)
-         m_current_cycle.distribution.has_choch = (rates[0].low > m_current_cycle.manipulation.sweep_level);
+         // CHoCH: higher high relative to accumulation high AND higher low vs sweep level
+         m_current_cycle.distribution.has_choch = (rates[0].high > range_high && rates[0].low > m_current_cycle.manipulation.sweep_level);
          
-         // Check for BOS (Break of Structure - above range high)
+         // BOS (Break of Structure - close above range high)
          m_current_cycle.distribution.has_bos = (rates[0].close > range_high);
          
          // Entry zone is the OB/FVG created by displacement
@@ -579,7 +580,7 @@ bool CAMDCycleTracker::DetectDistribution(MqlRates &rates[], double atr)
       // Looking for bearish displacement after high sweep
       double highest = rates[0].high;
       int highest_bar = 0;
-      for(int i = 0; i < 5; i++)
+      for(int i = 0; i < window; i++)
       {
          if(rates[i].high > highest)
          {
@@ -597,7 +598,7 @@ bool CAMDCycleTracker::DetectDistribution(MqlRates &rates[], double atr)
          m_current_cycle.distribution.displacement_atr = displacement / atr;
          m_current_cycle.distribution.start_time = rates[highest_bar].time;
          
-         m_current_cycle.distribution.has_choch = (rates[0].high < m_current_cycle.manipulation.sweep_level);
+         m_current_cycle.distribution.has_choch = (rates[0].low < range_low && rates[0].high < m_current_cycle.manipulation.sweep_level);
          m_current_cycle.distribution.has_bos = (rates[0].close < range_low);
          
          m_current_cycle.distribution.entry_zone_high = highest;

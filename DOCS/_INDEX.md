@@ -1,7 +1,8 @@
 # DOCS INDEX
 
-**Last Updated**: 2025-11-30  
+**Last Updated**: 2025-12-01  
 **Status**: Reorganizado conforme DOCS_REORGANIZATION_PLAN
+**Note**: 2025-12-01 FORGE — ONNX gate optional + spread guard wired in `MQL5/Experts/EA_SCALPER_XAUUSD.mq5`; model path resolution hardened in `Bridge/COnnxBrain.mqh`.
 
 ---
 
@@ -13,6 +14,7 @@
 | Progresso atual | `02_IMPLEMENTATION/PROGRESS.md` |
 | Deliverables de fase | `02_IMPLEMENTATION/PHASES/PHASE_N/` |
 | Audit do código | `02_IMPLEMENTATION/PHASES/PHASE_0_AUDIT/` |
+| Audit Analysis 2025-12-01 | `02_IMPLEMENTATION/PHASES/PHASE_0_AUDIT/20251201_ANALYSIS_MODULES_FIX.md` |
 | Relatórios de backtest | `04_REPORTS/BACKTESTS/` |
 | Validação (WFA/MC) | `04_REPORTS/VALIDATION/` |
 | Decisões GO/NO-GO | `04_REPORTS/DECISIONS/` |

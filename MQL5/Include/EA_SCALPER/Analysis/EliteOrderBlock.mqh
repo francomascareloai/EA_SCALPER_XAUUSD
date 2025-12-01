@@ -172,72 +172,67 @@ bool CEliteOrderBlockDetector::DetectEliteOrderBlocks()
 // Detect bullish order block formation
 bool CEliteOrderBlockDetector::DetectBullishOrderBlock(const MqlRates& rates[], int index)
 {
-    if(index < 3 || index >= ArraySize(rates) - 2) return false;
-    
-    double current_body = rates[index].close - rates[index].open;
-    double next_displacement = 0;
-    
-    // Calculate displacement after the order block
-    for(int j = index-1; j >= MathMax(0, index-5); j--)
-    {
-        if(rates[j].close > rates[index].high)
-        {
-            next_displacement = rates[j].close - rates[index].high;
-            break;
-        }
-    }
-    
-    if(current_body <= 0) return false;
-    
-    double total_range = rates[index].high - rates[index].low;
-    if(total_range > 0 && current_body < total_range * 0.5) return false;
-    
-    double avg_body = CalculateAverageBodySize(rates, index, 10);
-    if(current_body < avg_body * 1.5) return false;
-    
-    if(next_displacement < m_displacement_threshold) return false;
-    
-    if(m_use_volume_confirmation)
-    {
-        if(!HasVolumeSpike(rates, index)) return false;
-    }
-    
-    return true;
+   if(index < 3 || index >= ArraySize(rates) - 2) return false;
+   
+   // ICT: bullish OB = last down candle before the up displacement
+   double current_body = rates[index].close - rates[index].open;
+   if(current_body >= 0) return false; // must be bearish candle
+   
+   double next_displacement = 0;
+   // Array is series, so iterate towards newer bars (lower index) to measure move after the candle
+   for(int j = index-1; j >= MathMax(0, index-5); j--)
+   {
+      if(rates[j].close > rates[index].high)
+      {
+         next_displacement = rates[j].close - rates[index].high;
+         break;
+      }
+   }
+   
+   // Require meaningful body size relative to range
+   double total_range = rates[index].high - rates[index].low;
+   if(total_range <= 0 || MathAbs(current_body) < total_range * 0.5) return false;
+   
+   double avg_body = CalculateAverageBodySize(rates, index, 10);
+   if(MathAbs(current_body) < avg_body * 1.5) return false;
+   
+   if(next_displacement < m_displacement_threshold) return false;
+   
+   if(m_use_volume_confirmation && !HasVolumeSpike(rates, index)) return false;
+   
+   return true;
 }
 
 // Detect bearish order block formation  
 bool CEliteOrderBlockDetector::DetectBearishOrderBlock(const MqlRates& rates[], int index)
 {
-    if(index < 3 || index >= ArraySize(rates) - 2) return false;
-    
-    double current_body = rates[index].open - rates[index].close;
-    double next_displacement = 0;
-    
-    for(int j = index-1; j >= MathMax(0, index-5); j--)
-    {
-        if(rates[j].close < rates[index].low)
-        {
-            next_displacement = rates[index].low - rates[j].close;
-            break;
-        }
-    }
-    
-    if(current_body <= 0) return false;
-    
-    double total_range = rates[index].high - rates[index].low;
-    if(total_range > 0 && current_body < total_range * 0.5) return false;
-    
-    double avg_body = CalculateAverageBodySize(rates, index, 10);
-    if(current_body < avg_body * 1.5) return false;
-    
-    if(next_displacement < m_displacement_threshold) return false;
-    
-    if(m_use_volume_confirmation)
-    {
-        if(!HasVolumeSpike(rates, index)) return false;
-    }
-    
-    return true;
+   if(index < 3 || index >= ArraySize(rates) - 2) return false;
+   
+   // ICT: bearish OB = last up candle before the down displacement
+   double current_body = rates[index].open - rates[index].close;
+   if(current_body >= 0) return false; // must be bullish candle
+   
+   double next_displacement = 0;
+   for(int j = index-1; j >= MathMax(0, index-5); j--)
+   {
+      if(rates[j].close < rates[index].low)
+      {
+         next_displacement = rates[index].low - rates[j].close;
+         break;
+      }
+   }
+   
+   double total_range = rates[index].high - rates[index].low;
+   if(total_range <= 0 || MathAbs(current_body) < total_range * 0.5) return false;
+   
+   double avg_body = CalculateAverageBodySize(rates, index, 10);
+   if(MathAbs(current_body) < avg_body * 1.5) return false;
+   
+   if(next_displacement < m_displacement_threshold) return false;
+   
+   if(m_use_volume_confirmation && !HasVolumeSpike(rates, index)) return false;
+   
+   return true;
 }
 
 // Create order block structure
