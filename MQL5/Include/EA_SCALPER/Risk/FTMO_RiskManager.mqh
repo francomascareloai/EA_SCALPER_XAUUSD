@@ -621,6 +621,7 @@ void CFTMO_RiskManager::OnTradeResult(double profit_loss)
          Print("GENIUS: Loss streak ", m_consecutive_losses, " - Reducing size to ", 
                DoubleToString(GetMomentumMultiplier() * 100.0, 0), "%");
    }
+
 }
 
 //+------------------------------------------------------------------+

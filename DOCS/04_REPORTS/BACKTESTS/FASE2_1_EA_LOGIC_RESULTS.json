@@ -1,0 +1,23 @@
+{
+  "total_trades": 344,
+  "win_rate": 0.875,
+  "profit_factor": 8.607473545952267,
+  "max_drawdown": 0.0016249717971908988,
+  "total_return": 0.22965606803580552,
+  "sharpe_ratio": 213.75046797285853,
+  "sqn": 14.716000070366997,
+  "gross_profit": 25984.428579937525,
+  "gross_loss": 3018.821776357002,
+  "avg_win": 86.32700524896187,
+  "avg_loss": -70.20515758969772,
+  "final_balance": 122965.60680358055,
+  "net_profit": 22965.60680358055,
+  "timestamp": "2025-12-02T07:55:33.698078",
+  "config": {
+    "execution_mode": "PESSIMISTIC",
+    "years": [
+      2024
+    ],
+    "use_ea_logic": true
+  }
+}

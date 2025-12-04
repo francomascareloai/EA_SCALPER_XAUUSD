@@ -11,10 +11,8 @@
 #include "../Analysis/CRegimeDetector.mqh"     // v4.1: For SRegimeStrategy
 #include "../Analysis/CStructureAnalyzer.mqh"  // v4.2: For structure-based trailing
 #include "../Analysis/CFootprintAnalyzer.mqh"  // v4.2: For footprint exit signals
-
-// v4.2 GENIUS: Forward declaration for Bayesian learning callback
-// The actual include must be done in the main EA before CTradeManager.mqh
-class CConfluenceScorer;
+#include "../Signal/CConfluenceScorer.mqh"     // v4.2: For Bayesian learning callback (full include needed)
+#include "../Risk/FTMO_RiskManager.mqh"        // v4.2: For Kelly learning callback
 
 // === TRADE STATE ENUMERATION ===
 enum ENUM_TRADE_STATE
@@ -124,6 +122,10 @@ private:
    // v4.2: GENIUS Bayesian Learning Callback (FASE 3)
    CConfluenceScorer*   m_confluence_scorer;     // For RecordTradeOutcome callback
    bool                 m_use_learning_callback; // Enable learning on trade close
+   
+   // v4.2: GENIUS Kelly Learning Callback (RiskManager integration)
+   CFTMO_RiskManager*   m_risk_manager;          // For OnTradeResult callback (Kelly stats)
+   bool                 m_use_kelly_callback;    // Enable Kelly learning on trade close
    
    // Internal helper for GV persistence
    void                 PersistState();
@@ -258,6 +260,15 @@ public:
          Print("CTradeManager: Confluence Scorer attached - Bayesian Learning ENABLED");
    }
    
+   // v4.2: GENIUS Kelly Learning Integration (RiskManager)
+   void AttachRiskManager(CFTMO_RiskManager* rm)
+   {
+      m_risk_manager = rm;
+      m_use_kelly_callback = (rm != NULL);
+      if(m_use_kelly_callback)
+         Print("CTradeManager: RiskManager attached - Kelly Learning ENABLED");
+   }
+   
    // Trade operations
    bool                 OpenTrade(ENUM_SIGNAL_TYPE signal, double lots, double sl, double tp, 
                                   double score, string reason);
@@ -324,6 +335,10 @@ CTradeManager::CTradeManager()
    // v4.2: GENIUS Bayesian Learning
    m_confluence_scorer = NULL;
    m_use_learning_callback = false;
+   
+   // v4.2: GENIUS Kelly Learning
+   m_risk_manager = NULL;
+   m_use_kelly_callback = false;
    
    // Default management parameters (FTMO optimized)
    // Strategy: 40% at TP1, 30% at TP2, trail remaining 30%
@@ -639,6 +654,16 @@ bool CTradeManager::CloseTrade(string reason)
                   Print("CTradeManager: Bayesian Learning - Trade ", 
                         (was_win ? "WIN" : "LOSS"), " recorded (PnL: ", 
                         DoubleToString(final_pnl, 2), ")");
+               }
+               
+               // v4.2 GENIUS: Kelly Learning Callback (RiskManager)
+               if(m_use_kelly_callback && m_risk_manager != NULL)
+               {
+                  m_risk_manager.OnTradeResult(final_pnl);
+                  Print("CTradeManager: Kelly Learning - Trade result ", 
+                        DoubleToString(final_pnl, 2), " recorded | ",
+                        "Wins: ", m_risk_manager.GetConsecutiveWins(),
+                        " Losses: ", m_risk_manager.GetConsecutiveLosses());
                }
                
                Print("CTradeManager: Trade closed - ", reason, 

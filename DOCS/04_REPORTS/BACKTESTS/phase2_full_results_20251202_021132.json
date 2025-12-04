@@ -1,0 +1,26 @@
+{
+  "timestamp": "20251202_021132",
+  "years": [
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "global": {
+    "total_trades": 0,
+    "win_rate": 0,
+    "profit_factor": 0,
+    "max_drawdown": 0,
+    "total_return": 0,
+    "sqn": 0
+  },
+  "session_filter": {
+    "total_trades": 0,
+    "win_rate": 0,
+    "profit_factor": 0,
+    "max_drawdown": 0,
+    "total_return": 0,
+    "sqn": 0
+  }
+}

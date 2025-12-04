@@ -151,6 +151,7 @@ public:
    void              AllowAsianTrading(bool allow) { m_allow_asian = allow; }
    void              AllowLateNYTrading(bool allow) { m_allow_late_ny = allow; }
    void              SetFridayCloseHour(int hour) { m_friday_close_hour = hour; }
+   void              SetFridayCloseEarly(bool enable) { m_friday_close_early = enable; }
    
    // Score contribution
    int               GetSessionScore();      // 0-100 score for confluence

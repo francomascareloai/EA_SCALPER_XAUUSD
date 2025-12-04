@@ -1,8 +1,8 @@
 # EA_SCALPER_XAUUSD - PROGRESS TRACKER
 
-**Última Atualização**: 2025-11-30 14:45  
-**Versão do Plano**: 1.0  
-**Status Geral**: Phase 1 COMPLETO → Pronto para Phase 2
+**Última Atualização**: 2025-12-01 (Tick Data Conversion)  
+**Versão do Plano**: 1.1  
+**Status Geral**: Phase 1 COMPLETO → Tick Data Convertido → Pronto para Phase 2
 
 ---
 
@@ -82,6 +82,7 @@
 |------|-----------|--------|-------------|
 | 1.1 | Data Acquisition | ⏭️ SKIP | Dados Dukascopy já existem |
 | 1.2 | Data Validation | ✅ COMPLETO | DATA_QUALITY_REPORT.md |
+| 1.2b | **Tick Data → Parquet** | ✅ COMPLETO | 20251201_TICK_DATA_CONVERSION.md |
 | 1.3 | Baseline Backtest | ✅ COMPLETO | BASELINE_METRICS.md |
 
 ### Task 1.2 - Data Validation (✅ COMPLETO)
@@ -110,6 +111,28 @@
 
 **Deliverable:** `DOCS/04_REPORTS/VALIDATION/DATA_QUALITY_REPORT.md`
 
+### Task 1.2b - Tick Data → Parquet (✅ COMPLETO - 2025-12-01)
+
+**Ações realizadas:**
+- Conversão de CSV 12.5 GB para Parquet 5.5 GB (56% compressão)
+- Processamento de 318M ticks em 17 minutos
+- Particionamento por ano (2020-2025)
+- Adição de colunas derivadas: spread, mid_price, timestamp_unix
+- Validação de spread calculado vs exportado (IDÊNTICOS)
+
+**Resultados:**
+
+| Métrica | Valor |
+|---------|-------|
+| Total Ticks | 318,354,849 |
+| Período | 2020-01-02 → 2025-11-28 |
+| Compressão | 56% |
+| Gaps Críticos | 0 ✅ |
+| Spread Médio | 43.1¢ |
+| Preço Range | $1,451 - $4,382 |
+
+**Deliverable:** `DOCS/02_IMPLEMENTATION/PHASES/PHASE_1_DATA/20251201_TICK_DATA_CONVERSION.md`
+
 ### Data Inventory (Atualizado)
 
 **OHLC Bars (para Python/ML):**
@@ -129,9 +152,22 @@
 | XAUUSD_ftmo_2020_ticks_dukascopy.csv | 12.7 GB | 2020-2025 | ✅ Fonte primária |
 | xauusd-ticks-2024-2025_MT5.csv | 428 MB | 2024-2025 | ✅ Backup |
 
+**Tick Data PARQUET (NOVO - 2025-12-01):**
+
+| Dataset | Ticks | Tamanho | Período | Status |
+|---------|-------|---------|---------|--------|
+| ticks_2020.parquet | 55.6M | 966 MB | 2020 | ✅ Convertido |
+| ticks_2021.parquet | 53.1M | 908 MB | 2021 | ✅ Convertido |
+| ticks_2022.parquet | 53.8M | 934 MB | 2022 | ✅ Convertido |
+| ticks_2023.parquet | 36.4M | 634 MB | 2023 | ✅ Convertido |
+| ticks_2024.parquet | 56.2M | 980 MB | 2024 | ✅ Convertido |
+| ticks_2025.parquet | 63.2M | 1,125 MB | 2025 | ✅ Convertido |
+| **TOTAL** | **318M** | **5.5 GB** | 2020-2025 | ✅ |
+
 **Uso:**
 - MT5 Backtest → Ticks Dukascopy (máxima precisão)
 - Python ML/WFA → Barras OHLC (velocidade)
+- Python Tick Backtest → Parquet (velocidade + precisão)
 
 ### Task 1.3 - Baseline Backtest (✅ COMPLETO)
 
@@ -199,16 +235,16 @@ Phase 6: ░░░░░░░░░░░░░░░░░░░░   0%
 
 ## PRÓXIMA TAREFA
 
-**Foco**: Task 1.3 - Baseline Backtest
+**Foco**: Phase 2 - Validation Pipeline
 
-**Objetivo**: Rodar backtest simples (sem ML) para estabelecer baseline de performance.
+**Objetivo**: Rodar validação completa com WFA + Monte Carlo + GO/NO-GO.
 
-**Estratégia Baseline**:
-- Entry: Cruzamento de MAs ou regra simples
-- Exit: Fixed TP/SL
-- Risk: 1% por trade
-- Período: 2020-2024 (deixar 2025 para OOS)
+**Próximos passos**:
+1. ⏳ Rodar `validate_data.py` com análise GENIUS nos Parquet
+2. ⏳ Segmentação por regime (trending/ranging/reverting)
+3. ⏳ Segmentação por sessão (Asian/London/NY)
+4. ⏳ Walk-Forward Analysis com dados tick
 
 ---
 
-*Atualizado em 2025-11-30 14:30 por ORACLE via Droid*
+*Atualizado em 2025-12-01 por FORGE via Droid (Tick Data Conversion)*

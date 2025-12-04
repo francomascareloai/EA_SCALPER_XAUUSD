@@ -1,0 +1,51 @@
+# =============================================================================
+# STRATEGY CONFIG - XAUUSD SCALPER (Nautilus)
+# All tunable knobs for confluence, footprint, fib, spread, risk.
+# =============================================================================
+
+confluence:
+  min_score_to_trade: 60
+  footprint_weight: 10
+  fib_weight: 10
+  session_weights:
+    # Override if needed, else defaults in code
+    asian: null
+    london: null
+    ny_overlap: null
+    ny: null
+
+footprint:
+  cluster_size: 0.5
+  tick_size: 0.01
+  imbalance_ratio: 3.0
+  stacked_min: 3
+  absorption_threshold: 15.0
+  volume_multiplier: 2.0
+  lookback_bars: 20
+  stack_decay_30m: 0.75
+  stack_decay_60m: 0.5
+  score_floor: 40.0
+  score_cap: 95.0
+
+fibonacci:
+  enabled: true
+  use_levels: [0.382, 0.5, 0.618]
+  tp_ext: [1.272, 1.618, 2.0]
+
+spread:
+  warning_ratio: 2.0
+  block_ratio: 5.0
+  urgency_threshold: 0.8
+
+risk:
+  max_risk_per_trade: 0.01   # 1%
+  dd_soft: 0.03
+  dd_hard: 0.05
+  kelly_fraction: 0.25
+
+execution:
+  slippage_ticks: 2
+  latency_ms: 50
+  commission_per_contract: 2.5
+  fill_model: realistic   # immediate | realistic | worst_case
+

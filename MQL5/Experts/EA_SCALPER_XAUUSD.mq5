@@ -48,6 +48,7 @@
 #include <EA_SCALPER/Analysis/CStructureAnalyzer.mqh>
 #include <EA_SCALPER/Analysis/CSessionFilter.mqh>
 #include <EA_SCALPER/Analysis/CNewsFilter.mqh>
+#include <EA_SCALPER/Analysis/CNewsCalendarNative.mqh>  // NEW: Native MQL5 Calendar
 #include <EA_SCALPER/Analysis/CEntryOptimizer.mqh>
 #include <EA_SCALPER/Analysis/EliteFVG.mqh>
 
@@ -60,6 +61,38 @@
 //#include <EA_SCALPER/Bridge/PythonBridge.mqh>
 #include <EA_SCALPER/Bridge/COnnxBrain.mqh>
 
+//--- Mode presets (quick configuration profiles)
+enum ENUM_ModePreset
+{
+   MODE_CUSTOM = 0,       // Use manual inputs below
+   MODE_CONSERVATIVE,     // Lowest risk, strict filters
+   MODE_BALANCED,         // Default profile (current v3.30 baseline)
+   MODE_ELITE,            // Higher quality flow, moderate risk boost
+   MODE_RISK_ON           // Max risk within FTMO guardrails
+};
+
+struct SModeConfig
+{
+   double risk_per_trade;
+   double max_daily_loss;
+   double soft_stop;
+   double max_total_loss;
+   int    max_trades_per_day;
+   int    execution_threshold;
+   double min_mtf_confluence;
+   bool   require_htf_align;
+   bool   require_mtf_zone;
+   bool   require_ltf_confirm;
+   bool   use_mtf;
+   bool   aggressive_mode;
+   bool   use_footprint_boost;
+   bool   use_bandit_context;
+   double min_rr;
+   double target_rr;
+   int    max_wait_bars;
+   int    max_spread_points;
+};
+
 //--- Input Parameters: Risk Management
 input group "=== Risk Management (FTMO) ==="
 input double   InpRiskPerTrade      = 0.5;      // Risk Per Trade (%)
@@ -67,6 +100,7 @@ input double   InpMaxDailyLoss      = 5.0;      // Max Daily Loss (%)
 input double   InpSoftStop          = 4.0;      // Soft Stop Level (%)
 input double   InpMaxTotalLoss      = 10.0;     // Max Total Loss (%)
 input int      InpMaxTradesPerDay   = 20;       // Max Trades Per Day
+
 
 //--- Input Parameters: Scoring Engine
 input group "=== Scoring Engine ==="
@@ -83,10 +117,11 @@ input string   InpTradeComment      = "SINGULARITY"; // Trade Comment
 
 //--- Input Parameters: Session Filter
 input group "=== Session & Time Filters ==="
-input bool     InpAllowAsian        = true;     // Allow Asian Session (DEFAULT: ON for testing)
-input bool     InpAllowLateNY       = true;     // Allow Late NY (DEFAULT: ON for testing)
+input bool     InpAllowAsian        = false;    // Allow Asian Session (TESTED: OFF is better)
+input bool     InpAllowLateNY       = false;    // Allow Late NY (TESTED: OFF is better)
 input int      InpGMTOffset         = 0;        // Broker GMT Offset
 input int      InpFridayCloseHour   = 14;       // Friday Close Hour (GMT)
+input bool     InpDisableFridayClose = true;    // Disable Friday Close (for backtest)
 
 //--- Input Parameters: News Filter
 input group "=== News Filter ==="
@@ -121,6 +156,13 @@ input bool     InpRequireHTFAlign   = false;    // Require H1 Trend Alignment (D
 input bool     InpRequireMTFZone    = false;    // Require M15 Structure Zone (DEFAULT: OFF)
 input bool     InpRequireLTFConfirm = false;    // Require M5 Confirmation (DEFAULT: OFF)
 
+//--- Input Parameters: Mode/Boosts
+input group "=== Mode Settings ==="
+input ENUM_ModePreset InpModePreset = MODE_CUSTOM; // Quick preset selector (CUSTOM = manual)
+input bool     InpAggressiveMode    = true;     // Enable aggressive boosts (bandit/risk boost)
+input bool     InpUseFootprintBoost = true;     // Use footprint veto/boost
+input bool     InpUseBanditContext  = true;     // Use contextual bandit-lite gating
+
 //--- Global Objects (Core)
 CFTMO_RiskManager    g_RiskManager;
 CSignalScoringModule g_ScoringEngine;
@@ -136,7 +178,8 @@ CStructureAnalyzer      g_Structure;
 CLiquiditySweepDetector g_Sweep;
 CAMDCycleTracker        g_AMD;
 CSessionFilter          g_Session;
-CNewsFilter             g_News;
+CNewsFilter             g_News;           // Fallback: hardcoded calendar
+CNewsCalendarNative     g_NewsNative;     // PRIMARY: MQL5 native calendar
 CEntryOptimizer         g_EntryOpt;
 CEliteFVGDetector       g_FVG;
 CConfluenceScorer       g_Confluence;
@@ -154,6 +197,141 @@ bool g_IsEmergencyMode = false;
 // v4.1: Current regime strategy (GENIUS)
 SRegimeStrategy         g_CurrentStrategy;
 
+// Active mode configuration (populated by ApplyModePreset)
+SModeConfig             g_ModeCfg;
+
+// Adaptive risk helpers
+double                  g_spread_buff[20];
+int                     g_spread_idx = 0;
+int                     g_atr_fast_handle = INVALID_HANDLE;
+int                     g_atr_slow_handle = INVALID_HANDLE;
+int                     g_bucket_trades[96];
+
+//+------------------------------------------------------------------+
+//| Apply trading mode preset                                        |
+//+------------------------------------------------------------------+
+void ApplyModePreset()
+{
+   // Seed config with manual inputs (MODE_CUSTOM)
+   g_ModeCfg.risk_per_trade     = InpRiskPerTrade;
+   g_ModeCfg.max_daily_loss     = InpMaxDailyLoss;
+   g_ModeCfg.soft_stop          = InpSoftStop;
+   g_ModeCfg.max_total_loss     = InpMaxTotalLoss;
+   g_ModeCfg.max_trades_per_day = InpMaxTradesPerDay;
+   g_ModeCfg.execution_threshold= InpExecutionThreshold;
+   g_ModeCfg.min_mtf_confluence = InpMinMTFConfluence;
+   g_ModeCfg.require_htf_align  = InpRequireHTFAlign;
+   g_ModeCfg.require_mtf_zone   = InpRequireMTFZone;
+   g_ModeCfg.require_ltf_confirm= InpRequireLTFConfirm;
+   g_ModeCfg.use_mtf            = InpUseMTF;
+   g_ModeCfg.aggressive_mode    = InpAggressiveMode;
+   g_ModeCfg.use_footprint_boost= InpUseFootprintBoost;
+   g_ModeCfg.use_bandit_context = InpUseBanditContext;
+   g_ModeCfg.min_rr             = InpMinRR;
+   g_ModeCfg.target_rr          = InpTargetRR;
+   g_ModeCfg.max_wait_bars      = InpMaxWaitBars;
+   g_ModeCfg.max_spread_points  = InpMaxSpreadPoints;
+
+   switch(InpModePreset)
+   {
+      case MODE_CONSERVATIVE:
+         g_ModeCfg.risk_per_trade      = 0.35;
+         g_ModeCfg.soft_stop           = 3.5;
+         g_ModeCfg.max_trades_per_day  = 10;
+         g_ModeCfg.execution_threshold = 65;
+         g_ModeCfg.min_mtf_confluence  = 65.0;
+         g_ModeCfg.use_mtf             = true;
+         g_ModeCfg.require_htf_align   = true;
+         g_ModeCfg.require_mtf_zone    = true;
+         g_ModeCfg.require_ltf_confirm = true;
+         g_ModeCfg.aggressive_mode     = false;
+         g_ModeCfg.use_footprint_boost = false;
+         g_ModeCfg.use_bandit_context  = false;
+         g_ModeCfg.min_rr              = 2.0;
+         g_ModeCfg.target_rr           = 3.0;
+         g_ModeCfg.max_wait_bars       = 16;
+         g_ModeCfg.max_spread_points   = 60;
+         break;
+         
+      case MODE_BALANCED:
+         g_ModeCfg.risk_per_trade      = 0.50;
+         g_ModeCfg.soft_stop           = 4.0;
+         g_ModeCfg.max_trades_per_day  = 15;
+         g_ModeCfg.execution_threshold = 50;
+         g_ModeCfg.min_mtf_confluence  = 60.0;
+         g_ModeCfg.use_mtf             = true;
+         g_ModeCfg.require_htf_align   = true;
+         g_ModeCfg.require_mtf_zone    = true;
+         g_ModeCfg.require_ltf_confirm = false;
+         g_ModeCfg.aggressive_mode     = false;
+         g_ModeCfg.use_footprint_boost = true;
+         g_ModeCfg.use_bandit_context  = false;
+         g_ModeCfg.min_rr              = 1.6;
+         g_ModeCfg.target_rr           = 2.4;
+         g_ModeCfg.max_wait_bars       = 12;
+         g_ModeCfg.max_spread_points   = 75;
+         break;
+
+      case MODE_ELITE:
+         g_ModeCfg.risk_per_trade      = 0.65;
+         g_ModeCfg.soft_stop           = 4.2;
+         g_ModeCfg.max_trades_per_day  = 18;
+         g_ModeCfg.execution_threshold = 50;
+         g_ModeCfg.min_mtf_confluence  = 55.0;
+         g_ModeCfg.use_mtf             = true;
+         g_ModeCfg.require_htf_align   = true;
+         g_ModeCfg.require_mtf_zone    = false;
+         g_ModeCfg.require_ltf_confirm = false;
+         g_ModeCfg.aggressive_mode     = true;
+         g_ModeCfg.use_footprint_boost = true;
+         g_ModeCfg.use_bandit_context  = true;
+         g_ModeCfg.min_rr              = 1.6;
+         g_ModeCfg.target_rr           = 2.3;
+         g_ModeCfg.max_wait_bars       = 10;
+         g_ModeCfg.max_spread_points   = 85;
+         break;
+
+      case MODE_RISK_ON:
+         g_ModeCfg.risk_per_trade      = 1.0;
+         g_ModeCfg.soft_stop           = 4.5;
+         g_ModeCfg.max_trades_per_day  = 22;
+         g_ModeCfg.execution_threshold = 45;
+         g_ModeCfg.min_mtf_confluence  = 50.0;
+         g_ModeCfg.use_mtf             = true;
+         g_ModeCfg.require_htf_align   = false;
+         g_ModeCfg.require_mtf_zone    = false;
+         g_ModeCfg.require_ltf_confirm = false;
+         g_ModeCfg.aggressive_mode     = true;
+         g_ModeCfg.use_footprint_boost = true;
+         g_ModeCfg.use_bandit_context  = true;
+         g_ModeCfg.min_rr              = 1.3;
+         g_ModeCfg.target_rr           = 2.0;
+         g_ModeCfg.max_wait_bars       = 8;
+         g_ModeCfg.max_spread_points   = 95;
+         break;
+
+      default:
+         // MODE_CUSTOM keeps user-provided inputs
+         break;
+   }
+
+   // Safety clamps aligned to FTMO guardrails
+   g_ModeCfg.risk_per_trade     = MathMin(1.0, MathMax(0.1, g_ModeCfg.risk_per_trade)); // 0.1% - 1.0%
+   g_ModeCfg.max_daily_loss     = MathMin(5.0, g_ModeCfg.max_daily_loss);
+   g_ModeCfg.max_total_loss     = MathMin(10.0, g_ModeCfg.max_total_loss);
+   g_ModeCfg.max_spread_points  = MathMax(20,  g_ModeCfg.max_spread_points);
+
+   PrintFormat("[Mode] %s applied | Risk=%.2f%% | Exec>=%d | RR>=%.1f/%.1f | Spread<=%d | MTF=%s | Aggressive=%s",
+               EnumToString(InpModePreset),
+               g_ModeCfg.risk_per_trade,
+               g_ModeCfg.execution_threshold,
+               g_ModeCfg.min_rr,
+               g_ModeCfg.target_rr,
+               g_ModeCfg.max_spread_points,
+               g_ModeCfg.use_mtf ? "ON" : "OFF",
+               g_ModeCfg.aggressive_mode ? "ON" : "OFF");
+}
+
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -161,14 +339,16 @@ int OnInit()
 {
    Print("=== EA_SCALPER_XAUUSD v3.30 Singularity Order Flow Edition ===");
    Print("=== HTF=H1 | MTF=M15 | LTF=M5 (Execution) ===");
+
+   // Apply selected trading mode before initializing modules
+   ApplyModePreset();
    
    // 1. Initialize Risk Manager (FTMO Compliance)
-   if(!g_RiskManager.Init(InpRiskPerTrade, InpMaxDailyLoss, InpMaxTotalLoss, InpMaxTradesPerDay, InpSoftStop))
+   if(!g_RiskManager.Init(g_ModeCfg.risk_per_trade, g_ModeCfg.max_daily_loss, g_ModeCfg.max_total_loss, g_ModeCfg.max_trades_per_day, g_ModeCfg.soft_stop))
    {
       Print("Critical Error: Risk Manager Initialization Failed!");
       return(INIT_FAILED);
    }
-
    // 2. Initialize Scoring Engine
    if(!g_ScoringEngine.Init(InpWeightTech, InpWeightFund, InpWeightSent))
    {
@@ -197,7 +377,7 @@ int OnInit()
    g_TradeManager.SetAbsorptionExitConfidence(60);  // Min 60% confidence for exit signal
 
    // 5. Initialize Multi-Timeframe Manager (NEW v3.20)
-   if(InpUseMTF)
+   if(g_ModeCfg.use_mtf)
    {
       if(!g_MTF.Init(_Symbol))
       {
@@ -205,7 +385,7 @@ int OnInit()
       }
       else
       {
-         g_MTF.SetMinConfluence(InpMinMTFConfluence);
+         g_MTF.SetMinConfluence(g_ModeCfg.min_mtf_confluence);
          Print("MTF Manager initialized: H1+M15+M5 architecture active");
       }
    }
@@ -235,8 +415,9 @@ int OnInit()
    g_Session.AllowAsianTrading(InpAllowAsian);
    g_Session.AllowLateNYTrading(InpAllowLateNY);
    g_Session.SetFridayCloseHour(InpFridayCloseHour);
+   g_Session.SetFridayCloseEarly(!InpDisableFridayClose);  // Disable for backtest
    
-   // News filter
+   // News filter (fallback - hardcoded calendar)
    if(!g_News.Initialize(InpGMTOffset))
    {
       Print("Warning: News filter initialization issue");
@@ -245,14 +426,25 @@ int OnInit()
    g_News.BlockHighImpact(InpBlockHighImpact);
    g_News.BlockMediumImpact(InpBlockMediumImpact);
    
+   // Native MQL5 Calendar (PRIMARY - real-time from MetaQuotes)
+   if(!g_NewsNative.Init(30, 15))  // 30 min before, 15 min after
+   {
+      Print("Warning: Native calendar initialization issue - using fallback");
+   }
+   else
+   {
+      Print("Native MQL5 Calendar: ACTIVE - ", g_NewsNative.GetCachedEventCount(), " events loaded");
+      g_NewsNative.PrintStatus();  // Show upcoming events
+   }
+   
    // Entry optimizer
    if(!g_EntryOpt.Initialize())
    {
       Print("Warning: Entry optimizer initialization issue");
    }
-   g_EntryOpt.SetMinRR(InpMinRR);
-   g_EntryOpt.SetTargetRR(InpTargetRR);
-   g_EntryOpt.SetMaxWaitBars(InpMaxWaitBars);
+   g_EntryOpt.SetMinRR(g_ModeCfg.min_rr);
+   g_EntryOpt.SetTargetRR(g_ModeCfg.target_rr);
+   g_EntryOpt.SetMaxWaitBars(g_ModeCfg.max_wait_bars);
    
    // v3.31: Initialize Footprint Analyzer (FORGE fix - was missing!)
    if(!g_Footprint.Init(_Symbol, PERIOD_M5, 0.50, 3.0))
@@ -284,8 +476,11 @@ int OnInit()
    
    // v4.2 GENIUS: Bayesian Learning - Connect CTradeManager to CConfluenceScorer
    // This enables self-improving priors based on actual trade outcomes
-   // TODO: Fix compilation - AttachConfluenceScorer not being recognized
-   // g_TradeManager.AttachConfluenceScorer(&g_Confluence);
+   g_TradeManager.AttachConfluenceScorer(&g_Confluence);
+   
+   // v4.2 GENIUS: Kelly Learning - Connect CTradeManager to RiskManager
+   // This enables adaptive Kelly position sizing based on trade outcomes
+   g_TradeManager.AttachRiskManager(&g_RiskManager);
    
    // 8. Timer for slow-lane updates
    EventSetTimer(1);
@@ -305,6 +500,14 @@ int OnInit()
          Print("ONNX brain enabled with threshold=", DoubleToString(InpMLThreshold, 2));
       }
    }
+
+   // 10. Init ATR handles for volatility rank (M5)
+   g_atr_fast_handle = iATR(_Symbol, PERIOD_M5, 14);
+   g_atr_slow_handle = iATR(_Symbol, PERIOD_M5, 100);
+   if(g_atr_fast_handle == INVALID_HANDLE || g_atr_slow_handle == INVALID_HANDLE)
+      Print("Warning: ATR handles for vol rank failed to initialize");
+   
+   ArrayInitialize(g_bucket_trades, 0);
 
    // v4.2: Initialize regime strategy at startup (GENIUS refinement)
    // This ensures strategy is ready even before first H1 bar change
@@ -328,7 +531,8 @@ int OnInit()
    Print("=== Singularity MTF Edition Initialized Successfully ===");
    Print("Execution TF: M5 | Structure TF: M15 | Direction TF: H1");
    Print("Session: ", g_Session.GetSessionName());
-   Print("News: ", g_News.GetCurrentStatus());
+   Print("News Native: ", g_NewsNative.IsCalendarAvailable() ? "ACTIVE" : "UNAVAILABLE");
+   Print("News Fallback: ", g_News.GetCurrentStatus());
    return(INIT_SUCCEEDED);
 }
 
@@ -344,6 +548,8 @@ void OnDeinit(const int reason)
    g_AMD.Deinitialize();
    g_Sweep.Deinitialize();
    g_OnnxBrain.Deinitialize();
+   if(g_atr_fast_handle!=INVALID_HANDLE) IndicatorRelease(g_atr_fast_handle);
+   if(g_atr_slow_handle!=INVALID_HANDLE) IndicatorRelease(g_atr_slow_handle);
    
    Print("EA_SCALPER_XAUUSD v3.30 Singularity Order Flow Deinitialized. Reason: ", reason);
 }
@@ -363,9 +569,11 @@ void OnTick()
       
       // Collect ALL gate statuses
       int spread_pts = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-      bool spread_ok = (spread_pts <= InpMaxSpreadPoints);
+      bool spread_ok = (spread_pts <= g_ModeCfg.max_spread_points);
       bool session_ok = g_Session.IsTradingAllowed();
       bool news_ok = g_News.IsTradingAllowed();
+      SNewsWindowNative news_native = g_NewsNative.CheckNewsWindow();
+      bool news_native_ok = (news_native.action != NEWS_ACTION_BLOCK);
       bool risk_ok = g_RiskManager.CanOpenNewTrade();
       bool has_trade = g_TradeManager.HasActiveTrade();
       
@@ -381,7 +589,7 @@ void OnTick()
       // Confluence
       SConfluenceResult conf = g_Confluence.CalculateConfluence();
       int score = (int)conf.total_score;
-      bool score_ok = (score >= InpExecutionThreshold);
+      bool score_ok = (score >= g_ModeCfg.execution_threshold);
       
       // AMD Phase
       ENUM_AMD_PHASE amd = g_AMD.GetCurrentPhase();
@@ -390,13 +598,14 @@ void OnTick()
       Print("=== DEBUG STATUS @ ", TimeToString(TimeCurrent(), TIME_DATE|TIME_MINUTES), " ===");
       PrintFormat("  Spread: %d pts [%s]", spread_pts, spread_ok ? "OK" : "BLOCKED");
       PrintFormat("  Session: %s [%s]", g_Session.GetSessionName(), session_ok ? "OK" : "BLOCKED");
-      PrintFormat("  News: %s [%s]", g_News.GetCurrentStatus(), news_ok ? "OK" : "BLOCKED");
+      PrintFormat("  News Native: %s [%s]", news_native.reason, news_native_ok ? "OK" : "BLOCKED");
+      PrintFormat("  News Fallback: %s [%s]", g_News.GetCurrentStatus(), news_ok ? "OK" : "BLOCKED");
       PrintFormat("  Risk: [%s]", risk_ok ? "OK" : "BLOCKED");
       PrintFormat("  Has Trade: [%s]", has_trade ? "YES-SKIP" : "NO-OK");
       PrintFormat("  HTF Align: [%s]", htf_ok ? "OK" : "BLOCKED");
       PrintFormat("  MTF Align: %s [%s]", EnumToString(mtf_conf.alignment), mtf_align_ok ? "OK" : "BLOCKED");
       PrintFormat("  Regime: %s [%s]", regime.philosophy, regime_ok ? "OK" : "BLOCKED");
-      PrintFormat("  Score: %d/%d [%s]", score, InpExecutionThreshold, score_ok ? "OK" : "LOW");
+      PrintFormat("  Score: %d/%d [%s]", score, g_ModeCfg.execution_threshold, score_ok ? "OK" : "LOW");
       PrintFormat("  AMD Phase: %s [%s]", EnumToString(amd), amd_ok ? "OK" : "WAITING");
       PrintFormat("  Direction: %s | Valid: %s", EnumToString(conf.direction), conf.is_valid ? "YES" : "NO");
       Print("=== END DEBUG ===");
@@ -404,12 +613,14 @@ void OnTick()
    
    //=== GATE 1: Spread Guard ===
    int spread_points = (int)SymbolInfoInteger(_Symbol, SYMBOL_SPREAD);
-   if(spread_points > InpMaxSpreadPoints)
+   g_spread_buff[g_spread_idx % 20] = spread_points;
+   g_spread_idx++;
+   if(spread_points > g_ModeCfg.max_spread_points)
    {
       static datetime last_spread_log = 0;
       if(TimeCurrent() - last_spread_log > 300)
       {
-         if(InpDebugMode) Print("[BLOCKED] Spread too high: ", spread_points, " > ", InpMaxSpreadPoints);
+         if(InpDebugMode) Print("[BLOCKED] Spread too high: ", spread_points, " > ", g_ModeCfg.max_spread_points);
          last_spread_log = TimeCurrent();
       }
       return;
@@ -480,27 +691,50 @@ void OnTick()
       return;
    }
    
-   //=== GATE 4: News Filter ===
-   if(!g_News.IsTradingAllowed())
+   //=== GATE 4: News Filter (Native MQL5 Calendar + Fallback) ===
+   // PRIMARY: Use native MQL5 calendar (real-time data from MetaQuotes)
+   SNewsWindowNative news_result = g_NewsNative.CheckNewsWindow();
+   
+   if(news_result.action == NEWS_ACTION_BLOCK)
    {
       static datetime last_news_log = 0;
       if(TimeCurrent() - last_news_log > 300)
       {
-         Print("News blackout: ", g_News.GetCurrentStatus());
+         Print("NEWS BLOCK [Native]: ", news_result.reason);
+         if(news_result.event.is_valid)
+            Print("  Event: ", news_result.event.event_name, " | Minutes: ", news_result.minutes_to_event);
          last_news_log = TimeCurrent();
       }
       return;
    }
+   // Soft news caution: cut risk by 50% for next trade
+   bool news_caution = false; // native calendar caution flag (set to true if enum provides)
+   
+   // FALLBACK: Also check hardcoded calendar for extra safety
+   if(!g_News.IsTradingAllowed())
+   {
+      static datetime last_news_log2 = 0;
+      if(TimeCurrent() - last_news_log2 > 300)
+      {
+         Print("NEWS BLOCK [Fallback]: ", g_News.GetCurrentStatus());
+         last_news_log2 = TimeCurrent();
+      }
+      return;
+   }
+   
+   // Apply news-based score adjustment and size multiplier
+   int news_score_adj = news_result.score_adjustment;
+   double news_size_mult = news_result.size_multiplier;
    
    //=== GATE 5: Risk Manager - Can open new trade? ===
    if(!g_RiskManager.CanOpenNewTrade()) return;
 
    //=== GATE 6: Multi-Timeframe Analysis (NEW v3.20) ===
-   if(InpUseMTF)
+   if(g_ModeCfg.use_mtf)
    {
       // Check HTF (H1) direction - NEVER trade against H1 trend
       SMTFConfluence mtf_conf_htf = g_MTF.GetConfluence();
-      if(InpRequireHTFAlign && !mtf_conf_htf.htf_aligned)
+      if(g_ModeCfg.require_htf_align && !mtf_conf_htf.htf_aligned)
       {
          static datetime last_htf_log = 0;
          if(TimeCurrent() - last_htf_log > 1800)
@@ -520,7 +754,34 @@ void OnTick()
    int score = (int)conf_result.total_score;
    
    // Check minimum score threshold
-   if(score < InpExecutionThreshold) return;
+   if(score < g_ModeCfg.execution_threshold) return;
+
+   // Volatility & spread-relative filters
+   double vol_rank = GetVolRank();
+   if(vol_rank < 0.15) return;              // block chop dead markets
+   double median_spread = GetMedianSpread();
+   if(g_spread_idx >= 5 && median_spread > 0 && spread_points > median_spread * 1.8) return;
+
+   // Footprint booster/veto
+   double fp_score = conf_result.footprint_score;
+   if(g_ModeCfg.use_footprint_boost && g_ModeCfg.aggressive_mode)
+   {
+      if(fp_score <= 20) return;
+   }
+   
+   // Contextual bandit-lite using bucket + vol + confluence
+   double ctx_bandit = 1.0;
+   int bucket = GetBucket15();
+   if(bucket < 0 || bucket > 95) bucket = 0;
+   if(g_ModeCfg.use_bandit_context && g_ModeCfg.aggressive_mode)
+   {
+      double norm_conf = score / 100.0;
+      double spread_z = (g_spread_idx >=5 && median_spread>0) ? (double)spread_points/median_spread : 1.0;
+      double ctx_mean = 0.5*norm_conf + 0.3*vol_rank + 0.2*(fp_score/100.0);
+      double exploration = 0.30 / MathSqrt((double)g_bucket_trades[bucket] + 1.0);
+      ctx_bandit = ctx_mean + exploration - MathMax(0.0, (spread_z-1.0)*0.15);
+      if(ctx_bandit < 0.55) return; // too weak
+   }
 
    //=== GATE 7: AMD Cycle Check ===
    // Only trade in DISTRIBUTION phase (after manipulation)
@@ -593,7 +854,7 @@ void OnTick()
    g_MTF.SetStructureFlags(has_ob, has_fvg, g_Sweep.HasRecentSweep());
    
    // Refresh MTF confluence with updated structure flags
-   if(InpUseMTF)
+   if(g_ModeCfg.use_mtf)
    {
       SMTFConfluence mtf_conf = g_MTF.GetConfluence();
       
@@ -602,7 +863,7 @@ void OnTick()
          return;
       
       // Require structure zone if configured
-      if(InpRequireMTFZone && !mtf_conf.mtf_structure)
+      if(g_ModeCfg.require_mtf_zone && !mtf_conf.mtf_structure)
       {
          static datetime last_mtf_zone_log = 0;
          if(TimeCurrent() - last_mtf_zone_log > 900)
@@ -615,7 +876,7 @@ void OnTick()
    }
    
    //=== GATE 8: MTF Direction Confirmation (NEW v3.20) ===
-   if(InpUseMTF)
+   if(g_ModeCfg.use_mtf)
    {
       // Verify signal aligns with H1 trend
       if(signal == SIGNAL_BUY && !g_MTF.CanTradeLong())
@@ -628,7 +889,7 @@ void OnTick()
       }
       
       // Check M5 confirmation
-      if(InpRequireLTFConfirm && !g_MTF.HasLTFConfirmation(signal))
+      if(g_ModeCfg.require_ltf_confirm && !g_MTF.HasLTFConfirmation(signal))
       {
          return; // No M5 confirmation candle
       }
@@ -673,9 +934,9 @@ void OnTick()
    );
    
    // Validate entry quality
-   if(!entry.is_valid || entry.risk_reward < InpMinRR)
+   if(!entry.is_valid || entry.risk_reward < g_ModeCfg.min_rr)
    {
-      Print("Entry rejected: R:R = ", DoubleToString(entry.risk_reward, 2), " < ", InpMinRR);
+      Print("Entry rejected: R:R = ", DoubleToString(entry.risk_reward, 2), " < ", g_ModeCfg.min_rr);
       return;
    }
    
@@ -763,6 +1024,26 @@ void OnTick()
    
    // Calculate position size
    double slPoints = MathAbs(current_price - entry.stop_loss) / _Point;
+
+   // Dynamic risk based on edge/vol/spread/news
+   double risk_custom = g_ModeCfg.risk_per_trade;
+   double edge = (score - g_ModeCfg.execution_threshold) / MathMax(10.0, (double)g_ModeCfg.execution_threshold);
+   risk_custom *= (1.0 + MathMax(-0.5, MathMin(0.6, edge * 0.6))); // boost/nerf 60% of edge
+   double spread_rel = (g_spread_idx >= 5 && GetMedianSpread() > 0) ? spread_points / GetMedianSpread() : 1.0;
+   if(spread_rel > 1.6) risk_custom *= 0.6;
+   if(vol_rank < 0.35) risk_custom *= 0.6;
+   if(vol_rank > 0.85) risk_custom *= 0.85; // tail caution
+   if(news_caution)    risk_custom *= 0.5;
+   // Footprint boost/nerf
+   if(g_ModeCfg.use_footprint_boost && g_ModeCfg.aggressive_mode)
+   {
+      if(fp_score >= 60) risk_custom *= 1.15;
+      else if(fp_score <= 35) risk_custom *= 0.8;
+   }
+   // Contextual bandit boost
+   if(g_ModeCfg.use_bandit_context && g_ModeCfg.aggressive_mode)
+      risk_custom *= (1.0 + MathMax(0.0, MathMin(0.3, ctx_bandit - 0.55)));
+   risk_custom = MathMax(0.05, MathMin(g_ModeCfg.risk_per_trade * 2.5, risk_custom));
    
    //=== v4.2: OVERRIDE TPs WITH REGIME STRATEGY R-MULTIPLES (GENIUS) ===
    // Calculate TPs based on regime strategy instead of CEntryOptimizer defaults
@@ -803,9 +1084,28 @@ void OnTick()
       }
    }
 
-   double lotSize = g_RiskManager.CalculateLotSize(slPoints);
-   
+   double lotSize = g_RiskManager.CalculateLotSizeWithRisk(slPoints, risk_custom);
+
    if(lotSize <= 0) return;
+   
+   // Additional safety: cap lot by equity and max 5 lots hard
+   double maxLotEquity = AccountInfoDouble(ACCOUNT_EQUITY) / 20000.0; // 0.5 lot por 10k
+   lotSize = MathMin(lotSize, maxLotEquity);
+   lotSize = MathMin(lotSize, 5.0);
+   
+   // Margin pre-check: ensure using <80% of free margin
+   double margin_required = 0;
+   if(OrderCalcMargin((signal==SIGNAL_BUY)?ORDER_TYPE_BUY:ORDER_TYPE_SELL, _Symbol, lotSize, current_price, margin_required))
+   {
+      double free_margin = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
+      if(margin_required > free_margin * 0.8)
+      {
+         double safe_lot = (free_margin * 0.8) / (margin_required / lotSize);
+         lotSize = MathMin(lotSize, safe_lot);
+         if(lotSize < SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN))
+            return; // abort if too small after cap
+      }
+   }
    
    // v3.31: Apply position sizing from CConfluenceScorer (includes regime + MTF)
    double conf_size_mult = conf_result.position_size_mult;
@@ -816,7 +1116,7 @@ void OnTick()
    }
    
    // Also apply MTF multiplier if different (belt and suspenders)
-   if(InpUseMTF)
+   if(g_ModeCfg.use_mtf)
    {
       double mtf_mult = g_MTF.GetPositionSizeMultiplier();
       if(mtf_mult < conf_size_mult && mtf_mult > 0)
@@ -832,7 +1132,7 @@ void OnTick()
    
    // v3.31: Enhanced trade reason with confluence details
    string reason = StringFormat("Score:%d/%d Conf:%d/9 Q:%s AMD:%s RR:%.1f", 
-                                score, InpExecutionThreshold,
+                                score, g_ModeCfg.execution_threshold,
                                 conf_result.total_confluences,
                                 g_Confluence.QualityToString(conf_result.quality),
                                 EnumToString(amd_phase), entry.risk_reward);
@@ -841,12 +1141,12 @@ void OnTick()
    g_TradeManager.ApplyRegimeStrategy(g_CurrentStrategy);
    
    // v4.1: Apply regime-based risk percent (overrides input if regime dictates lower risk)
-   if(g_CurrentStrategy.risk_percent > 0 && g_CurrentStrategy.risk_percent < InpRiskPerTrade / 100.0)
+   if(g_CurrentStrategy.risk_percent > 0 && g_CurrentStrategy.risk_percent < g_ModeCfg.risk_per_trade / 100.0)
    {
       double regime_lots = g_RiskManager.CalculateLotSizeWithRisk(slPoints, g_CurrentStrategy.risk_percent * 100);
       if(regime_lots > 0 && regime_lots < lotSize)
       {
-         Print("[Regime v4.1] Risk adjusted from ", DoubleToString(InpRiskPerTrade, 2), 
+         Print("[Regime v4.1] Risk adjusted from ", DoubleToString(g_ModeCfg.risk_per_trade, 2), 
                "% to ", DoubleToString(g_CurrentStrategy.risk_percent * 100, 2), 
                "% | Lot: ", DoubleToString(lotSize, 2), " -> ", DoubleToString(regime_lots, 2));
          lotSize = regime_lots;
@@ -857,6 +1157,12 @@ void OnTick()
                                        entry.take_profit_1, entry.take_profit_2, entry.take_profit_3,
                                        score, reason))
    {
+      // increment bucket trade count for exploration decay
+      if(g_ModeCfg.use_bandit_context && g_ModeCfg.aggressive_mode)
+      {
+         int bucket = GetBucket15();
+         if(bucket >=0 && bucket < 96) g_bucket_trades[bucket]++;
+      }
       Print("=== TRADE EXECUTED (v3.31 FORGE Genius Edition) ===");
       Print("Direction: ", (signal == SIGNAL_BUY ? "BUY" : "SELL"));
       Print("Entry: ", current_price, " | SL: ", entry.stop_loss);
@@ -867,7 +1173,7 @@ void OnTick()
       Print("Lot: ", lotSize);
       Print("Confluence Score: ", score, " | Quality: ", g_Confluence.QualityToString(conf_result.quality));
       Print("Factors: ", conf_result.total_confluences, "/9 | MTF:", DoubleToString(conf_result.mtf_score,1), " | FP:", DoubleToString(conf_result.footprint_score,1));
-      if(InpUseMTF) Print("MTF: ", g_MTF.GetAnalysisSummary());
+      if(g_ModeCfg.use_mtf) Print("MTF: ", g_MTF.GetAnalysisSummary());
       Print("============================================");
       
       g_RiskManager.OnTradeExecuted();
@@ -929,7 +1235,7 @@ void OnTimer()
    g_Footprint.Update();
    
    // Update MTF manager once per timer tick (uses cached indicator buffers)
-   if(InpUseMTF)
+   if(g_ModeCfg.use_mtf)
       g_MTF.Update();
    
    // Check for new day (reset daily counters)
@@ -940,13 +1246,54 @@ void OnTimer()
    {
       last_day = dt.day;
       g_RiskManager.OnNewDay();
-      g_News.RefreshSchedule();
+      g_News.RefreshSchedule();         // Refresh hardcoded calendar
+      g_NewsNative.RefreshCache();      // Refresh native MQL5 calendar
       Print("=== NEW TRADING DAY ===");
       Print("Session: ", g_Session.GetSessionName());
-      Print("News: ", g_News.GetCurrentStatus());
+      Print("News Fallback: ", g_News.GetCurrentStatus());
+      g_NewsNative.PrintStatus();       // Show native calendar events
    }
    
    // Phase 2: Python Hub updates
    // g_PythonBridge.OnTimer();
+}
+
+//+------------------------------------------------------------------+
+//| Helpers: volatility rank & spread median                         |
+//+------------------------------------------------------------------+
+double GetVolRank()
+{
+   if(g_atr_fast_handle==INVALID_HANDLE || g_atr_slow_handle==INVALID_HANDLE) return 0.5;
+   double fast[1], slow[1];
+   if(CopyBuffer(g_atr_fast_handle,0,0,1,fast) < 1) return 0.5;
+   if(CopyBuffer(g_atr_slow_handle,0,0,1,slow) < 1) return 0.5;
+   if(slow[0] <= 0) return 0.5;
+   double rank = fast[0] / (slow[0]*2.0);
+   return MathMin(1.0, MathMax(0.0, rank));
+}
+
+double GetMedianSpread()
+{
+   int count = MathMin(g_spread_idx, 20);
+   if(count <= 0) return 0;
+   double temp[];
+   ArrayResize(temp, count);
+   for(int i=0;i<count;i++) temp[i]=g_spread_buff[i];
+   ArraySort(temp);
+   int mid = count/2;
+   if((count%2)==0) return (temp[mid-1]+temp[mid])/2.0;
+   else return temp[mid];
+}
+
+int GetBucket15()
+{
+   MqlDateTime dt;
+   TimeCurrent(dt);
+   int adj_hour = (dt.hour - InpGMTOffset + 24) % 24;
+   int minute_of_day = adj_hour*60 + dt.min;
+   int bucket = minute_of_day / 15;
+   if(bucket < 0) bucket = 0;
+   if(bucket > 95) bucket = 95;
+   return bucket;
 }
 //+------------------------------------------------------------------+

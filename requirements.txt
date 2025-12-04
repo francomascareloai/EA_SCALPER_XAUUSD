@@ -14,6 +14,8 @@ scipy>=1.11.0
 onnxruntime>=1.16.0
 torch>=2.2.0
 onnx>=1.15.0
+onnxmltools>=1.12.0
+skl2onnx>=1.16.0
 
 # === STATISTICS ===
 statsmodels>=0.14.0

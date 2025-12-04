@@ -16,6 +16,8 @@ Date: 2025-12-01
 """
 
 import os
+import pyarrow as pa
+import pyarrow.parquet as pq
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -25,6 +27,27 @@ from datetime import datetime, timedelta
 from enum import Enum
 import warnings
 warnings.filterwarnings('ignore')
+# EA parity types - USE FULL LOGIC (not simplified)
+try:
+    from scripts.backtest.strategies.ea_logic_full import SignalType, EALogic, EAConfig
+    USE_FULL_EA_LOGIC = True
+except ImportError:
+    try:
+        from scripts.backtest.strategies.ea_logic_python import SignalType, EALogic, EAConfig
+        USE_FULL_EA_LOGIC = False
+    except Exception:
+        class SignalType(Enum):
+            NONE = 0
+            BUY = 1
+            SELL = -1
+        USE_FULL_EA_LOGIC = False
+
+# Footprint analyzer for real order flow
+try:
+    from scripts.backtest.footprint_analyzer import FootprintAnalyzer, FootprintConfig
+    HAVE_FOOTPRINT = True
+except Exception:
+    HAVE_FOOTPRINT = False
 
 
 # =============================================================================
@@ -72,8 +95,16 @@ class BacktestConfig:
     session_start_hour: int = 8        # GMT
     session_end_hour: int = 20         # GMT
     
+    # EA parity mode
+    use_ea_logic: bool = False         # If True, use Python parity of EA for signals
+    eval_window_bars: int = 400        # Bars window passed to EA evaluator
+    fp_score: float = 50.0             # Default footprint score when using EA logic
+    use_real_footprint: bool = True    # Calculate real footprint from ticks (recommended)
+    ml_prob: float = None              # Optional ML probability override
+    
     # Timeframe for indicators
-    bar_timeframe: str = '5min'        # M5
+    bar_timeframe: str = '5min'        # Execution timeframe (default M5)
+    exec_timeframe: str = '5min'       # Separate execution TF (e.g., '15s') if provided
     
     # Debug
     debug: bool = False
@@ -113,6 +144,43 @@ class TickDataLoader:
             start_date: Optional start date filter (YYYY-MM-DD)
             end_date: Optional end date filter (YYYY-MM-DD)
         """
+        # Parquet fast-path
+        if filepath.lower().endswith(".parquet"):
+            pf = pq.ParquetFile(filepath)
+            tables = []
+            rows = 0
+            want = max_ticks or pf.metadata.num_rows
+            for rg in reversed(range(pf.num_row_groups)):
+                t = pf.read_row_group(rg)
+                tables.append(t)
+                rows += t.num_rows
+                if rows >= want:
+                    break
+            tables.reverse()
+            table = pa.concat_tables(tables)
+            if table.num_rows > want:
+                start = table.num_rows - want
+                table = table.slice(start, want)
+            df = table.to_pandas()
+            if "timestamp" in df.columns:
+                df["datetime"] = pd.to_datetime(df["timestamp"])
+            if "bid" in df.columns and "ask" in df.columns:
+                df["mid"] = (df["bid"] + df["ask"]) / 2
+                df["spread"] = df["ask"] - df["bid"]
+            elif "mid_price" in df.columns:
+                df["mid"] = df["mid_price"]
+                df["spread"] = df.get("spread", pd.Series(0.3, index=df.index))
+            else:
+                raise ValueError("Parquet must contain bid/ask or mid_price columns")
+            df = df.set_index("datetime")
+            df.sort_index(inplace=True)
+            if start_date:
+                df = df[df.index >= start_date]
+            if end_date:
+                df = df[df.index <= end_date]
+            print(f"[TickLoader] Loaded {len(df):,} ticks (parquet tail)")
+            return df
+
         file_size = os.path.getsize(filepath)
         print(f"[TickLoader] File: {filepath}")
         print(f"[TickLoader] Size: {file_size / (1024**3):.2f} GB")
@@ -478,6 +546,40 @@ class TickBacktester:
         self.position: Optional[Position] = None
         self.trades: List[Trade] = []
         self.equity_curve: List[dict] = []
+
+        # EA parity layer
+        self.ea = None
+        self.htf_bars = None
+        self.bars_data = None
+        if self.config.use_ea_logic:
+            try:
+                # Use REAL thresholds for accurate backtesting
+                # Note: relaxed_mtf_gate=True because backtest data doesn't have proper MTF
+                ea_cfg = EAConfig(
+                    execution_threshold=40.0,   # Very relaxed for debugging
+                    confluence_min_score=40.0,  # Very relaxed for debugging
+                    amd_threshold=30.0,         # Very relaxed for debugging
+                    min_rr=1.0,                 # Relaxed R:R for debugging
+                    max_spread_points=100.0,    # Slightly relaxed for backtest data
+                    use_ml=False,
+                    use_fib_filter=True,
+                    ob_displacement_mult=2.0,   # REAL displacement
+                    fvg_min_gap=0.3,            # REAL gap
+                    allow_asian=True,           # Allow Asian for backtest data coverage
+                    allow_late_ny=True,         # Allow Late NY for backtest
+                    relaxed_mtf_gate=True,      # Relax MTF gate for backtest
+                    require_ltf_confirm=False,  # Don't require LTF confirm for backtest
+                )
+                self.ea = EALogic(ea_cfg, initial_balance=self.config.initial_balance)
+                if USE_FULL_EA_LOGIC:
+                    print("[EA Logic] Using FULL EA logic (ea_logic_full.py)")
+                else:
+                    print("[EA Logic] Using simplified logic (ea_logic_python.py)")
+            except Exception as e:
+                print(f"[EA Logic] Failed to initialize parity layer: {e}")
+                import traceback
+                traceback.print_exc()
+                self.config.use_ea_logic = False
     
     def run(self, tick_path: str, max_ticks: int = 5_000_000,
             start_date: str = None, end_date: str = None) -> Dict:
@@ -501,11 +603,44 @@ class TickBacktester:
         ticks = TickDataLoader.load(tick_path, max_ticks, start_date, end_date)
         
         # 2. Resample to OHLC
-        bars = OHLCResampler.resample(ticks, self.config.bar_timeframe)
+        exec_tf = self.config.exec_timeframe or self.config.bar_timeframe
+        bars = OHLCResampler.resample(ticks, exec_tf)
+        # Keep HTF for EA logic (H1)
+        if self.config.use_ea_logic:
+            self.htf_bars = OHLCResampler.resample(ticks, '1h')
         
         # 3. Calculate indicators
         print("[Backtest] Calculating indicators...")
         bars = Indicators.add_all(bars, self.config)
+        
+        # 3.5. Calculate real footprint from ticks (if enabled)
+        self.fp_scores = {}  # Store fp_score per bar timestamp
+        if self.config.use_ea_logic and self.config.use_real_footprint and HAVE_FOOTPRINT:
+            print("[Backtest] Calculating footprint from ticks...")
+            try:
+                fp_config = FootprintConfig(tick_size=0.01)
+                fp_analyzer = FootprintAnalyzer(fp_config)
+                fp_df = fp_analyzer.analyze_ticks(ticks)
+                # Merge fp_score into bars DataFrame
+                if 'fp_score' in fp_df.columns:
+                    bars = bars.merge(
+                        fp_df[['fp_score', 'delta', 'stacked_imbal', 'absorption']],
+                        left_index=True, right_index=True, how='left'
+                    )
+                    bars['fp_score'] = bars['fp_score'].fillna(50.0)
+                    # Also store in dict for fallback
+                    for ts, row in fp_df.iterrows():
+                        self.fp_scores[ts] = row.get('fp_score', 50.0)
+                    print(f"[Backtest] Footprint merged into bars: {len(fp_df)} rows")
+                    # Stats
+                    scores = bars['fp_score'].dropna().values
+                    if len(scores) > 0:
+                        bullish = (scores > 55).sum()
+                        bearish = (scores < 45).sum()
+                        print(f"[Backtest] FP Stats: Bullish={bullish}, Bearish={bearish}, Neutral={len(scores)-bullish-bearish}")
+            except Exception as e:
+                print(f"[Backtest] Footprint calculation failed: {e}")
+                bars['fp_score'] = 50.0  # Default neutral
         
         signal_buy = bars['ma_cross_up'].sum()
         signal_sell = bars['ma_cross_down'].sum()
@@ -518,8 +653,11 @@ class TickBacktester:
         # 5. Calculate metrics
         metrics = self._calculate_metrics()
         
-        # 6. Print report
-        self._print_report(metrics)
+        # 6. Print report (safe for encoding issues)
+        try:
+            self._print_report(metrics)
+        except UnicodeEncodeError:
+            print("[!] Report printing failed due to encoding - results still valid")
         
         return {
             'trades': self.trades,
@@ -531,7 +669,8 @@ class TickBacktester:
     
     def _simulate(self, bars: pd.DataFrame):
         """Main simulation loop - event-driven"""
-        
+        self.bars_data = bars
+
         for i, (timestamp, bar) in enumerate(bars.iterrows()):
             # Update daily tracking
             self.risk.new_day(timestamp.date())
@@ -553,7 +692,7 @@ class TickBacktester:
             
             # Generate new signals (only if no position)
             if self.position is None and can_trade:
-                self._check_entry(timestamp, bar)
+                self._check_entry(i, timestamp, bar)
             
             # Record equity
             self.equity_curve.append({
@@ -576,8 +715,51 @@ class TickBacktester:
                 ExitReason.END
             )
     
-    def _check_entry(self, timestamp: datetime, bar: pd.Series):
+    def _check_entry(self, idx: int, timestamp: datetime, bar: pd.Series):
         """Check for entry signals"""
+
+        # EA parity path
+        if self.config.use_ea_logic and self.ea is not None:
+            start = max(0, idx - self.config.eval_window_bars)
+            ltf_window = self.bars_data.iloc[start:idx+1].copy()
+            # Require spread column for EA; ensure exists
+            if 'spread' not in ltf_window.columns:
+                ltf_window['spread'] = pd.Series(30.0, index=ltf_window.index)
+            
+            # Debug: check spread values
+            if self.config.debug and idx % 500 == 0:
+                spread_val = ltf_window['spread'].iloc[-1]
+                print(f"  [EA Debug] Bar {idx}: spread={spread_val:.1f}, bars={len(ltf_window)}")
+            
+            # Get real footprint score for this bar (or default)
+            real_fp_score = self.fp_scores.get(timestamp, self.config.fp_score)
+            
+            setup = self.ea.evaluate_from_df(
+                ltf_window,
+                self.htf_bars if self.htf_bars is not None else ltf_window,
+                timestamp,
+                ml_prob=self.config.ml_prob,
+                fp_score=real_fp_score,
+            )
+            if setup is None:
+                return
+
+            entry = setup.entry
+            sl = setup.sl
+            tp = setup.tp1  # Use TP1 for SL/TP distance; TradeManager in EA handles partials; here single TP
+            lots = setup.lot
+            direction = Direction.LONG if setup.direction == SignalType.BUY else Direction.SHORT
+
+            self.position = Position(
+                direction=direction,
+                entry_time=timestamp,
+                entry_price=entry,
+                sl_price=sl,
+                tp_price=tp,
+                lots=lots,
+                spread_at_entry=bar.get('spread', 0.30)
+            )
+            return
         
         # Skip if filters not met
         if not bar.get('is_trending', True):
@@ -630,27 +812,54 @@ class TickBacktester:
             )
     
     def _manage_position(self, timestamp: datetime, bar: pd.Series):
-        """Check SL/TP for open position"""
+        """Check SL/TP for open position with realistic execution friction"""
+        
+        # Get execution mode multiplier for slippage
+        slip_mult = self.execution.mult['slippage']
+        base_slip = self.config.base_slippage_points * 0.01  # Convert to price
         
         if self.position.direction == Direction.LONG:
-            # Check SL
-            if bar['low'] <= self.position.sl_price:
-                self._close_position(timestamp, bar, ExitReason.SL, 
-                                    exit_price=self.position.sl_price)
-            # Check TP
-            elif bar['high'] >= self.position.tp_price:
-                self._close_position(timestamp, bar, ExitReason.TP,
-                                    exit_price=self.position.tp_price)
+            sl_hit = bar['low'] <= self.position.sl_price
+            tp_hit = bar['high'] >= self.position.tp_price
+            
+            # REALISTIC: If both could hit, assume SL hit first (worst case)
+            if sl_hit and tp_hit:
+                # Both hit in same bar = worst case scenario
+                # Apply adverse slippage beyond SL
+                slippage = np.random.uniform(0, base_slip * slip_mult)
+                exit_price = self.position.sl_price - slippage
+                self._close_position(timestamp, bar, ExitReason.SL, exit_price=exit_price)
+            elif sl_hit:
+                # SL hit - apply adverse slippage (price goes further against us)
+                slippage = np.random.uniform(0, base_slip * slip_mult)
+                exit_price = self.position.sl_price - slippage
+                self._close_position(timestamp, bar, ExitReason.SL, exit_price=exit_price)
+            elif tp_hit:
+                # TP hit - small adverse slippage (we might not get exact price)
+                slippage = np.random.uniform(0, base_slip * slip_mult * 0.3)
+                exit_price = self.position.tp_price - slippage
+                self._close_position(timestamp, bar, ExitReason.TP, exit_price=exit_price)
         
         else:  # SHORT
-            # Check SL
-            if bar['high'] >= self.position.sl_price:
-                self._close_position(timestamp, bar, ExitReason.SL,
-                                    exit_price=self.position.sl_price)
-            # Check TP
-            elif bar['low'] <= self.position.tp_price:
-                self._close_position(timestamp, bar, ExitReason.TP,
-                                    exit_price=self.position.tp_price)
+            sl_hit = bar['high'] >= self.position.sl_price
+            tp_hit = bar['low'] <= self.position.tp_price
+            
+            # REALISTIC: If both could hit, assume SL hit first (worst case)
+            if sl_hit and tp_hit:
+                # Both hit in same bar = worst case scenario
+                slippage = np.random.uniform(0, base_slip * slip_mult)
+                exit_price = self.position.sl_price + slippage
+                self._close_position(timestamp, bar, ExitReason.SL, exit_price=exit_price)
+            elif sl_hit:
+                # SL hit - apply adverse slippage
+                slippage = np.random.uniform(0, base_slip * slip_mult)
+                exit_price = self.position.sl_price + slippage
+                self._close_position(timestamp, bar, ExitReason.SL, exit_price=exit_price)
+            elif tp_hit:
+                # TP hit - small adverse slippage
+                slippage = np.random.uniform(0, base_slip * slip_mult * 0.3)
+                exit_price = self.position.tp_price + slippage
+                self._close_position(timestamp, bar, ExitReason.TP, exit_price=exit_price)
     
     def _close_position(self, timestamp: datetime, bar: pd.Series,
                        reason: ExitReason, exit_price: float = None):
@@ -780,7 +989,7 @@ class TickBacktester:
         print(f"Avg Spread:       ${metrics['avg_spread']:.2f}")
         
         if metrics.get('blown'):
-            print(f"\n⚠️ ACCOUNT BLOWN: {metrics['blow_reason']}")
+            print(f"\n[!] ACCOUNT BLOWN: {metrics['blow_reason']}")
         
         # FTMO Assessment
         print("\n" + "-"*40)

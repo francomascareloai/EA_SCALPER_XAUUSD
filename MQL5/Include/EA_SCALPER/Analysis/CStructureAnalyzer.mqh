@@ -90,6 +90,43 @@ struct SStructureState
    datetime            last_update;
 };
 
+// === CONSOLIDATION STRUCTURES (NEW - Choon Chiat Strategy) ===
+struct SConsolidation
+{
+   double   high;              // Range high
+   double   low;               // Range low
+   double   mid;               // Equilibrium (50%)
+   double   range_size;        // High - Low
+   int      bars_in_range;     // How many bars in consolidation
+   int      touches_high;      // Times price touched high
+   int      touches_low;       // Times price touched low
+   datetime start_time;        // When consolidation started
+   datetime last_update;       // Last update time
+   bool     is_valid;          // Is this a valid consolidation?
+   double   atr_ratio;         // Range relative to ATR (< 2.5 = consolidation)
+};
+
+enum ENUM_CONSOLIDATION_SIGNAL
+{
+   CONS_SIGNAL_NONE = 0,       // No signal
+   CONS_SIGNAL_BUY_BOUNCE,     // Buy at support bounce
+   CONS_SIGNAL_SELL_BOUNCE,    // Sell at resistance bounce
+   CONS_SIGNAL_BREAKOUT_UP,    // Bullish breakout
+   CONS_SIGNAL_BREAKOUT_DOWN   // Bearish breakout
+};
+
+struct SConsolidationSignal
+{
+   ENUM_CONSOLIDATION_SIGNAL type;
+   double   entry_price;
+   double   stop_loss;
+   double   take_profit;
+   double   risk_reward;
+   int      strength;          // 0-100 signal strength
+   string   reason;
+   bool     is_valid;
+};
+
 // === MTF TIMEFRAME DEFINITIONS ===
 #define STRUCT_TF_HTF    PERIOD_H1    // High Timeframe - Direction
 #define STRUCT_TF_MTF    PERIOD_M15   // Medium Timeframe - Structure  
@@ -187,6 +224,13 @@ public:
    string BiasToString(ENUM_MARKET_BIAS bias);
    string BreakToString(ENUM_STRUCTURE_BREAK brk);
    string StructureTypeToString(ENUM_STRUCTURE_TYPE type);
+   
+   // Consolidation Bounce Mode (NEW - Inspired by Choon Chiat FTMO #1)
+   SConsolidation DetectConsolidation(string symbol, ENUM_TIMEFRAMES tf, int lookback);
+   bool IsInConsolidation(string symbol, ENUM_TIMEFRAMES tf);
+   SConsolidationSignal GetConsolidationBounceSignal(string symbol, ENUM_TIMEFRAMES tf);
+   SConsolidation GetCurrentConsolidation(string symbol, ENUM_TIMEFRAMES tf);
+   string ConsolidationSignalToString(ENUM_CONSOLIDATION_SIGNAL type);
    
 private:
    void AddSwingHigh(const SSwingPoint &swing);
@@ -868,5 +912,354 @@ bool CStructureAnalyzer::IsMTFAligned()
    }
    
    return false;
+}
+
+//+------------------------------------------------------------------+
+//| CONSOLIDATION BOUNCE MODE - Inspired by Choon Chiat (FTMO #1)    |
+//| Detects range-bound markets and generates bounce signals         |
+//+------------------------------------------------------------------+
+
+// === CONSOLIDATION STRUCTURES ===
+struct SConsolidation
+{
+   double   high;              // Range high
+   double   low;               // Range low
+   double   mid;               // Equilibrium (50%)
+   double   range_size;        // High - Low
+   int      bars_in_range;     // How many bars in consolidation
+   int      touches_high;      // Times price touched high
+   int      touches_low;       // Times price touched low
+   datetime start_time;        // When consolidation started
+   datetime last_update;       // Last update time
+   bool     is_valid;          // Is this a valid consolidation?
+   double   atr_ratio;         // Range relative to ATR (< 2.5 = consolidation)
+};
+
+enum ENUM_CONSOLIDATION_SIGNAL
+{
+   CONS_SIGNAL_NONE = 0,       // No signal
+   CONS_SIGNAL_BUY_BOUNCE,     // Buy at support bounce
+   CONS_SIGNAL_SELL_BOUNCE,    // Sell at resistance bounce
+   CONS_SIGNAL_BREAKOUT_UP,    // Bullish breakout
+   CONS_SIGNAL_BREAKOUT_DOWN   // Bearish breakout
+};
+
+struct SConsolidationSignal
+{
+   ENUM_CONSOLIDATION_SIGNAL type;
+   double   entry_price;
+   double   stop_loss;
+   double   take_profit;
+   double   risk_reward;
+   int      strength;          // 0-100 signal strength
+   string   reason;
+   bool     is_valid;
+};
+
+// === CONSOLIDATION DETECTION METHODS ===
+
+//+------------------------------------------------------------------+
+//| Detect if market is in consolidation (range-bound)               |
+//| Uses ATR comparison method from top FTMO scalpers                |
+//+------------------------------------------------------------------+
+SConsolidation CStructureAnalyzer::DetectConsolidation(string symbol, ENUM_TIMEFRAMES tf, int lookback = 20)
+{
+   SConsolidation cons;
+   ZeroMemory(cons);
+   cons.is_valid = false;
+   
+   if(symbol == NULL) symbol = _Symbol;
+   
+   // Get price data
+   MqlRates rates[];
+   ArraySetAsSeries(rates, true);
+   int copied = CopyRates(symbol, tf, 0, lookback + 10, rates);
+   if(copied < lookback) return cons;
+   
+   // Calculate range (excluding current bar)
+   double highest = rates[1].high;
+   double lowest = rates[1].low;
+   
+   for(int i = 1; i <= lookback; i++)
+   {
+      if(rates[i].high > highest) highest = rates[i].high;
+      if(rates[i].low < lowest) lowest = rates[i].low;
+   }
+   
+   cons.high = highest;
+   cons.low = lowest;
+   cons.mid = (highest + lowest) / 2.0;
+   cons.range_size = highest - lowest;
+   
+   // Get ATR for comparison
+   int atr_handle = iATR(symbol, tf, 14);
+   if(atr_handle == INVALID_HANDLE) return cons;
+   
+   double atr_buffer[];
+   ArraySetAsSeries(atr_buffer, true);
+   if(CopyBuffer(atr_handle, 0, 0, 1, atr_buffer) < 1)
+   {
+      IndicatorRelease(atr_handle);
+      return cons;
+   }
+   double atr = atr_buffer[0];
+   IndicatorRelease(atr_handle);
+   
+   if(atr <= 0) return cons;
+   
+   // Calculate ATR ratio
+   cons.atr_ratio = cons.range_size / atr;
+   
+   // CONSOLIDATION CRITERIA (from Choon Chiat strategy):
+   // Range < 2.5x ATR = consolidation
+   // Range > 3.5x ATR = trending (not consolidation)
+   if(cons.atr_ratio > 2.5)
+   {
+      cons.is_valid = false;
+      return cons;
+   }
+   
+   // Count touches to high/low zones (10% buffer)
+   double buffer = cons.range_size * 0.10;
+   cons.touches_high = 0;
+   cons.touches_low = 0;
+   cons.bars_in_range = 0;
+   
+   for(int i = 1; i <= lookback; i++)
+   {
+      // Check if bar is within range
+      if(rates[i].high <= highest + buffer && rates[i].low >= lowest - buffer)
+         cons.bars_in_range++;
+      
+      // Check touches to extremes
+      if(rates[i].high >= highest - buffer)
+         cons.touches_high++;
+      if(rates[i].low <= lowest + buffer)
+         cons.touches_low++;
+   }
+   
+   // Validate consolidation:
+   // - At least 80% of bars should be in range
+   // - At least 2 touches on each side
+   if(cons.bars_in_range < lookback * 0.8) return cons;
+   if(cons.touches_high < 2 || cons.touches_low < 2) return cons;
+   
+   // Valid consolidation found!
+   cons.is_valid = true;
+   cons.start_time = rates[lookback].time;
+   cons.last_update = TimeCurrent();
+   
+   return cons;
+}
+
+//+------------------------------------------------------------------+
+//| Check if currently in consolidation                              |
+//+------------------------------------------------------------------+
+bool CStructureAnalyzer::IsInConsolidation(string symbol = NULL, ENUM_TIMEFRAMES tf = PERIOD_M30)
+{
+   SConsolidation cons = DetectConsolidation(symbol, tf, 20);
+   return cons.is_valid;
+}
+
+//+------------------------------------------------------------------+
+//| Get consolidation bounce signal                                   |
+//| Based on Choon Chiat's 70% win rate strategy                     |
+//+------------------------------------------------------------------+
+SConsolidationSignal CStructureAnalyzer::GetConsolidationBounceSignal(string symbol = NULL, ENUM_TIMEFRAMES tf = PERIOD_M30)
+{
+   SConsolidationSignal sig;
+   ZeroMemory(sig);
+   sig.type = CONS_SIGNAL_NONE;
+   sig.is_valid = false;
+   
+   if(symbol == NULL) symbol = _Symbol;
+   
+   // First, detect consolidation
+   SConsolidation cons = DetectConsolidation(symbol, tf, 20);
+   if(!cons.is_valid) return sig;
+   
+   // Get current price
+   double bid = SymbolInfoDouble(symbol, SYMBOL_BID);
+   double ask = SymbolInfoDouble(symbol, SYMBOL_ASK);
+   double point = SymbolInfoDouble(symbol, SYMBOL_POINT);
+   
+   // Get RSI for confirmation
+   int rsi_handle = iRSI(symbol, tf, 14, PRICE_CLOSE);
+   if(rsi_handle == INVALID_HANDLE) return sig;
+   
+   double rsi_buffer[];
+   ArraySetAsSeries(rsi_buffer, true);
+   if(CopyBuffer(rsi_handle, 0, 0, 1, rsi_buffer) < 1)
+   {
+      IndicatorRelease(rsi_handle);
+      return sig;
+   }
+   double rsi = rsi_buffer[0];
+   IndicatorRelease(rsi_handle);
+   
+   // Get Bollinger Bands for additional confirmation
+   int bb_handle = iBands(symbol, tf, 20, 0, 2.0, PRICE_CLOSE);
+   if(bb_handle == INVALID_HANDLE) return sig;
+   
+   double bb_upper[], bb_lower[], bb_mid[];
+   ArraySetAsSeries(bb_upper, true);
+   ArraySetAsSeries(bb_lower, true);
+   ArraySetAsSeries(bb_mid, true);
+   
+   if(CopyBuffer(bb_handle, 1, 0, 1, bb_upper) < 1 ||
+      CopyBuffer(bb_handle, 2, 0, 1, bb_lower) < 1 ||
+      CopyBuffer(bb_handle, 0, 0, 1, bb_mid) < 1)
+   {
+      IndicatorRelease(bb_handle);
+      return sig;
+   }
+   IndicatorRelease(bb_handle);
+   
+   // Define zones (10% of range from extremes)
+   double zone_buffer = cons.range_size * 0.10;
+   double buy_zone_top = cons.low + zone_buffer;
+   double sell_zone_bottom = cons.high - zone_buffer;
+   
+   // === BUY BOUNCE SIGNAL ===
+   // Price near range low + RSI oversold + Price at/below BB lower
+   if(bid <= buy_zone_top)
+   {
+      int strength = 0;
+      string reasons = "";
+      
+      // Price in buy zone
+      strength += 30;
+      reasons = "Price at range support";
+      
+      // RSI confirmation
+      if(rsi < 35)
+      {
+         strength += 30;
+         reasons += " + RSI oversold(" + DoubleToString(rsi, 1) + ")";
+      }
+      else if(rsi < 45)
+      {
+         strength += 15;
+         reasons += " + RSI low(" + DoubleToString(rsi, 1) + ")";
+      }
+      
+      // Bollinger confirmation
+      if(bid <= bb_lower[0])
+      {
+         strength += 25;
+         reasons += " + At BB lower";
+      }
+      else if(bid <= bb_lower[0] + (bb_mid[0] - bb_lower[0]) * 0.3)
+      {
+         strength += 15;
+         reasons += " + Near BB lower";
+      }
+      
+      // Multiple touches = stronger level
+      if(cons.touches_low >= 3)
+      {
+         strength += 15;
+         reasons += " + " + IntegerToString(cons.touches_low) + " touches";
+      }
+      
+      // Generate signal if strong enough
+      if(strength >= 60)
+      {
+         sig.type = CONS_SIGNAL_BUY_BOUNCE;
+         sig.entry_price = ask;
+         sig.stop_loss = cons.low - (zone_buffer * 2);  // SL below range
+         sig.take_profit = cons.mid;  // TP at range mid (conservative)
+         sig.risk_reward = (sig.take_profit - sig.entry_price) / (sig.entry_price - sig.stop_loss);
+         sig.strength = MathMin(100, strength);
+         sig.reason = reasons;
+         sig.is_valid = true;
+         
+         return sig;
+      }
+   }
+   
+   // === SELL BOUNCE SIGNAL ===
+   // Price near range high + RSI overbought + Price at/above BB upper
+   if(bid >= sell_zone_bottom)
+   {
+      int strength = 0;
+      string reasons = "";
+      
+      // Price in sell zone
+      strength += 30;
+      reasons = "Price at range resistance";
+      
+      // RSI confirmation
+      if(rsi > 65)
+      {
+         strength += 30;
+         reasons += " + RSI overbought(" + DoubleToString(rsi, 1) + ")";
+      }
+      else if(rsi > 55)
+      {
+         strength += 15;
+         reasons += " + RSI high(" + DoubleToString(rsi, 1) + ")";
+      }
+      
+      // Bollinger confirmation
+      if(bid >= bb_upper[0])
+      {
+         strength += 25;
+         reasons += " + At BB upper";
+      }
+      else if(bid >= bb_upper[0] - (bb_upper[0] - bb_mid[0]) * 0.3)
+      {
+         strength += 15;
+         reasons += " + Near BB upper";
+      }
+      
+      // Multiple touches = stronger level
+      if(cons.touches_high >= 3)
+      {
+         strength += 15;
+         reasons += " + " + IntegerToString(cons.touches_high) + " touches";
+      }
+      
+      // Generate signal if strong enough
+      if(strength >= 60)
+      {
+         sig.type = CONS_SIGNAL_SELL_BOUNCE;
+         sig.entry_price = bid;
+         sig.stop_loss = cons.high + (zone_buffer * 2);  // SL above range
+         sig.take_profit = cons.mid;  // TP at range mid (conservative)
+         sig.risk_reward = (sig.entry_price - sig.take_profit) / (sig.stop_loss - sig.entry_price);
+         sig.strength = MathMin(100, strength);
+         sig.reason = reasons;
+         sig.is_valid = true;
+         
+         return sig;
+      }
+   }
+   
+   return sig;
+}
+
+//+------------------------------------------------------------------+
+//| Get consolidation state for external use                         |
+//+------------------------------------------------------------------+
+SConsolidation CStructureAnalyzer::GetCurrentConsolidation(string symbol = NULL, ENUM_TIMEFRAMES tf = PERIOD_M30)
+{
+   return DetectConsolidation(symbol, tf, 20);
+}
+
+//+------------------------------------------------------------------+
+//| Convert consolidation signal type to string                      |
+//+------------------------------------------------------------------+
+string CStructureAnalyzer::ConsolidationSignalToString(ENUM_CONSOLIDATION_SIGNAL type)
+{
+   switch(type)
+   {
+      case CONS_SIGNAL_NONE:          return "NONE";
+      case CONS_SIGNAL_BUY_BOUNCE:    return "BUY_BOUNCE";
+      case CONS_SIGNAL_SELL_BOUNCE:   return "SELL_BOUNCE";
+      case CONS_SIGNAL_BREAKOUT_UP:   return "BREAKOUT_UP";
+      case CONS_SIGNAL_BREAKOUT_DOWN: return "BREAKOUT_DOWN";
+      default:                        return "UNKNOWN";
+   }
 }
 //+------------------------------------------------------------------+

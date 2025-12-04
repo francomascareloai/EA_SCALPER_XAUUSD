@@ -1,0 +1,954 @@
+{
+  "SESSION_FILTERS": [
+    {
+      "test_name": "SESSION_NO_FILTER",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 222,
+      "win_rate": 0.34234234234234234,
+      "pf": 0.7903395969524756,
+      "return": -0.10249036096709094,
+      "dd": 0.10249036096709094,
+      "sharpe": -29.58781151363771,
+      "sqn": -1.6364126058589128,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_LONDON_ONLY",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 16,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 158,
+      "win_rate": 0.34177215189873417,
+      "pf": 0.7343509127334119,
+      "return": -0.0857639125474646,
+      "dd": 0.1033927279804228,
+      "sharpe": -39.157598787265854,
+      "sqn": -1.8270401087173,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_NY_ONLY",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 22,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 125,
+      "win_rate": 0.336,
+      "pf": 0.7005818854160699,
+      "return": -0.09802821959835989,
+      "dd": 0.10111597370934451,
+      "sharpe": -46.01361050172649,
+      "sqn": -1.9096105448067004,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_LONDON_NY_OVERLAP",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 80,
+      "win_rate": 0.2875,
+      "pf": 0.5631123685615491,
+      "return": -0.08934904743877496,
+      "dd": 0.10125574374986415,
+      "sharpe": -74.1249088306335,
+      "sqn": -2.4610058805188006,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_ACTIVE_HOURS",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 189,
+      "win_rate": 0.36507936507936506,
+      "pf": 0.7915099690349431,
+      "return": -0.09323980921146635,
+      "dd": 0.1023943918356702,
+      "sharpe": -29.86290271053792,
+      "sqn": -1.5239348724832202,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_EXTENDED_ACTIVE",
+      "config": {
+        "session_enabled": true,
+        "session_start": 6,
+        "session_end": 22,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 202,
+      "win_rate": 0.36633663366336633,
+      "pf": 0.8049659627459335,
+      "return": -0.09152486796927393,
+      "dd": 0.10042536052560451,
+      "sharpe": -27.617507627614668,
+      "sqn": -1.4570137594132426,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_MORNING_LONDON",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 12,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 180,
+      "win_rate": 0.3611111111111111,
+      "pf": 0.8133370615305376,
+      "return": -0.06402986505012354,
+      "dd": 0.10358985556244871,
+      "sharpe": -26.106401682568684,
+      "sqn": -1.3001299240742357,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_AFTERNOON_NY",
+      "config": {
+        "session_enabled": true,
+        "session_start": 14,
+        "session_end": 20,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 117,
+      "win_rate": 0.3247863247863248,
+      "pf": 0.7148113955735298,
+      "return": -0.09171183282629285,
+      "dd": 0.10013514076909041,
+      "sharpe": -43.4992554499744,
+      "sqn": -1.7465388079511777,
+      "success": true
+    },
+    {
+      "test_name": "SESSION_ASIA_EXCLUDED",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 226,
+      "win_rate": 0.3805309734513274,
+      "pf": 0.8555523378374272,
+      "return": -0.07442032556172751,
+      "dd": 0.1015314884487398,
+      "sharpe": -19.804653204596043,
+      "sqn": -1.105159464403849,
+      "success": true
+    }
+  ],
+  "REGIME_FILTERS": [
+    {
+      "test_name": "REGIME_NO_REGIME",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 275,
+      "win_rate": 0.3527272727272727,
+      "pf": 0.8325614812398089,
+      "return": -0.10018872350189124,
+      "dd": 0.10018872350189124,
+      "sharpe": -22.9430462687297,
+      "sqn": -1.4122803404752173,
+      "success": true
+    },
+    {
+      "test_name": "REGIME_HURST_0.50",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 240,
+      "win_rate": 0.375,
+      "pf": 0.9051861424025077,
+      "return": -0.04835572995564004,
+      "dd": 0.09366728903573883,
+      "sharpe": -12.626081902297122,
+      "sqn": -0.7260686891842533,
+      "success": true
+    },
+    {
+      "test_name": "REGIME_HURST_0.52",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.52,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 186,
+      "win_rate": 0.4032258064516129,
+      "pf": 1.018379518059845,
+      "return": 0.006935008616345585,
+      "dd": 0.05845062554928297,
+      "sharpe": 2.3031482090741338,
+      "sqn": 0.11659551467705677,
+      "success": true
+    },
+    {
+      "test_name": "REGIME_HURST_0.55",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 121,
+      "win_rate": 0.38016528925619836,
+      "pf": 0.9195391646374815,
+      "return": -0.019982674892705634,
+      "dd": 0.04500722068221431,
+      "sharpe": -10.57964762659429,
+      "sqn": -0.4319837138954673,
+      "success": true
+    },
+    {
+      "test_name": "REGIME_HURST_0.58",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.58,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 80,
+      "win_rate": 0.3875,
+      "pf": 0.998334590541517,
+      "return": -0.00025888888035318817,
+      "dd": 0.04225247456337018,
+      "sharpe": -0.2081829580620141,
+      "sqn": -0.006911839651432527,
+      "success": true
+    },
+    {
+      "test_name": "REGIME_HURST_0.60",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 57,
+      "win_rate": 0.38596491228070173,
+      "pf": 1.0040640702814339,
+      "return": 0.0004410805662749335,
+      "dd": 0.043179635635520804,
+      "sharpe": 0.5058841492525689,
+      "sqn": 0.014177249602250539,
+      "success": true
+    }
+  ],
+  "TIMEFRAMES": [
+    {
+      "test_name": "TIMEFRAME_1min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "1min",
+        "risk": 0.005
+      },
+      "trades": 277,
+      "win_rate": 0.35379061371841153,
+      "pf": 0.8319084017888018,
+      "return": -0.1013231535640444,
+      "dd": 0.1013231535640444,
+      "sharpe": -23.066514553364758,
+      "sqn": -1.4250343927555944,
+      "success": true
+    },
+    {
+      "test_name": "TIMEFRAME_5min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 269,
+      "win_rate": 0.35315985130111527,
+      "pf": 0.8345487445297726,
+      "return": -0.09735778364519088,
+      "dd": 0.10281724628247396,
+      "sharpe": -22.677872001040438,
+      "sqn": -1.3806446852681462,
+      "success": true
+    },
+    {
+      "test_name": "TIMEFRAME_15min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 272,
+      "win_rate": 0.35294117647058826,
+      "pf": 0.8309807478788324,
+      "return": -0.10111381978966016,
+      "dd": 0.10111381978966016,
+      "sharpe": -23.258912068493558,
+      "sqn": -1.423892933031602,
+      "success": true
+    },
+    {
+      "test_name": "TIMEFRAME_30min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "30min",
+        "risk": 0.005
+      },
+      "trades": 268,
+      "win_rate": 0.35447761194029853,
+      "pf": 0.8290821484013728,
+      "return": -0.10066148687683325,
+      "dd": 0.10066148687683325,
+      "sharpe": -23.531693402420313,
+      "sqn": -1.4299605756054976,
+      "success": true
+    }
+  ],
+  "RISK_LEVELS": [
+    {
+      "test_name": "RISK_0.3pct",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.003
+      },
+      "trades": 312,
+      "win_rate": 0.34615384615384615,
+      "pf": 0.8145405141057013,
+      "return": -0.09837202059763553,
+      "dd": 0.10012114522800585,
+      "sharpe": -26.687429450041414,
+      "sqn": -1.7497964335931413,
+      "success": true
+    },
+    {
+      "test_name": "RISK_0.5pct",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 266,
+      "win_rate": 0.3533834586466165,
+      "pf": 0.825651652200154,
+      "return": -0.1010409339830333,
+      "dd": 0.1010409339830333,
+      "sharpe": -24.043498704976518,
+      "sqn": -1.4555997375575518,
+      "success": true
+    },
+    {
+      "test_name": "RISK_0.7pct",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.007
+      },
+      "trades": 277,
+      "win_rate": 0.35379061371841153,
+      "pf": 0.8439771166575641,
+      "return": -0.10217224798480817,
+      "dd": 0.10217224798480817,
+      "sharpe": -20.536131242983377,
+      "sqn": -1.2687089437673675,
+      "success": true
+    },
+    {
+      "test_name": "RISK_1.0pct",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.01
+      },
+      "trades": 224,
+      "win_rate": 0.35267857142857145,
+      "pf": 0.8265504997493388,
+      "return": -0.10035741242179007,
+      "dd": 0.10179975604238822,
+      "sharpe": -22.107364546661962,
+      "sqn": -1.2281869192589976,
+      "success": true
+    }
+  ],
+  "COMBINED": [
+    {
+      "test_name": "COMBINED_ASIA_EXCLUDED+NO_REGIME",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 228,
+      "win_rate": 0.37719298245614036,
+      "pf": 0.8428249907405359,
+      "return": -0.08186624180520861,
+      "dd": 0.10271385126209652,
+      "sharpe": -21.73234855971812,
+      "sqn": -1.2180849328030938,
+      "success": true
+    },
+    {
+      "test_name": "COMBINED_ASIA_EXCLUDED+HURST_0.50",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": true,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 201,
+      "win_rate": 0.373134328358209,
+      "pf": 0.885530255605464,
+      "return": -0.05047292993777711,
+      "dd": 0.08834579473785073,
+      "sharpe": -15.529327403860888,
+      "sqn": -0.8172485537400049,
+      "success": true
+    },
+    {
+      "test_name": "COMBINED_ASIA_EXCLUDED+HURST_0.52",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": true,
+        "hurst": 0.52,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 158,
+      "win_rate": 0.3860759493670886,
+      "pf": 0.9518062278144311,
+      "return": -0.01647807528175891,
+      "dd": 0.06756272630071637,
+      "sharpe": -6.311307918471197,
+      "sqn": -0.2944770124480126,
+      "success": true
+    },
+    {
+      "test_name": "COMBINED_ASIA_EXCLUDED+HURST_0.55",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 107,
+      "win_rate": 0.38317757009345793,
+      "pf": 0.9703664727495979,
+      "return": -0.006679248573621968,
+      "dd": 0.031178394049132703,
+      "sharpe": -3.812610752936551,
+      "sqn": -0.14639216814977998,
+      "success": true
+    },
+    {
+      "test_name": "COMBINED_ASIA_EXCLUDED+HURST_0.58",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": true,
+        "hurst": 0.58,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 68,
+      "win_rate": 0.38235294117647056,
+      "pf": 0.9880646367701973,
+      "return": -0.0016502275363847148,
+      "dd": 0.037230678813855514,
+      "sharpe": -1.5175315705791115,
+      "sqn": -0.04645106513659662,
+      "success": true
+    },
+    {
+      "test_name": "COMBINED_ASIA_EXCLUDED+HURST_0.60",
+      "config": {
+        "session_enabled": true,
+        "session_start": 5,
+        "session_end": 23,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 47,
+      "win_rate": 0.3829787234042553,
+      "pf": 0.9928515635067441,
+      "return": -0.0006837222614964703,
+      "dd": 0.0397285071264215,
+      "sharpe": -0.9073855105154542,
+      "sqn": -0.02309108046718809,
+      "success": true
+    }
+  ],
+  "GRID_SEARCH": [
+    {
+      "test_name": "GRID_NO_FILTER_NO_REGIME_5min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 252,
+      "win_rate": 0.34523809523809523,
+      "pf": 0.8152450471377201,
+      "return": -0.10386306206205696,
+      "dd": 0.10386306206205696,
+      "sharpe": -25.659273526532722,
+      "sqn": -1.5119871925776454,
+      "success": true
+    },
+    {
+      "test_name": "GRID_NO_FILTER_NO_REGIME_15min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 234,
+      "win_rate": 0.3504273504273504,
+      "pf": 0.8042548013879456,
+      "return": -0.10128713742016139,
+      "dd": 0.10128713742016139,
+      "sharpe": -27.42509678205662,
+      "sqn": -1.557254459705806,
+      "success": true
+    },
+    {
+      "test_name": "GRID_NO_FILTER_HURST_0.55_5min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 122,
+      "win_rate": 0.4016393442622951,
+      "pf": 1.026871597467704,
+      "return": 0.006565277644458693,
+      "dd": 0.035347694947612245,
+      "sharpe": 3.336485795133241,
+      "sqn": 0.13679577407710322,
+      "success": true
+    },
+    {
+      "test_name": "GRID_NO_FILTER_HURST_0.55_15min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 124,
+      "win_rate": 0.4032258064516129,
+      "pf": 1.0038033839581915,
+      "return": 0.0009500283040680224,
+      "dd": 0.035918561006215044,
+      "sharpe": 0.4779215146386119,
+      "sqn": 0.019754721432930437,
+      "success": true
+    },
+    {
+      "test_name": "GRID_NO_FILTER_HURST_0.60_5min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 52,
+      "win_rate": 0.36538461538461536,
+      "pf": 0.9474696727426761,
+      "return": -0.005323651848178473,
+      "dd": 0.03940519362752577,
+      "sharpe": -6.70602225523235,
+      "sqn": -0.17950235384629584,
+      "success": true
+    },
+    {
+      "test_name": "GRID_NO_FILTER_HURST_0.60_15min",
+      "config": {
+        "session_enabled": false,
+        "session_start": 0,
+        "session_end": 24,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 53,
+      "win_rate": 0.37735849056603776,
+      "pf": 0.961530616315269,
+      "return": -0.003920102212751051,
+      "dd": 0.04627076916469361,
+      "sharpe": -4.890511168397963,
+      "sqn": -0.13215867491763295,
+      "success": true
+    },
+    {
+      "test_name": "GRID_LONDON_NY_OVERLAP_NO_REGIME_5min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 101,
+      "win_rate": 0.3069306930693069,
+      "pf": 0.6514692337553581,
+      "return": -0.08742532786029379,
+      "dd": 0.10184244152122629,
+      "sharpe": -54.87228864424902,
+      "sqn": -2.0469971923785457,
+      "success": true
+    },
+    {
+      "test_name": "GRID_LONDON_NY_OVERLAP_NO_REGIME_15min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 97,
+      "win_rate": 0.29896907216494845,
+      "pf": 0.6319318215253589,
+      "return": -0.08856318322483124,
+      "dd": 0.1004801546545165,
+      "sharpe": -58.78642549648273,
+      "sqn": -2.149148408868377,
+      "success": true
+    },
+    {
+      "test_name": "GRID_LONDON_NY_OVERLAP_HURST_0.55_5min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 33,
+      "win_rate": 0.30303030303030304,
+      "pf": 0.6762550771834461,
+      "return": -0.02489953346977709,
+      "dd": 0.03262917187606856,
+      "sharpe": -50.11107066326297,
+      "sqn": -1.068548250420022,
+      "success": true
+    },
+    {
+      "test_name": "GRID_LONDON_NY_OVERLAP_HURST_0.55_15min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 34,
+      "win_rate": 0.29411764705882354,
+      "pf": 0.6567389339075995,
+      "return": -0.027185076898348284,
+      "dd": 0.034896597762016084,
+      "sharpe": -53.7936584959159,
+      "sqn": -1.1643244724701869,
+      "success": true
+    },
+    {
+      "test_name": "GRID_LONDON_NY_OVERLAP_HURST_0.60_5min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 15,
+      "win_rate": 0.3333333333333333,
+      "pf": 0.8240593845439615,
+      "return": -0.005819758973214194,
+      "dd": 0.025187675036069543,
+      "sharpe": -24.535189538321035,
+      "sqn": -0.3527268602569206,
+      "success": true
+    },
+    {
+      "test_name": "GRID_LONDON_NY_OVERLAP_HURST_0.60_15min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 13,
+        "session_end": 17,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 15,
+      "win_rate": 0.3333333333333333,
+      "pf": 0.8240593845439615,
+      "return": -0.005819758973214194,
+      "dd": 0.025187675036069543,
+      "sharpe": -24.535189538321035,
+      "sqn": -0.3527268602569206,
+      "success": true
+    },
+    {
+      "test_name": "GRID_ACTIVE_HOURS_NO_REGIME_5min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 217,
+      "win_rate": 0.37327188940092165,
+      "pf": 0.8532695680213149,
+      "return": -0.0735692470477902,
+      "dd": 0.10146663090664076,
+      "sharpe": -20.115891089161234,
+      "sqn": -1.0999492002001363,
+      "success": true
+    },
+    {
+      "test_name": "GRID_ACTIVE_HOURS_NO_REGIME_15min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": false,
+        "hurst": 0.5,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 216,
+      "win_rate": 0.37037037037037035,
+      "pf": 0.8504554741921543,
+      "return": -0.07439873207443824,
+      "dd": 0.101043600194773,
+      "sharpe": -20.51492671129377,
+      "sqn": -1.1191810063211334,
+      "success": true
+    },
+    {
+      "test_name": "GRID_ACTIVE_HOURS_HURST_0.55_5min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 87,
+      "win_rate": 0.3793103448275862,
+      "pf": 0.961108745982921,
+      "return": -0.007292137858844479,
+      "dd": 0.03339438579529999,
+      "sharpe": -5.029786772481067,
+      "sqn": -0.1741456723792521,
+      "success": true
+    },
+    {
+      "test_name": "GRID_ACTIVE_HOURS_HURST_0.55_15min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": true,
+        "hurst": 0.55,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 86,
+      "win_rate": 0.37209302325581395,
+      "pf": 0.9216315613708116,
+      "return": -0.014676831426026417,
+      "dd": 0.04061728309347092,
+      "sharpe": -10.36670622713644,
+      "sqn": -0.35685641068955476,
+      "success": true
+    },
+    {
+      "test_name": "GRID_ACTIVE_HOURS_HURST_0.60_5min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "5min",
+        "risk": 0.005
+      },
+      "trades": 37,
+      "win_rate": 0.3783783783783784,
+      "pf": 0.9988839954734,
+      "return": -8.62906044612173e-05,
+      "dd": 0.03741934102749932,
+      "sharpe": -0.1409848824995643,
+      "sqn": -0.0031832950539443412,
+      "success": true
+    },
+    {
+      "test_name": "GRID_ACTIVE_HOURS_HURST_0.60_15min",
+      "config": {
+        "session_enabled": true,
+        "session_start": 7,
+        "session_end": 21,
+        "regime_enabled": true,
+        "hurst": 0.6,
+        "timeframe": "15min",
+        "risk": 0.005
+      },
+      "trades": 36,
+      "win_rate": 0.3888888888888889,
+      "pf": 1.0540632695386347,
+      "return": 0.003962941850895877,
+      "dd": 0.03347930638290527,
+      "sharpe": 6.637242035535925,
+      "sqn": 0.14782312910755666,
+      "success": true
+    }
+  ]
+}

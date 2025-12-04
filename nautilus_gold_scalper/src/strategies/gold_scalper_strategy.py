@@ -1,0 +1,696 @@
+"""
+Gold Scalper Strategy - Main XAUUSD trading strategy.
+STREAM F - Trading Strategies (Part 2)
+
+Implements the complete SMC (Smart Money Concepts) trading system:
+- Multi-timeframe analysis (H1/M15/M5)
+- Regime-adaptive execution
+- Order flow confirmation
+- Prop firm risk management
+"""
+import logging
+import numpy as np
+from datetime import datetime, timezone
+from decimal import Decimal
+from typing import Dict, List, Optional, Any
+
+logger = logging.getLogger(__name__)
+
+from nautilus_trader.config import StrategyConfig
+from nautilus_trader.model import Bar, BarType, QuoteTick
+from nautilus_trader.model import InstrumentId
+from nautilus_trader.model.objects import Price, Quantity
+
+from .base_strategy import BaseGoldStrategy, BaseStrategyConfig
+from ..core.definitions import (
+    SignalType, SignalQuality, MarketRegime, TradingSession,
+    TIER_INVALID,
+)
+from ..indicators.structure_analyzer import MarketBias
+from ..core.data_types import ConfluenceResult, RegimeAnalysis, SessionInfo, OrderBlock, FairValueGap
+
+# Import analyzers
+from ..indicators.session_filter import SessionFilter
+from ..indicators.regime_detector import RegimeDetector
+from ..indicators.structure_analyzer import StructureAnalyzer
+from ..indicators.footprint_analyzer import FootprintAnalyzer
+from ..indicators.order_block_detector import OrderBlockDetector
+from ..indicators.fvg_detector import FVGDetector
+from ..indicators.liquidity_sweep import LiquiditySweepDetector
+from ..indicators.amd_cycle_tracker import AMDCycleTracker
+
+# Import signal generators
+from ..signals.mtf_manager import MTFManager
+from ..signals.confluence_scorer import ConfluenceScorer
+from ..signals.news_calendar import NewsCalendar, NewsTradeAction
+
+# Import risk management
+from ..risk.prop_firm_manager import PropFirmManager
+from ..risk.position_sizer import PositionSizer
+from ..risk.drawdown_tracker import DrawdownTracker
+
+
+class GoldScalperConfig(BaseStrategyConfig, frozen=True):
+    """Configuration for Gold Scalper Strategy."""
+    
+    # Scoring thresholds
+    execution_threshold: int = 65  # Changed from 50 - block C-tier signals
+    min_mtf_confluence: float = 50.0
+    
+    # MTF requirements
+    require_htf_align: bool = True
+    require_mtf_zone: bool = False
+    require_ltf_confirm: bool = False
+    
+    # Mode settings
+    aggressive_mode: bool = False
+    use_footprint_boost: bool = True
+    use_bandit_context: bool = False
+    
+    # Prop firm settings (Apex/Tradovate)
+    prop_firm_enabled: bool = True
+    account_balance: float = 100000.0
+    daily_loss_limit_pct: float = 5.0
+    total_loss_limit_pct: float = 10.0
+    
+    # News / event filters
+    use_news_filter: bool = True
+    news_score_penalty: int = -15
+    news_size_multiplier: float = 0.5
+
+
+class GoldScalperStrategy(BaseGoldStrategy):
+    """
+    XAUUSD Gold Scalping Strategy using Smart Money Concepts.
+    
+    Architecture:
+    - HTF (H1): Direction filter - NEVER trade against H1 trend
+    - MTF (M15): Structure zones - OB, FVG, Liquidity levels
+    - LTF (M5): Execution - Entry confirmation & tight SL
+    
+    Features:
+    - SMC order block detection
+    - Fair value gap analysis
+    - Liquidity sweep identification
+    - AMD cycle tracking
+    - Order flow (footprint) confirmation
+    - Regime-adaptive sizing
+    - Prop firm risk management
+    """
+    
+    def __init__(self, config: GoldScalperConfig):
+        super().__init__(config=config)
+        
+        # Analyzers
+        self._session_filter: Optional[SessionFilter] = None
+        self._regime_detector: Optional[RegimeDetector] = None
+        self._structure_analyzer: Optional[StructureAnalyzer] = None
+        self._footprint_analyzer: Optional[FootprintAnalyzer] = None
+        self._ob_detector: Optional[OrderBlockDetector] = None
+        self._fvg_detector: Optional[FVGDetector] = None
+        self._sweep_detector: Optional[LiquiditySweepDetector] = None
+        self._amd_tracker: Optional[AMDCycleTracker] = None
+        
+        # Signal generators
+        self._mtf_manager: Optional[MTFManager] = None
+        self._confluence_scorer: Optional[ConfluenceScorer] = None
+        
+        # Risk management
+        self._prop_firm: Optional[PropFirmManager] = None
+        self._position_sizer: Optional[PositionSizer] = None
+        self._drawdown_tracker: Optional[DrawdownTracker] = None
+        self._news_calendar: Optional[NewsCalendar] = None
+        self._news_size_mult: float = 1.0
+        
+        # Analysis state (per timeframe)
+        self._htf_bias: MarketBias = MarketBias.RANGING
+        self._mtf_order_blocks: List[OrderBlock] = []
+        self._mtf_fvgs: List[FairValueGap] = []
+        self._current_spread: float = 0.0
+    
+    def _on_strategy_start(self) -> None:
+        """Initialize all analyzers and managers."""
+        # Session filter
+        self._session_filter = SessionFilter(
+            allow_asian=False,
+            allow_late_ny=False,
+        )
+        
+        # Regime detector
+        self._regime_detector = RegimeDetector(
+            hurst_period=100,
+            entropy_period=50,
+        )
+        
+        # Structure analyzer - use defaults
+        self._structure_analyzer = StructureAnalyzer()
+        
+        # Footprint analyzer (if enabled) - use defaults
+        if self.config.use_footprint:
+            self._footprint_analyzer = FootprintAnalyzer()
+        
+        # SMC detectors - use defaults
+        self._ob_detector = OrderBlockDetector()
+        self._fvg_detector = FVGDetector()
+        self._sweep_detector = LiquiditySweepDetector()
+        self._amd_tracker = AMDCycleTracker()
+        
+        # MTF Manager - use defaults
+        self._mtf_manager = MTFManager()
+        
+        # Confluence scorer - use defaults
+        self._confluence_scorer = ConfluenceScorer()
+        
+        # News calendar (optional)
+        if self.config.use_news_filter:
+            self._news_calendar = NewsCalendar()
+        
+        # Risk management (if prop firm mode)
+        if self.config.prop_firm_enabled:
+            from ..risk.prop_firm_manager import PropFirmLimits
+            limits = PropFirmLimits(
+                account_size=self.config.account_balance,
+                daily_loss_limit=self.config.account_balance * float(self.config.daily_loss_limit_pct) / 100,
+                trailing_drawdown=self.config.account_balance * float(self.config.total_loss_limit_pct) / 100,
+            )
+            self._prop_firm = PropFirmManager(limits=limits)
+            
+            self._position_sizer = PositionSizer(
+                risk_per_trade=float(self.config.risk_per_trade) / 100,
+            )
+            
+            self._drawdown_tracker = DrawdownTracker(
+                initial_equity=float(self.config.account_balance),
+                max_daily=float(self.config.daily_loss_limit_pct) / 100.0,
+                max_total=float(self.config.total_loss_limit_pct) / 100.0,
+            )
+        
+        # Validate all critical analyzers
+        if not self._validate_analyzers():
+            self.log.error("Analyzer validation failed - stopping strategy")
+            self.stop()
+            return
+        
+        self.log.info("Gold Scalper Strategy initialized with all analyzers")
+    
+    def _validate_analyzers(self) -> bool:
+        """
+        Verify all critical analyzers are properly initialized.
+        
+        Returns:
+            True if all required analyzers are functional, False otherwise
+        """
+        required = [
+            ('structure_analyzer', self._structure_analyzer),
+            ('regime_detector', self._regime_detector),
+            ('confluence_scorer', self._confluence_scorer),
+            ('mtf_manager', self._mtf_manager),
+            ('ob_detector', self._ob_detector),
+            ('fvg_detector', self._fvg_detector),
+            ('sweep_detector', self._sweep_detector),
+            ('session_filter', self._session_filter),
+        ]
+        
+        for name, analyzer in required:
+            if analyzer is None:
+                self.log.error(f"Critical analyzer not initialized: {name}")
+                return False
+        
+        self.log.info("All critical analyzers validated successfully")
+        return True
+    
+    def _check_daily_reset(self, timestamp_ns: int) -> None:
+        """
+        Reset daily counters at day change.
+        
+        Args:
+            timestamp_ns: Current timestamp in nanoseconds
+        """
+        from datetime import datetime, timezone
+        
+        current_date = datetime.fromtimestamp(timestamp_ns / 1e9, tz=timezone.utc).date()
+        
+        if not hasattr(self, '_last_reset_date'):
+            self._last_reset_date = current_date
+            return
+        
+        if current_date != self._last_reset_date:
+            self.log.info(f"=== NEW TRADING DAY: {current_date} ===")
+            
+            # Reset daily counters
+            self._daily_trades = 0
+            self._daily_pnl = 0.0
+            if self._drawdown_tracker:
+                try:
+                    self._drawdown_tracker.reset_daily()
+                except Exception:
+                    pass
+            
+            # Reset prop firm manager if active
+            if self._prop_firm is not None and hasattr(self._prop_firm, 'on_new_day'):
+                self._prop_firm.on_new_day()
+            
+            # Reset drawdown tracker if active
+            if self._drawdown_tracker is not None and hasattr(self._drawdown_tracker, 'on_new_day'):
+                self._drawdown_tracker.on_new_day()
+            
+            self._last_reset_date = current_date
+            self.log.info("Daily reset complete")
+    
+    def _on_strategy_stop(self) -> None:
+        """Cleanup analyzers."""
+        self.log.info("Gold Scalper Strategy cleanup complete")
+    
+    def _on_htf_bar(self, bar: Bar) -> None:
+        """Process H1 bar - Update directional bias."""
+        if not self._structure_analyzer:
+            return
+        
+        # Extract OHLCV from bars
+        closes = np.array([b.close.as_double() for b in self._htf_bars[-200:]])
+        highs = np.array([b.high.as_double() for b in self._htf_bars[-200:]])
+        lows = np.array([b.low.as_double() for b in self._htf_bars[-200:]])
+        
+        if len(closes) < 50:
+            return
+        
+        # Analyze structure for bias
+        state = self._structure_analyzer.analyze(highs, lows, closes)
+        self._htf_bias = state.bias
+        
+        # Update regime
+        if self._regime_detector:
+            self._current_regime = self._regime_detector.analyze(closes)
+            
+            if self._current_regime.regime == MarketRegime.REGIME_RANDOM_WALK:
+                self.log.warning("HTF in RANDOM WALK regime - trading disabled")
+                self._is_trading_allowed = False
+            else:
+                self._is_trading_allowed = True
+        
+        if self.config.debug_mode:
+            self.log.debug(f"HTF Bias: {self._htf_bias}, Regime: {self._current_regime.regime if self._current_regime else 'N/A'}")
+    
+    def _on_mtf_bar(self, bar: Bar) -> None:
+        """Process M15 bar - Update structure zones."""
+        if len(self._mtf_bars) < 30:
+            return
+        
+        closes = np.array([b.close.as_double() for b in self._mtf_bars[-100:]])
+        highs = np.array([b.high.as_double() for b in self._mtf_bars[-100:]])
+        lows = np.array([b.low.as_double() for b in self._mtf_bars[-100:]])
+        opens = np.array([b.open.as_double() for b in self._mtf_bars[-100:]])
+        volumes = np.array([b.volume.as_double() for b in self._mtf_bars[-100:]])
+        
+        # Detect order blocks
+        if self._ob_detector:
+            self._mtf_order_blocks = self._ob_detector.detect(
+                opens, highs, lows, closes, volumes
+            )
+        
+        # Detect FVGs
+        if self._fvg_detector:
+            self._mtf_fvgs = self._fvg_detector.detect(
+                highs, lows, closes
+            )
+        
+        if self.config.debug_mode:
+            self.log.debug(f"MTF: {len(self._mtf_order_blocks)} OBs, {len(self._mtf_fvgs)} FVGs")
+    
+    def _on_ltf_bar(self, bar: Bar) -> None:
+        """Process M5 bar - Update execution-level analysis."""
+        pass  # Main signal checking done in _check_for_signal
+    
+    def _check_for_signal(self, bar: Bar) -> None:
+        """Check for trading signal and execute if valid."""
+        # Debug: Log periodically
+        if len(self._ltf_bars) % 500 == 0:
+            print(f"[SIGNAL] Checking at bar {len(self._ltf_bars)}, flat={self.is_flat}")
+        
+        # Safety checks
+        if not self.instrument:
+            logger.error("Cannot check signal: instrument not loaded")
+            return
+        
+        if not self._is_trading_allowed:
+            return
+        
+        # Reset per-bar news multiplier
+        self._news_size_mult = 1.0
+        
+        if not self.is_flat:
+            return  # Already in a position
+        
+        # Check session (only if enabled)
+        if self.config.use_session_filter and self._session_filter:
+            from datetime import datetime, timezone
+            # Use bar timestamp for backtesting, not current time!
+            bar_time = datetime.fromtimestamp(bar.ts_event / 1e9, tz=timezone.utc)
+            self._current_session = self._session_filter.get_session_info(bar_time)
+            
+            if not self._current_session.is_trading_allowed:
+                return
+        
+        # Check prop firm limits (only if enabled)
+        if self.config.prop_firm_enabled and self._prop_firm and not self._prop_firm.can_trade():
+            self._is_trading_allowed = False
+            return
+        
+        # News filter (uses bar timestamp for backtest realism)
+        news_window = None
+        if self.config.use_news_filter and self._news_calendar:
+            bar_time = datetime.fromtimestamp(bar.ts_event / 1e9, tz=timezone.utc)
+            news_window = self._news_calendar.check_news_window(now=bar_time)
+            if news_window.action == NewsTradeAction.BLOCK:
+                if self.config.debug_mode and len(self._ltf_bars) % 200 == 0:
+                    self.log.info(f"[NEWS] Blocked by news: {news_window.reason}")
+                return
+            # apply conservative size/score adjustments
+            self._news_size_mult = max(news_window.size_multiplier, 0.0)
+        
+        # Check spread
+        if self._current_spread > self.config.max_spread_points:
+            if len(self._ltf_bars) % 500 == 0:
+                print(f"[SIGNAL] Spread too high: {self._current_spread} > {self.config.max_spread_points}")
+            return
+        
+        # HTF alignment check (only if required)
+        if self.config.require_htf_align:
+            if self._htf_bias == MarketBias.RANGING:
+                if len(self._ltf_bars) % 500 == 0:
+                    print(f"[SIGNAL] HTF RANGING - blocked")
+                return
+        
+        # Calculate confluence score
+        if len(self._ltf_bars) % 500 == 0:
+            print(f"[SIGNAL] Calculating confluence at bar {len(self._ltf_bars)}...")
+        confluence_result = self._calculate_confluence(bar)
+        
+        if confluence_result is None:
+            if len(self._ltf_bars) % 500 == 0:
+                print(f"[SIGNAL] Confluence is None at bar {len(self._ltf_bars)}")
+            return
+        
+        news_score_adj = news_window.score_adjustment if news_window else 0
+        effective_score = confluence_result.total_score + news_score_adj
+        
+        if len(self._ltf_bars) % 500 == 0:
+            print(
+                f"[SIGNAL] Confluence: score={confluence_result.total_score:.1f} "
+                f"(news {news_score_adj:+}), effective={effective_score:.1f}, "
+                f"signal={confluence_result.direction}, threshold={self.config.execution_threshold}"
+            )
+        
+        self._last_confluence = confluence_result
+        
+        # Check if score meets threshold
+        if effective_score < self.config.execution_threshold:
+            if self.config.debug_mode:
+                self.log.debug(f"Score {effective_score:.1f} below threshold {self.config.execution_threshold}")
+            return
+        
+        # Determine signal direction
+        signal = confluence_result.direction
+        
+        if signal == SignalType.SIGNAL_NONE:
+            return
+        
+        # Calculate position size
+        sl_distance = self._calculate_sl_distance(bar, signal)
+        
+        if sl_distance <= 0:
+            return
+        
+        quantity = self._calculate_position_size(sl_distance)
+        
+        if quantity is None or float(quantity) <= 0:
+            return
+        
+        # Calculate SL and TP prices
+        from decimal import Decimal, ROUND_DOWN
+        
+        current_price = bar.close.as_double()
+        
+        if signal == SignalType.SIGNAL_BUY:
+            # Use Decimal for precise price calculations
+            current_decimal = Decimal(str(current_price))
+            sl_decimal = current_decimal - Decimal(str(sl_distance))
+            sl_price = Price(sl_decimal.quantize(Decimal('0.01'), rounding=ROUND_DOWN), precision=2)
+            
+            tp_distance = sl_distance * self.config.target_rr_ratio
+            tp_decimal = current_decimal + Decimal(str(tp_distance))
+            tp_price = Price(tp_decimal.quantize(Decimal('0.01'), rounding=ROUND_DOWN), precision=2)
+            
+            self.log.info(
+                f"BUY Signal: Score={confluence_result.total_score:.1f}, "
+                f"Quality={confluence_result.quality.name}, "
+                f"SL={sl_price}, TP={tp_price}"
+            )
+            self._enter_long(quantity, sl_price, tp_price)
+            
+        elif signal == SignalType.SIGNAL_SELL:
+            # Use Decimal for precise price calculations
+            current_decimal = Decimal(str(current_price))
+            sl_decimal = current_decimal + Decimal(str(sl_distance))
+            sl_price = Price(sl_decimal.quantize(Decimal('0.01'), rounding=ROUND_DOWN), precision=2)
+            
+            tp_distance = sl_distance * self.config.target_rr_ratio
+            tp_decimal = current_decimal - Decimal(str(tp_distance))
+            tp_price = Price(tp_decimal.quantize(Decimal('0.01'), rounding=ROUND_DOWN), precision=2)
+            
+            self.log.info(
+                f"SELL Signal: Score={confluence_result.total_score:.1f}, "
+                f"Quality={confluence_result.quality.name}, "
+                f"SL={sl_price}, TP={tp_price}"
+            )
+            self._enter_short(quantity, sl_price, tp_price)
+    
+    def _calculate_confluence(self, bar: Bar) -> Optional[ConfluenceResult]:
+        """Calculate confluence score from all analysis components."""
+        if not self._confluence_scorer:
+            print("[CONFLUENCE] Scorer not initialized")
+            return None
+        
+        try:
+            # Get LTF data
+            closes = np.array([b.close.as_double() for b in self._ltf_bars[-200:]])
+            highs = np.array([b.high.as_double() for b in self._ltf_bars[-200:]])
+            lows = np.array([b.low.as_double() for b in self._ltf_bars[-200:]])
+            volumes = np.array([b.volume.as_double() for b in self._ltf_bars[-200:]])
+            
+            if len(closes) < 50:
+                print(f"[CONFLUENCE] Not enough closes: {len(closes)}")
+                return None
+            
+            # Analyze individual components
+            structure_state = self._analyze_structure_component(highs, lows, closes)
+            footprint_score = self._analyze_footprint_component(bar)
+            sweeps = self._analyze_sweeps_component(highs, lows, closes)
+            amd_cycle = self._analyze_amd_component(highs, lows, closes, volumes)
+            mtf_score, mtf_aligned = self._analyze_mtf_component(structure_state)
+            
+            # Analyze regime on LTF if HTF regime not available
+            if self._current_regime is None and self._regime_detector and len(closes) >= 100:
+                self._current_regime = self._regime_detector.analyze(closes)
+            
+            # Detect order blocks on LTF (refresh every 20 bars)
+            if self._ob_detector and len(self._ltf_bars) % 20 == 0:
+                try:
+                    self._mtf_order_blocks = self._ob_detector.detect(highs, lows, closes, volumes)
+                except Exception as e:
+                    logger.debug(f"OB detection error: {e}")
+            
+            # Detect FVGs on LTF (refresh every 20 bars)
+            if self._fvg_detector and len(self._ltf_bars) % 20 == 0:
+                try:
+                    self._mtf_fvgs = self._fvg_detector.detect(highs, lows, closes)
+                except Exception as e:
+                    logger.debug(f"FVG detection error: {e}")
+            
+            # Calculate final confluence
+            if len(self._ltf_bars) % 100 == 0:
+                print(f"[CONFLUENCE] structure={structure_state is not None}, regime={self._current_regime is not None}, mtf_score={mtf_score:.1f}")
+            
+            # Get current session enum for weight profile
+            current_session_enum = TradingSession.SESSION_UNKNOWN
+            if self._current_session:
+                current_session_enum = self._current_session.session
+            
+            result = self._confluence_scorer.calculate_score(
+                structure_state=structure_state,
+                regime_analysis=self._current_regime,
+                session_info=self._current_session,
+                order_blocks=self._mtf_order_blocks,
+                fvgs=self._mtf_fvgs,
+                sweeps=sweeps,
+                amd_cycle=amd_cycle,
+                mtf_score=mtf_score,
+                mtf_aligned=mtf_aligned,
+                footprint_score=footprint_score,
+                current_session=current_session_enum,
+            )
+            
+            if len(self._ltf_bars) % 100 == 0:
+                if result:
+                    print(f"[CONFLUENCE] Result: score={result.total_score:.1f}, signal={result.direction}")
+                else:
+                    print(f"[CONFLUENCE] Result is None from scorer")
+            
+            return result
+            
+        except Exception as e:
+            print(f"[CONFLUENCE] Exception: {e}")
+            return None
+    
+    def _analyze_structure_component(self, highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> Optional[Any]:
+        """Analyze market structure component."""
+        if not self._structure_analyzer:
+            return None
+        
+        try:
+            return self._structure_analyzer.analyze(highs, lows, closes)
+        except Exception as e:
+            logger.error(f"Structure analysis failed: {e}")
+            return None
+    
+    def _analyze_footprint_component(self, bar: Bar) -> float:
+        """Analyze footprint/order flow component."""
+        if not self._footprint_analyzer or not self.config.use_footprint:
+            return 0.0
+        
+        try:
+            fp_result = self._footprint_analyzer.analyze_bar(
+                bar.open.as_double(),
+                bar.high.as_double(),
+                bar.low.as_double(),
+                bar.close.as_double(),
+                int(bar.volume.as_double()),
+            )
+            return fp_result.score if fp_result else 0.0
+        except Exception as e:
+            logger.error(f"Footprint analysis failed: {e}")
+            return 0.0
+    
+    def _analyze_sweeps_component(self, highs: np.ndarray, lows: np.ndarray, closes: np.ndarray) -> List[Any]:
+        """Analyze liquidity sweeps component."""
+        if not self._sweep_detector:
+            return []
+        
+        try:
+            # detect() returns Tuple[List[LiquidityPool], List[LiquiditySweep]]
+            pools, sweeps = self._sweep_detector.detect(highs, lows, closes)
+            return sweeps
+        except Exception as e:
+            logger.error(f"Sweep detection failed: {e}")
+            return []
+    
+    def _analyze_amd_component(
+        self, 
+        highs: np.ndarray, 
+        lows: np.ndarray, 
+        closes: np.ndarray, 
+        volumes: np.ndarray
+    ) -> Optional[Any]:
+        """Analyze AMD cycle component."""
+        if not self._amd_tracker:
+            return None
+        
+        try:
+            return self._amd_tracker.analyze(highs, lows, closes, volumes)
+        except Exception as e:
+            logger.error(f"AMD tracking failed: {e}")
+            return None
+    
+    def _analyze_mtf_component(self, structure_state: Optional[Any]) -> tuple[float, bool]:
+        """Analyze multi-timeframe alignment component."""
+        if not self._mtf_manager or not self.config.use_mtf:
+            return 0.0, False
+        
+        try:
+            mtf_result = self._mtf_manager.analyze(
+                htf_bias=self._htf_bias,
+                mtf_order_blocks=self._mtf_order_blocks,
+                mtf_fvgs=self._mtf_fvgs,
+                ltf_structure=structure_state,
+            )
+            return mtf_result.confluence_score, mtf_result.is_aligned
+        except Exception as e:
+            logger.error(f"MTF analysis failed: {e}")
+            return 0.0, False
+    
+    def _calculate_sl_distance(self, bar: Bar, signal: SignalType) -> float:
+        """Calculate stop loss distance based on structure."""
+        if not self._structure_analyzer:
+            # Fallback to ATR-based SL
+            closes = np.array([b.close.as_double() for b in self._ltf_bars[-20:]])
+            highs = np.array([b.high.as_double() for b in self._ltf_bars[-20:]])
+            lows = np.array([b.low.as_double() for b in self._ltf_bars[-20:]])
+            
+            tr = np.maximum(highs - lows, np.abs(highs - np.roll(closes, 1)))
+            tr = np.maximum(tr, np.abs(lows - np.roll(closes, 1)))
+            atr = np.mean(tr[1:])
+            
+            return atr * 1.5
+        
+        # Structure-based SL: place behind last swing
+        last_low = self._structure_analyzer.get_last_swing_low()
+        last_high = self._structure_analyzer.get_last_swing_high()
+        
+        if signal == SignalType.SIGNAL_BUY and last_low > 0:
+            # SL below last swing low
+            return bar.close.as_double() - last_low + (bar.close.as_double() * 0.0005)
+        
+        elif signal == SignalType.SIGNAL_SELL and last_high > 0:
+            # SL above last swing high
+            return last_high - bar.close.as_double() + (bar.close.as_double() * 0.0005)
+        
+        # Fallback to ATR
+        closes = np.array([b.close.as_double() for b in self._ltf_bars[-20:]])
+        highs = np.array([b.high.as_double() for b in self._ltf_bars[-20:]])
+        lows = np.array([b.low.as_double() for b in self._ltf_bars[-20:]])
+        
+        tr = np.maximum(highs - lows, np.abs(highs - np.roll(closes, 1)))
+        tr = np.maximum(tr, np.abs(lows - np.roll(closes, 1)))
+        atr = np.mean(tr[1:])
+        
+        return atr * 1.5
+    
+    def _calculate_position_size(self, sl_distance: float) -> Optional[Quantity]:
+        """Calculate position size based on risk and regime."""
+        if not self._position_sizer:
+            # Default sizing
+            risk_amount = self.config.account_balance * float(self.config.risk_per_trade) / 100
+            risk_amount *= getattr(self, "_news_size_mult", 1.0)
+            point_value = 1.0  # Gold point value (adjust per broker)
+            lots = risk_amount / (sl_distance * point_value)
+            return Quantity.from_str(str(round(max(0.01, lots), 2)))
+        
+        # Regime-adaptive sizing
+        regime_mult = 1.0
+        if self._current_regime:
+            regime_mult = self._current_regime.size_multiplier
+        
+        # Calculate base size
+        news_mult = getattr(self, "_news_size_mult", 1.0)
+        risk_pct = float(self.config.risk_per_trade) * news_mult
+        
+        # Use PositionSizer.calculate_lot
+        position_size = self._position_sizer.calculate_lot(
+            balance=self.config.account_balance,
+            risk_percent=risk_pct,
+            stop_loss_pips=sl_distance,  # Convert points to pips if needed
+            regime_multiplier=regime_mult,
+        )
+        
+        if position_size <= 0:
+            return None
+        
+        return Quantity.from_str(str(round(max(0.01, position_size), 2)))
+    
+    def on_quote_tick(self, tick: QuoteTick) -> None:
+        """Track spread for spread filter."""
+        super().on_quote_tick(tick)
+        
+        spread = float(tick.ask_price - tick.bid_price)
+        if self.instrument:
+            self._current_spread = int(spread / self.instrument.price_increment)

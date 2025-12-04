@@ -1,0 +1,32 @@
+[
+  {
+    "segment": "GLOBAL",
+    "success": false,
+    "error": "'TickBacktester' object has no attribute 'closed_trades'"
+  },
+  {
+    "segment": "REGIME_FILTER",
+    "success": false,
+    "error": "'TickBacktester' object has no attribute 'closed_trades'"
+  },
+  {
+    "segment": "SESSION_FILTER",
+    "success": false,
+    "error": "'TickBacktester' object has no attribute 'closed_trades'"
+  },
+  {
+    "segment": "REGIME+SESSION",
+    "success": false,
+    "error": "'TickBacktester' object has no attribute 'closed_trades'"
+  },
+  {
+    "segment": "TRENDING",
+    "success": false,
+    "error": "Parquet must contain bid/ask or mid_price columns"
+  },
+  {
+    "segment": "TRENDING_OVERLAP",
+    "success": false,
+    "error": "Parquet must contain bid/ask or mid_price columns"
+  }
+]

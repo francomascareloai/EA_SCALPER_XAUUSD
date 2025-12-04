@@ -27,6 +27,7 @@ Cada sessao: 1 tarefa → Construir → Testar → Proxima.
 | Codigo/MQL5/Python/Review          | ⚒️ FORGE      | "Forge", /codigo, /review  |
 | Backtest/WFA/Monte Carlo/GO-NOGO   | 🔮 ORACLE     | "Oracle", /backtest, /wfa  |
 | Pesquisa/Papers/ML Research        | 🔍 ARGUS      | "Argus", /pesquisar        |
+| NautilusTrader/Migration/Python    | 🐙 NAUTILUS   | "Nautilus", /migrate, /strategy |
 
 ### Handoffs
 
@@ -36,6 +37,9 @@ CRUCIBLE → ORACLE:   "Validar setup estatisticamente"
 ARGUS → FORGE:       "Implementar pattern encontrado"
 FORGE → ORACLE:      "Validar codigo com backtest"
 ORACLE → SENTINEL:   "Calcular sizing para go-live"
+FORGE → NAUTILUS:    "Migrar modulo MQL5 para NautilusTrader"
+NAUTILUS → ORACLE:   "Validar backtest Python/Nautilus"
+NAUTILUS → FORGE:    "Preciso referencia do codigo MQL5"
 ```
 
 ---
@@ -44,12 +48,14 @@ ORACLE → SENTINEL:   "Calcular sizing para go-live"
 
 | Preciso de...              | Onde encontrar                              |
 |----------------------------|---------------------------------------------|
-| **Estrategia XAUUSD**      | `.factory/skills/crucible-xauusd-expert.md` |
-| **Risk/FTMO**              | `.factory/skills/sentinel-risk-guardian.md` |
-| **Codigo MQL5/Python**     | `.factory/skills/forge-code-architect.md`   |
-| **Backtest/Validacao**     | `.factory/skills/oracle-backtest-commander.md` |
-| **Pesquisa/Papers**        | `.factory/skills/argus-research-analyst.md` |
+| **Estrategia XAUUSD**      | `.factory/droids/crucible-gold-strategist.md` |
+| **Risk/FTMO**              | `.factory/droids/sentinel-ftmo-guardian.md` |
+| **Codigo MQL5/Python**     | `.factory/droids/forge-mql5-architect.md`   |
+| **Backtest/Validacao**     | `.factory/droids/oracle-backtest-commander.md` |
+| **Pesquisa/Papers**        | `.factory/droids/argus-quant-researcher.md` |
+| **NautilusTrader/Migration** | `.factory/droids/nautilus-trader-architect.md` |
 | **Plano de Implementacao** | `DOCS/02_IMPLEMENTATION/PLAN_v1.md`         |
+| **Plano Nautilus**         | `DOCS/02_IMPLEMENTATION/NAUTILUS_MIGRATION_MASTER_PLAN.md` |
 | **Referencia tecnica**     | `DOCS/06_REFERENCE/CLAUDE_REFERENCE.md`     |
 | **Index de DOCS**          | `DOCS/_INDEX.md`                            |
 | **Arquitetura modulos**    | `MQL5/Include/EA_SCALPER/INDEX.md`          |
@@ -92,6 +98,9 @@ DOCS/
 | 🔍 **ARGUS** | Paper summaries | `DOCS/03_RESEARCH/PAPERS/` |
 | 🔍 **ARGUS** | Research findings | `DOCS/03_RESEARCH/FINDINGS/` |
 | 🔍 **ARGUS** | Repo references | `DOCS/03_RESEARCH/REPOS/REPO_INDEX.md` |
+| 🐙 **NAUTILUS** | Migration code | `nautilus_gold_scalper/src/` |
+| 🐙 **NAUTILUS** | Migration progress | `DOCS/02_IMPLEMENTATION/NAUTILUS_MIGRATION_MASTER_PLAN.md` |
+| 🐙 **NAUTILUS** | Backtest scripts | `nautilus_gold_scalper/scripts/` |
 | **ALL** | Progress updates | `DOCS/02_IMPLEMENTATION/PROGRESS.md` |
 | **ALL** | Party Mode sessions | `DOCS/01_AGENTS/PARTY_MODE/` |
 
@@ -331,6 +340,38 @@ ERROS COMUNS:
 ├── "undeclared identifier" → Import faltando
 ├── "unexpected token" → Erro de sintaxe
 └── "closing quote" → String mal formatada
+```
+
+---
+
+## 6.6 DOCUMENT HYGIENE (EDIT > CREATE)
+
+```
+REGRA DE OURO: EDITAR > CRIAR
+
+ANTES de criar qualquer documento:
+1. Glob/Grep buscar docs existentes com topico similar
+2. Se existir documento relacionado → EDITAR/ATUALIZAR ele
+3. Se NAO existir → Criar novo
+
+WORKFLOW OBRIGATORIO:
+├── BUSCAR: Glob "DOCS/**/*[TOPIC]*.md" antes de criar
+├── SE ENCONTRAR: EDITAR documento existente (adicionar secao, atualizar data)
+├── SE NAO ENCONTRAR: Criar novo
+└── CONSOLIDAR: Informacoes relacionadas no MESMO arquivo
+
+EXEMPLOS:
+├── Novo finding sobre Order Flow? → Buscar *ORDER_FLOW*.md e EDITAR
+├── Novo backtest report? → Atualizar PROGRESS.md ou doc existente
+├── Novo research? → Consolidar em finding existente se possivel
+└── Novo GO/NO-GO? → Atualizar o mais recente, NAO criar outro
+
+NUNCA FAZER:
+├── ❌ Criar 5 arquivos separados para findings relacionados
+├── ❌ Criar novo report se anterior pode ser atualizado
+├── ❌ Criar FINDING_V1.md, FINDING_V2.md, FINDING_V3.md
+├── ❌ Criar documento sem verificar se existe similar
+└── ❌ Ignorar _INDEX.md existentes (editar, nao criar novo index)
 ```
 
 ---

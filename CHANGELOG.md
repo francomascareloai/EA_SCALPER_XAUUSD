@@ -2,6 +2,37 @@
 
 ## 📅 CONTROLE DE VERSÃO E ALTERAÇÕES
 
+### [2025-12-03] - NautilusTrader Score Calculation & Filter Bug Fixes
+
+#### Corrigido (confluence_scorer.py)
+- **SCORE_SCALE_FACTOR = 5.0**: Session weights somam ~1.0, causando base_score max ~15-20 ao invés de 100. Fator de escala normaliza scores para range 0-100
+- **Sequence penalty para regime ausente**: `regime_analysis == None` retornava -10 penalty (matando todos scores). Agora só REGIME_RANDOM_WALK explícito retorna -10
+- **Removido `* 100` de cada componente**: Estava causando inflação de scores (500-1000 antes de clamp)
+
+#### Corrigido (gold_scalper_strategy.py)
+- **Session filter usava datetime.now()**: Em backtesting, session filter usava tempo real ao invés do timestamp do bar. Agora usa `bar.ts_event`
+- **Regime detector só rodava em HTF bars**: Adicionado detecção de regime em LTF quando HTF não disponível
+- **OB/FVG detection faltando**: Adicionado detecção de Order Blocks e FVGs em LTF (refresh a cada 20 bars)
+- **current_session não passado ao scorer**: Adicionado passagem de `TradingSession` enum para session weight profile
+- **PositionSizer.calculate()**: Método não existia - corrigido para usar `calculate_lot()` com parâmetros corretos
+
+#### Corrigido (run_backtest.py)
+- **Tick data path incorreto**: Estava buscando arquivo errado, fixado para usar parquet direto
+- **Filters desabilitados por padrão**: Habilitado session_filter=True e regime_filter=True
+
+#### Resultados com Filtros Habilitados (10 dias Out-2024)
+- Sem filtros: -$374 (perda)
+- Com filtros: -$117 (perda reduzida 69%)
+- 20 trades: 8W/12L (40% win rate)
+
+#### Arquivos Modificados
+- `nautilus_gold_scalper/src/signals/confluence_scorer.py`
+- `nautilus_gold_scalper/src/strategies/base_strategy.py`
+- `nautilus_gold_scalper/src/strategies/gold_scalper_strategy.py`
+- `nautilus_gold_scalper/scripts/run_backtest.py`
+
+---
+
 ### [2025-08-14] - Classificação MQL4 Concluída
 
 #### Adicionado

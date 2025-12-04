@@ -1,0 +1,45 @@
+{
+  "timestamp": "20251202_021344",
+  "years": [
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "global": {
+    "total_trades": 406,
+    "win_rate": 0.30049261083743845,
+    "profit_factor": 0.643474864878967,
+    "max_drawdown": 0.48656948488262286,
+    "total_return": -0.48656948488262236,
+    "sqn": -4.385969267998777
+  },
+  "session_filter": {
+    "total_trades": 437,
+    "win_rate": 0.3112128146453089,
+    "profit_factor": 0.6734953669422405,
+    "max_drawdown": 0.46888696510340655,
+    "total_return": -0.4688869651034061,
+    "sqn": -4.075390375157183,
+    "kelly": {
+      "segment": "SESSION_FILTER",
+      "n_trades": 437,
+      "win_rate": 0.3112128146453089,
+      "avg_win": 711.1717808144259,
+      "avg_loss": 477.1031850534971,
+      "payoff_ratio": 1.4906037165412822,
+      "kelly_full": -0.15087323660439297,
+      "kelly_half": 0,
+      "kelly_quarter": 0,
+      "recommendation": "AVOID"
+    },
+    "convexity": {
+      "asymmetry": 1.4906037165412822,
+      "skewness": 0.8154585313067845,
+      "tail_ratio": 1.4960002579069067,
+      "gain_to_pain": 0.6734953669422405,
+      "convexity_score": 50
+    }
+  }
+}

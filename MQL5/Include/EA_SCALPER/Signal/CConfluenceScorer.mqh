@@ -863,7 +863,7 @@ CConfluenceScorer::CConfluenceScorer()
    
    // Bayesian parameters (calibrated defaults)
    m_bayes.SetDefaults();
-   m_use_bayesian = true;          // Enable Bayesian by default
+   m_use_bayesian = false;         // Disable Bayesian (causes score=0 when factors < 60)
    
    // Thresholds
    m_min_score = TIER_B_MIN;       // 70 minimum

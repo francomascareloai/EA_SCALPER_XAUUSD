@@ -10,7 +10,9 @@
 
 | Preciso de... | Vá para |
 |---------------|---------|
-| Plano de implementação | `02_IMPLEMENTATION/PLAN_v1.md` |
+| **🐙 NAUTILUS MIGRATION** | `02_IMPLEMENTATION/NAUTILUS_MIGRATION_MASTER_PLAN.md` |
+| Código Nautilus Python | `nautilus_gold_scalper/src/` |
+| Plano de implementação MQL5 | `02_IMPLEMENTATION/PLAN_v1.md` |
 | Progresso atual | `02_IMPLEMENTATION/PROGRESS.md` |
 | Deliverables de fase | `02_IMPLEMENTATION/PHASES/PHASE_N/` |
 | Audit do código | `02_IMPLEMENTATION/PHASES/PHASE_0_AUDIT/` |
@@ -37,6 +39,7 @@
 | ⚒️ FORGE | Code | `02_IMPLEMENTATION/PHASES/`, `05_GUIDES/` |
 | 🔮 ORACLE | Validation | `04_REPORTS/BACKTESTS/`, `04_REPORTS/VALIDATION/` |
 | 🔍 ARGUS | Research | `03_RESEARCH/PAPERS/`, `03_RESEARCH/FINDINGS/` |
+| 🐙 NAUTILUS | Migration | `nautilus_gold_scalper/src/` |
 | ALL | Progress | `02_IMPLEMENTATION/PROGRESS.md` |
 
 ---

@@ -4,5 +4,75 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		// Workspace-level settings (herdam de .vscode/settings.json)
+		// Adicionar overrides específicos aqui se necessário
+	},
+	"extensions": {
+		"recommendations": [
+			// Python Essentials
+			"ms-python.python",
+			"ms-python.vscode-pylance",
+			"ms-python.debugpy",
+			"charliermarsh.ruff",
+			"kevinrose.vsc-python-indent",
+
+			// Jupyter/Data Science
+			"ms-toolsai.jupyter",
+			"ms-toolsai.jupyter-keymap",
+			"ms-toolsai.jupyter-renderers",
+			"ms-toolsai.vscode-jupyter-cell-tags",
+
+			// MQL5
+			"l-i-v.mql-tools",
+			"nicholishen.mql-extension-pack",
+			"sibvic.profitrobots-mq5-snippets",
+
+			// Testing
+			"littlefoxteam.vscode-python-test-adapter",
+			"cameron.vscode-pytest",
+
+			// Git
+			"eamodio.gitlens",
+
+			// Productivity
+			"streetsidesoftware.code-spell-checker",
+			"usernamehw.errorlens"
+		],
+		"unwantedRecommendations": []
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Python: Current File",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${file}",
+				"console": "integratedTerminal",
+				"justMyCode": true
+			},
+			{
+				"name": "Python: Nautilus Backtest",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/nautilus_gold_scalper/scripts/run_backtest.py",
+				"console": "integratedTerminal",
+				"justMyCode": false,
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}/nautilus_gold_scalper/src"
+				}
+			},
+			{
+				"name": "Python: Pytest",
+				"type": "debugpy",
+				"request": "launch",
+				"module": "pytest",
+				"args": ["-v", "--tb=short"],
+				"console": "integratedTerminal",
+				"justMyCode": false
+			}
+		],
+		"compounds": []
+	}
 }

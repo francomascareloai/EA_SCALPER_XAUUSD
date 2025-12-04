@@ -41,8 +41,14 @@
 │  LOCALIZAÇÃO: Python_Agent_Hub/ml_pipeline/data/                           │
 │                                                                             │
 │  TICK DATA (usar para backtest de alta precisão):                          │
-│  ├── XAUUSD_ftmo_all_desde_2003.csv     │ 24.8 GB │ 2003-2025 │ PRINCIPAL  │
-│  └── XAUUSD_ftmo_2020_ticks_dukascopy.csv │ 12.1 GB │ 2020-2025 │ BACKUP   │
+│  ├── XAUUSD_ftmo_all_desde_2003.csv                │ 24.8 GB │ 2003-2025 │ PRINCIPAL │
+│  ├── CSV(comSPREAD)2020-2025XAUUSD_ftmo-TICK-No Session.csv │ 15.0 GB │ 2020-2025 │ COM SPREAD │
+│  └── XAUUSD_ftmo_2020_ticks_dukascopy.csv          │ 12.1 GB │ 2020-2025 │ MAiS CURTo   │
+│                                                                              │
+│  PARQUET GERADO (data/processed/ticks_YYYY.parquet):                         │
+│  - Colunas: timestamp (ns), bid, ask, volume, spread (cents), mid_price      │
+│  - Leitura por ano/mês (evitar lookahead): 2020-2024 = treino/validação; 2025 = holdout │
+│  - Spread no CSV está em USD; no Parquet está em cents (calculado como (Ask-Bid)*100)   │
 │                                                                             │
 │  BAR DATA (usar para validação MTF e features):                            │
 │  ├── Bars_2020-2025XAUUSD_ftmo-M5-No Session.csv  │ 22.6 MB │ M5          │
@@ -59,6 +65,16 @@
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## POLÍTICA DE JANELAS (ATUALIZADO)
+
+- Holdout futuro: 2025 exclusivo para validação final (não treinar/calibrar).
+- Iteração rápida: 6–9 meses recentes (ex.: 2024-06 a 2025-02) para smoke de lógica/latência.
+- Calibração principal: 2023–2024 (2 anos) para parâmetros iniciais.
+- WFA robusto: 2020–2024 com janelas rolling (ex.: 18m treino / 6m teste) cobrindo regimes COVID/guerra/pico 2024.
+- Unidade de spread: Parquets em cents (Ask-Bid)*100; scripts devem usar essa unidade ou recalcular de bid/ask.
 
 ---
 
