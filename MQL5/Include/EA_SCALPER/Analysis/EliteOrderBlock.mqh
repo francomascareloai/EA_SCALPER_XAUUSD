@@ -121,13 +121,11 @@ bool CEliteOrderBlockDetector::DetectEliteOrderBlocks()
     // Reset current order blocks count
     m_ob_count = 0;
     
-    // Get market data for analysis (dynamic array for MqlRates)
+    // Get market data for analysis (dynamic buffer for MqlRates)
     MqlRates rates[];
-    ArrayResize(rates, 100);
+    ArraySetAsSeries(rates, true);
     if(CopyRates(_Symbol, PERIOD_M15, 0, 100, rates) <= 0)
         return false;
-        
-    ArraySetAsSeries(rates, true);
     
     // Analyze each potential order block formation
     for(int i = 5; i < 95; i++)
@@ -442,7 +440,7 @@ double CEliteOrderBlockDetector::CalculateConfluenceScore(const SAdvancedOrderBl
 bool CEliteOrderBlockDetector::IsInPremiumZone(double price)
 {
     MqlRates rates[];
-    ArrayResize(rates, 100);
+    ArraySetAsSeries(rates, true);
     if(CopyRates(_Symbol, PERIOD_H1, 0, 100, rates) <= 0) return false;
     double highest = rates[0].high;
     double lowest = rates[0].low;

@@ -1,6 +1,12 @@
 Bugfix Index (EA_SCALPER_XAUUSD)
 ================================
 
+2025-11-28 (FORGE risk/compliance hardening)
+- RiskManager: Daily reset now keyed to ET day boundary (configurable offset, default -5) instead of broker midnight, aligning with Apex/FTMO rules.
+- RiskManager: Apex hard cutoff enforced at 16:55 ET (configurable minute) with pre-trade block + immediate flatten; risk checks now run before spread gate so drawdown resets aren't skipped in high-spread periods.
+- RiskManager: CloseAllPositions now flattens every open position (all symbols) on breach/cutoff to ensure account-level compliance.
+- EliteOrderBlock: Removed ArrayResize on fixed buffers to silence static array warning during compilation.
+
 2025-12-03 (FORGE - Validation Bug Fixes from ORACLE Investigation)
 ====================================================================
 BUG FIX: Corrected validation metrics that showed impossible 1,075,000% DD

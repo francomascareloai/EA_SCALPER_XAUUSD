@@ -71,13 +71,15 @@ private:
    string            m_gv_hwm_key;               // Persist high-water mark
    string            m_gv_halt_key;              // Persist halt latch
    string            m_gv_hard_breach_key;       // Persist total hard breach latch
+   int               m_et_offset_hours;          // ET offset for Apex cutoff/reset
+   int               m_last_day_of_year_et;      // Track day boundary in ET
 
 public:
                      CFTMO_RiskManager();
                     ~CFTMO_RiskManager();
 
    //--- Initialization
-   bool              Init(double risk_per_trade, double max_daily_loss, double max_total_loss, int max_trades, double soft_stop, double regime_multiplier = 1.0);
+   bool              Init(double risk_per_trade, double max_daily_loss, double max_total_loss, int max_trades, double soft_stop, double regime_multiplier = 1.0, int et_offset_hours = -5);
 
    //--- Core Logic
    void              OnTick();
@@ -90,6 +92,7 @@ public:
    {
       m_regime_multiplier = MathMin(MathMax(multiplier, 0.0), 3.0);
    }
+   void              FlattenAllPositions() { CloseAllPositions(); }
    
    //--- Adaptive Kelly methods (Phase 1 improvement)
    void              SetUseAdaptiveKelly(bool use) { m_use_adaptive_kelly = use; }
@@ -100,6 +103,7 @@ public:
    //--- GENIUS v1.0: Adaptive Capital Curve methods
    void              SetUseGeniusSizing(bool use) { m_use_genius_sizing = use; }
    void              SetGMTOffset(int offset) { m_gmt_offset = offset; }
+   void              SetETOffset(int offset) { m_et_offset_hours = offset; }
    double            CalculateGeniusRisk();              // MASTER: 6-factor adaptive risk%
    double            GetSessionMultiplier();             // Session-aware scaling
    double            GetMomentumMultiplier();            // Win/loss streak scaling
@@ -119,6 +123,7 @@ public:
    bool              IsTotalHardBreached() const { return m_total_hard_breached; }
    ulong             GetLastDDCheckMicroseconds() const { return m_last_dd_check_us; }
    int               GetTradesToday() const { return m_trades_today; }
+   bool              IsAfterCutoffET(int cutoff_hour_et = 16, int cutoff_minute_et = 55) const;
    
    //--- Setters
    void              SetSlippagePoints(int slippage) { m_slippage_points = MathMax(slippage, 10); }
@@ -128,6 +133,8 @@ public:
    void              CheckDrawdownLimits();
    void              CloseAllPositions();
    void              PersistHaltState();
+   int               GetETDayOfYear() const;
+   datetime          GetETNow() const;
 };
 
 //+------------------------------------------------------------------+
@@ -170,7 +177,9 @@ CFTMO_RiskManager::CFTMO_RiskManager() :
    m_gv_daily_key("EA_SCALPER_DAILY_START_" + _Symbol),
    m_gv_hwm_key("EA_SCALPER_HWM_" + _Symbol),
    m_gv_halt_key("EA_SCALPER_HALT_" + _Symbol),
-   m_gv_hard_breach_key("EA_SCALPER_HARD_" + _Symbol)
+   m_gv_hard_breach_key("EA_SCALPER_HARD_" + _Symbol),
+   m_et_offset_hours(-5),
+   m_last_day_of_year_et(-1)
 {
 }
 
@@ -184,7 +193,7 @@ CFTMO_RiskManager::~CFTMO_RiskManager()
 //+------------------------------------------------------------------+
 //| Initialization                                                   |
 //+------------------------------------------------------------------+
-bool CFTMO_RiskManager::Init(double risk_per_trade, double max_daily_loss, double max_total_loss, int max_trades, double soft_stop, double regime_multiplier/*=1.0*/)
+bool CFTMO_RiskManager::Init(double risk_per_trade, double max_daily_loss, double max_total_loss, int max_trades, double soft_stop, double regime_multiplier/*=1.0*/, int et_offset_hours/*=-5*/)
 {
    m_risk_per_trade_percent = risk_per_trade;
    m_max_daily_loss_percent = max_daily_loss;
@@ -192,6 +201,7 @@ bool CFTMO_RiskManager::Init(double risk_per_trade, double max_daily_loss, doubl
    m_max_trades_per_day = max_trades;
    m_soft_stop_percent = soft_stop;
    m_regime_multiplier = MathMin(MathMax(regime_multiplier, 0.0), 3.0); // allow 0 to block trades, cap 3x
+   m_et_offset_hours = et_offset_hours;
 
    m_initial_equity = AccountInfoDouble(ACCOUNT_EQUITY);
    if(m_initial_equity <= 0)
@@ -240,6 +250,7 @@ bool CFTMO_RiskManager::Init(double risk_per_trade, double max_daily_loss, doubl
    }
    
    m_last_day_check = TimeCurrent();
+   m_last_day_of_year_et = GetETDayOfYear();
 
    m_new_trades_paused = false;
    return true;
@@ -263,18 +274,42 @@ void CFTMO_RiskManager::OnNewDay()
 }
 
 //+------------------------------------------------------------------+
+//| Helper: current ET time                                          |
+//+------------------------------------------------------------------+
+datetime CFTMO_RiskManager::GetETNow() const
+{
+   // Use GMT to avoid broker offset drift; ET offset configurable for DST
+   return TimeGMT() + m_et_offset_hours * 3600;
+}
+
+int CFTMO_RiskManager::GetETDayOfYear() const
+{
+   MqlDateTime dt;
+   TimeToStruct(GetETNow(), dt);
+   return dt.day_of_year;
+}
+
+bool CFTMO_RiskManager::IsAfterCutoffET(int cutoff_hour_et/*=16*/, int cutoff_minute_et/*=55*/) const
+{
+   MqlDateTime dt;
+   TimeToStruct(GetETNow(), dt);
+   int minutes_now = dt.hour * 60 + dt.min;
+   int minutes_cutoff = cutoff_hour_et * 60 + cutoff_minute_et;
+   return minutes_now >= minutes_cutoff;
+}
+
+//+------------------------------------------------------------------+
 //| Check for New Day (Reset Daily Stats)                            |
 //+------------------------------------------------------------------+
 void CFTMO_RiskManager::CheckNewDay()
 {
    datetime current_time = TimeCurrent();
-   MqlDateTime dt_struct;
-   TimeToStruct(current_time, dt_struct);
-   
-   MqlDateTime last_dt_struct;
-   TimeToStruct(m_last_day_check, last_dt_struct);
+   int current_day_et = GetETDayOfYear();
 
-   if(dt_struct.day != last_dt_struct.day)
+   if(m_last_day_of_year_et < 0)
+      m_last_day_of_year_et = current_day_et;
+
+   if(current_day_et != m_last_day_of_year_et)
    {
       // New Day Detected
       m_daily_start_equity = AccountInfoDouble(ACCOUNT_EQUITY);
@@ -296,6 +331,7 @@ void CFTMO_RiskManager::CheckNewDay()
       }
       
       m_last_day_check = current_time;
+      m_last_day_of_year_et = current_day_et;
       Print("RiskManager: New Day Reset. Daily Start Equity: ", m_daily_start_equity);
    }
 }
@@ -865,9 +901,6 @@ void CFTMO_RiskManager::CloseAllPositions()
    {
       ulong ticket = PositionGetTicket(i);
       if(!PositionSelectByTicket(ticket))
-         continue;
-      
-      if(PositionGetString(POSITION_SYMBOL) != _Symbol)
          continue;
       
       // Retry loop for robustness

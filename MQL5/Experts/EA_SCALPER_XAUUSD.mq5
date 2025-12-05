@@ -100,6 +100,9 @@ input double   InpMaxDailyLoss      = 5.0;      // Max Daily Loss (%)
 input double   InpSoftStop          = 4.0;      // Soft Stop Level (%)
 input double   InpMaxTotalLoss      = 10.0;     // Max Total Loss (%)
 input int      InpMaxTradesPerDay   = 20;       // Max Trades Per Day
+input int      InpETOffset          = -5;       // ET offset vs GMT (Apex cutoff/reset)
+input bool     InpEnforceApexCutoff = true;     // Enforce Apex hard close at 16:55 ET
+input int      InpApexCutoffMinute  = 55;       // Minute of 16:xx ET to start flattening
 
 
 //--- Input Parameters: Scoring Engine
@@ -125,8 +128,8 @@ input bool     InpDisableFridayClose = true;    // Disable Friday Close (for bac
 
 //--- Input Parameters: News Filter
 input group "=== News Filter ==="
-input bool     InpNewsFilterEnabled = true;     // Enable News Filter
-input bool     InpBlockHighImpact   = true;     // Block High-Impact News
+input bool     InpNewsFilterEnabled = false;    // Enable News Filter (DEFAULT OFF for faster BT)
+input bool     InpBlockHighImpact   = false;    // Block High-Impact News
 input bool     InpBlockMediumImpact = false;    // Block Medium-Impact News
 
 //--- Input Parameters: Machine Learning / Safeguards
@@ -159,9 +162,9 @@ input bool     InpRequireLTFConfirm = false;    // Require M5 Confirmation (DEFA
 //--- Input Parameters: Mode/Boosts
 input group "=== Mode Settings ==="
 input ENUM_ModePreset InpModePreset = MODE_CUSTOM; // Quick preset selector (CUSTOM = manual)
-input bool     InpAggressiveMode    = true;     // Enable aggressive boosts (bandit/risk boost)
-input bool     InpUseFootprintBoost = true;     // Use footprint veto/boost
-input bool     InpUseBanditContext  = true;     // Use contextual bandit-lite gating
+input bool     InpUseFootprintBoost = false;    // Use footprint veto/boost (DEFAULT OFF)
+input bool     InpUseBanditContext  = false;    // Use contextual bandit-lite gating (DEFAULT OFF)
+input bool     InpAggressiveMode    = false;    // Enable aggressive boosts (DEFAULT OFF)
 
 //--- Global Objects (Core)
 CFTMO_RiskManager    g_RiskManager;
@@ -344,7 +347,7 @@ int OnInit()
    ApplyModePreset();
    
    // 1. Initialize Risk Manager (FTMO Compliance)
-   if(!g_RiskManager.Init(g_ModeCfg.risk_per_trade, g_ModeCfg.max_daily_loss, g_ModeCfg.max_total_loss, g_ModeCfg.max_trades_per_day, g_ModeCfg.soft_stop))
+   if(!g_RiskManager.Init(g_ModeCfg.risk_per_trade, g_ModeCfg.max_daily_loss, g_ModeCfg.max_total_loss, g_ModeCfg.max_trades_per_day, g_ModeCfg.soft_stop, 1.0, InpETOffset))
    {
       Print("Critical Error: Risk Manager Initialization Failed!");
       return(INIT_FAILED);
@@ -467,8 +470,11 @@ int OnInit()
    g_Confluence.AttachOBDetector(g_ScoringEngine.GetOBDetector());
    g_Confluence.AttachFVGDetector(&g_FVG);
    
-   // v3.31: Attach MTF and Footprint (FORGE genius upgrade)
-   g_Confluence.AttachMTFManager(&g_MTF);
+   // v3.31: Attach MTF and Footprint (FORGE genius upgrade) - only attach MTF when enabled
+   if(g_ModeCfg.use_mtf)
+      g_Confluence.AttachMTFManager(&g_MTF);
+   else
+      g_Confluence.AttachMTFManager(NULL);
    g_Confluence.AttachFootprint(&g_Footprint);
    
    g_Confluence.SetMinScore(70);       // Tier B minimum
@@ -559,6 +565,19 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+   // Always refresh risk state (daily reset / drawdown monitoring) even if spread gate blocks
+   g_RiskManager.OnTick();
+
+   // Apex cutoff: flatten and block new trades after 16:55 ET
+   if(InpEnforceApexCutoff && g_RiskManager.IsAfterCutoffET(16, InpApexCutoffMinute))
+   {
+      if(g_TradeManager.HasActiveTrade())
+         g_TradeManager.CloseTrade("Apex cutoff 16:55 ET");
+      g_RiskManager.FlattenAllPositions();
+      g_IsEmergencyMode = true;
+      return;
+   }
+
    //=== DEBUG: Periodic status dump ===
    static datetime last_debug_log = 0;
    bool debug_now = InpDebugMode && (TimeCurrent() - last_debug_log >= InpDebugInterval);
@@ -626,9 +645,6 @@ void OnTick()
       return;
    }
 
-   // Always refresh risk state so daily reset can recover from emergency
-   g_RiskManager.OnTick();
-   
    // If we were halted previously but risk manager is now clear (e.g., new day), exit emergency
    if(g_IsEmergencyMode && !g_RiskManager.IsTradingHalted())
    {

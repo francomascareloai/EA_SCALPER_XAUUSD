@@ -869,8 +869,8 @@ CConfluenceScorer::CConfluenceScorer()
    m_min_score = TIER_B_MIN;       // 70 minimum
    m_min_confluences = 3;          // At least 3 factors
    
-   // Cache
-   m_cache_seconds = 10;
+   // Cache (disabled by default in backtest to avoid stale "always valid" signals)
+   m_cache_seconds = 0;
    m_last_calculation = 0;
    
    // Proximity settings
@@ -938,8 +938,8 @@ void CConfluenceScorer::SetProximityPips(double ob_pips, double fvg_pips)
 // === MAIN SCORING ===
 SConfluenceResult CConfluenceScorer::CalculateConfluence(string symbol = NULL)
 {
-   // Check cache
-   if(TimeCurrent() - m_last_calculation < m_cache_seconds && m_last_result.is_valid)
+   // Check cache (only if cache horizon > 0)
+   if(m_cache_seconds > 0 && TimeCurrent() - m_last_calculation < m_cache_seconds && m_last_result.is_valid)
       return m_last_result;
    
    if(symbol == NULL) symbol = _Symbol;

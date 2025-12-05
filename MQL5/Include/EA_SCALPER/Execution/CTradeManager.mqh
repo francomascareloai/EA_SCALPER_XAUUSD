@@ -634,9 +634,8 @@ bool CTradeManager::CloseTrade(string reason)
             PositionGetString(POSITION_SYMBOL) == m_symbol)
          {
             // v4.2 GENIUS: Calculate final P/L BEFORE closing for Bayesian learning
-            // NOTE: POSITION_COMMISSION is deprecated in MQL5 - commission now in deals
+            // Use POSITION_PROFIT (includes swap/commission) to avoid deprecated POSITION_COMMISSION
             double final_pnl = PositionGetDouble(POSITION_PROFIT)
-                             + PositionGetDouble(POSITION_SWAP)
                              + m_active_trade.realized_pnl;  // Include partial profits
             
             if(ClosePositionWithRetry(ticket))
