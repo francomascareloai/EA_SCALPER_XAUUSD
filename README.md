@@ -23,53 +23,14 @@
 >
 > **DO NOT use on funded accounts or real money until further notice.**
 
----
+### Known Issues & Bugs Being Fixed
 
-## 📑 Table of Contents
-
-- [The Origin Story](#-the-origin-story)
-- [Active Development Notice](#️-active-development---read-this-first)
-- [Overview](#-overview)
-- [Two Versions Available](#-two-versions-available)
-- [Quick Start](#-quick-start)
-- [For Students & Researchers](#-for-students--researchers)
-- [System Architecture](#️-system-architecture)
-- [Trading Strategies](#-trading-strategies)
-- [Analysis Modules](#-analysis-modules-mql5)
-- [Risk Management](#️-risk-management)
-- [Machine Learning Integration](#-machine-learning-integration)
-- [NautilusTrader Migration](#-nautilustrader-migration-python)
-- [Project Structure](#-project-structure)
-- [Expected Performance](#-expected-performance)
-- [Requirements](#️-requirements)
-- [Disclaimer](#️-disclaimer)
-- [Contact & Contributions](#-contact--contributions)
-- [Version History](#-version-history)
-
----
-
-## 📖 The Origin Story
-
-This project started after I **downloaded and classified over 5,000 trading robots** from 90%+ of Telegram groups and channels about Trading and Expert Advisors. After extensive testing and analysis, I realized that **99.9% of trading bots are garbage** - either poorly coded, overfitted, or outright scams from vendors trying to steal your money.
-
-**No scammers. No fake vendors. No bullshit.**
-
-I decided to build my own robot from scratch, with proper backtesting, statistical validation, and real risk management. This is that journey.
-
----
-
-## ⚠️ ACTIVE DEVELOPMENT - READ THIS FIRST
-
-> **This project is under active development!** Things may not work as expected, and that's okay.
-
-### Common Issues & Solutions
-
-| Issue | Possible Cause | Solution |
-|-------|----------------|----------|
-| **No trades opening** | Filters are very strict (by design) | Check: Session (London/NY only), Regime (no random walk), Spread, News |
-| **Compilation errors** | Missing include files | Ensure all files in `MQL5/Include/EA_SCALPER/` are present |
-| **ONNX not loading** | Model path wrong | Check `models/` folder and input parameters |
-| **Too few trades** | High confluence requirement | Lower `InpExecutionThreshold` from 85 to 70 for testing |
+| Issue | Status | Description |
+|-------|--------|-------------|
+| Filters too strict | 🔧 Fixing | May result in very few or no trades |
+| ONNX model path | 🔧 Fixing | Model may not load on some setups |
+| Compilation warnings | ✅ Fixed | Deprecated functions removed |
+| Duplicate structs | ✅ Fixed | SConsolidation duplicate removed |
 
 ### Found a Bug? Have a Suggestion?
 
@@ -81,7 +42,40 @@ I decided to build my own robot from scratch, with proper backtesting, statistic
 
 ---
 
-## 🎯 Overview
+## 📑 Table of Contents
+
+- [The Origin Story](#the-origin-story)
+- [Overview](#overview)
+- [Two Versions Available](#two-versions-available)
+- [Quick Start](#quick-start)
+- [For Students & Researchers](#for-students--researchers)
+- [System Architecture](#system-architecture)
+- [Trading Strategies](#trading-strategies)
+- [Analysis Modules (MQL5)](#analysis-modules-mql5)
+- [Risk Management](#risk-management)
+- [Machine Learning Integration](#machine-learning-integration)
+- [NautilusTrader Migration (Python)](#nautilustrader-migration-python)
+- [Project Structure](#project-structure)
+- [Target Performance (Theoretical)](#target-performance-theoretical)
+- [Roadmap](#roadmap)
+- [Requirements](#requirements)
+- [Disclaimer](#disclaimer)
+- [Contact & Contributions](#contact--contributions)
+- [Version History](#version-history)
+
+---
+
+## The Origin Story
+
+This project started after I **downloaded and classified over 5,000 trading robots** from 90%+ of Telegram groups and channels about Trading and Expert Advisors. After extensive testing and analysis, I realized that **99.9% of trading bots are garbage** - either poorly coded, overfitted, or outright scams from vendors trying to steal your money.
+
+**No scammers. No fake vendors. No bullshit.**
+
+I decided to build my own robot from scratch, with proper backtesting, statistical validation, and real risk management. This is that journey.
+
+---
+
+## Overview
 
 EA_SCALPER_XAUUSD is an advanced Expert Advisor (trading robot) designed specifically for **XAUUSD (Gold)** scalping on MetaTrader 5. It combines:
 
@@ -93,7 +87,7 @@ EA_SCALPER_XAUUSD is an advanced Expert Advisor (trading robot) designed specifi
 
 ---
 
-## 🔀 Two Versions Available
+## Two Versions Available
 
 This project has **two separate implementations** for different use cases:
 
@@ -150,7 +144,7 @@ This project has **two separate implementations** for different use cases:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Option A: Run on MetaTrader 5 (MQL5 Version)
 
@@ -209,7 +203,7 @@ Start here:
 
 ---
 
-## 📚 For Students & Researchers
+## For Students & Researchers
 
 ### How to Compile MQL5 Files
 
@@ -272,7 +266,7 @@ OnTimer()                   # Every second
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -311,7 +305,7 @@ OnTimer()                   # Every second
 
 ---
 
-## 📊 Trading Strategies
+## Trading Strategies
 
 ### Strategy 1: SMC Scalping (Primary)
 
@@ -398,7 +392,7 @@ OnTimer()                   # Every second
 
 ---
 
-## 🧠 Analysis Modules (MQL5)
+## Analysis Modules (MQL5)
 
 ### Core Analysis Modules
 
@@ -455,7 +449,7 @@ OnTimer()                   # Every second
 
 ---
 
-## 🛡️ Risk Management
+## Risk Management
 
 ### Safety Layer Architecture
 
@@ -497,7 +491,7 @@ Lot Size = (Account Equity × Risk%) / (SL Points × Tick Value)
 
 ---
 
-## 🤖 Machine Learning Integration
+## Machine Learning Integration
 
 ### ONNX Brain - Direction Prediction
 
@@ -539,7 +533,7 @@ Lot Size = (Account Equity × Risk%) / (SL Points × Tick Value)
 
 ---
 
-## 🐍 NautilusTrader Migration (Python)
+## NautilusTrader Migration (Python)
 
 We are actively migrating to **[NautilusTrader](https://nautilustrader.io)** - a high-performance algorithmic trading platform.
 
@@ -587,7 +581,7 @@ nautilus_gold_scalper/
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 EA_SCALPER_XAUUSD/
@@ -621,41 +615,79 @@ EA_SCALPER_XAUUSD/
 
 ---
 
-## 📈 Expected Performance
+## Target Performance (Theoretical)
+
+> **⚠️ IMPORTANT: These are THEORETICAL targets, not actual results!**
+> 
+> The system is still in development. These numbers represent design goals, 
+> not guaranteed or backtested performance. Real results may vary significantly.
 
 | Metric | Target | Notes |
 |--------|--------|-------|
-| **Win Rate** | 65-75% | MTF + SMC + ML confluence |
-| **Average R:R** | 2.0-2.5 | Entry optimization |
-| **Profit Factor** | 2.0+ | High WR × High R:R |
-| **Max Drawdown** | < 8% | Prop firm buffer |
+| **Win Rate** | 65-75% | If MTF + SMC + ML confluence works as designed |
+| **Average R:R** | 2.0-2.5 | Depends on entry optimization |
+| **Profit Factor** | 2.0+ | Theoretical based on above |
+| **Max Drawdown** | < 8% | Prop firm buffer requirement |
 | **Trades/Day** | 3-8 | Quality over quantity |
-| **Monthly Return** | 5-15% | Conservative estimate |
 
 ---
 
-## ⚙️ Requirements
+## Roadmap
 
-- **Platform**: MetaTrader 5
-- **Broker**: Any with XAUUSD (low spread preferred)
-- **Account**: $50,000+ recommended
-- **VPS**: Recommended for 24/5 operation
-- **Python**: 3.10+ (for NautilusTrader)
+### Current Phase: Bug Fixing & Stabilization
+
+- [x] Fix duplicate struct definitions
+- [x] Remove deprecated MQL5 functions
+- [ ] Adjust filter strictness (too few trades)
+- [ ] Improve ONNX model loading reliability
+- [ ] Add more detailed logging for debugging
+- [ ] Complete backtesting validation
+
+### Next Phase: Optimization
+
+- [ ] Walk-Forward Analysis (WFA)
+- [ ] Monte Carlo simulation
+- [ ] Parameter optimization
+- [ ] Reduce false signals
+
+### Future Phase: Production Ready
+
+- [ ] 3+ months demo testing
+- [ ] Statistical validation complete
+- [ ] Documentation complete
+- [ ] Production release
 
 ---
 
-## ⚠️ Disclaimer
+## Requirements
 
-This is a **personal project** shared for educational purposes. Trading involves substantial risk of loss and is not suitable for all investors.
+- **Platform**: MetaTrader 5 (build 3000+)
+- **Broker**: Any with XAUUSD (low spread < 30 points preferred)
+- **Account**: $50,000+ recommended for proper position sizing
+- **VPS**: Recommended for 24/5 operation (low latency)
+- **Python**: 3.10+ (for NautilusTrader version)
+- **OS**: Windows 10/11 (for MQL5), Linux/Mac (for Python)
+
+---
+
+## Disclaimer
+
+> **⚠️ IMPORTANT LEGAL DISCLAIMER**
+
+This is a **personal project** shared for **educational purposes only**. 
+
+**Trading involves substantial risk of loss and is not suitable for all investors.**
 
 - Past performance does not guarantee future results
 - Use at your own risk
 - Always test on demo accounts first
-- I am not responsible for any financial losses
+- **I am not responsible for any financial losses**
+- This is NOT financial advice
+- Do NOT use real money until you fully understand the system
 
 ---
 
-## 📬 Contact & Contributions
+## Contact & Contributions
 
 This repository is maintained by **Franco** as a personal trading automation project.
 
@@ -667,16 +699,16 @@ If you find this useful, give it a ⭐ star!
 
 ---
 
-## 📜 Version History
+## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
-| **3.30** | 2024-11 | Order Flow Edition: Footprint, Imbalance, Absorption |
-| **3.20** | 2024-11 | MTF Architecture (H1+M15+M5) |
-| **3.10** | 2024-11 | Entry Optimizer SL limits |
-| **3.00** | 2024-11 | Singularity Edition (ML/ONNX) |
-| **2.00** | 2024-10 | SMC Core Modules |
-| **1.00** | 2024-09 | Initial Release |
+| **3.30** | 2025-12 | Order Flow Edition: Footprint, Imbalance, Absorption |
+| **3.20** | 2025-11 | MTF Architecture (H1+M15+M5) |
+| **3.10** | 2025-11 | Entry Optimizer SL limits |
+| **3.00** | 2025-10 | Singularity Edition (ML/ONNX) |
+| **2.00** | 2025-09 | SMC Core Modules |
+| **1.00** | 2025-08 | Initial Release |
 
 ---
 
