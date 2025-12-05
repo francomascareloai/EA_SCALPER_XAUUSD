@@ -5,9 +5,9 @@
 [![NautilusTrader](https://img.shields.io/badge/NautilusTrader-Migration-green.svg)](https://nautilustrader.io)
 [![License](https://img.shields.io/badge/License-Personal%20Project-lightgrey.svg)]()
 
-**Automated Gold Trading System for Apex Trader Funding**
+**Automated Gold Trading System for Prop Firms (Apex Trader Funding & FTMO)**
 
-> After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges.
+> After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges (Apex Trader Funding, FTMO, and others).
 
 ### The Origin Story
 
@@ -127,16 +127,17 @@ nautilus_gold_scalper/
 
 ---
 
-## Apex Trader Funding Compliance
+## Prop Firm Compliance (Apex & FTMO)
 
-This EA is specifically designed for Apex Trader Funding rules:
+This EA is designed to comply with major prop firm rules:
 
-| Rule | Implementation |
-|------|----------------|
-| **Trailing Drawdown (10%)** | Real-time high-water mark tracking |
-| **No Overnight Positions** | Auto-close before 4:59 PM ET |
-| **Consistency Rule (30%)** | Daily profit cap monitoring |
-| **Risk per Trade** | 0.5-1% maximum |
+| Rule | Apex | FTMO | Implementation |
+|------|------|------|----------------|
+| **Max Drawdown** | 10% trailing (HWM) | 10% total | Real-time tracking |
+| **Daily Drawdown** | N/A | 5% daily | Daily loss limit |
+| **Overnight Positions** | ❌ Prohibited | ✅ Allowed | Auto-close option |
+| **Consistency Rule** | 30% max/day | N/A | Daily profit cap |
+| **Risk per Trade** | 0.5-1% | 0.5-1% | Position sizing |
 
 ---
 
