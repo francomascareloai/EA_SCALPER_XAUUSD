@@ -17,9 +17,6 @@ This project started after I **downloaded and classified over 5,000 trading robo
 
 I decided to build my own robot from scratch, with proper backtesting, statistical validation, and real risk management. This is that journey.
 
-### Keywords / Topics
-`algorithmic-trading` `xauusd` `gold-trading` `mql5` `metatrader5` `expert-advisor` `prop-firm` `apex-trader-funding` `nautilustrader` `python-trading` `smart-money-concepts` `order-flow` `machine-learning` `onnx` `quantitative-trading` `automated-trading` `scalping` `forex` `futures`
-
 ---
 
 ## Overview
@@ -184,3 +181,8 @@ If you find this useful, give it a ⭐ star!
 ---
 
 *"The market is never wrong. Opinions are."* - Jesse Livermore
+
+---
+
+### Keywords
+`algorithmic-trading` `xauusd` `gold-trading` `mql5` `metatrader5` `expert-advisor` `prop-firm` `apex-trader-funding` `nautilustrader` `python-trading` `smart-money-concepts` `order-flow` `machine-learning` `onnx` `quantitative-trading` `automated-trading` `scalping` `forex` `futures` `trading-bot` `quant` `financial-analysis`
