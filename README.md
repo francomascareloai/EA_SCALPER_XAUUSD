@@ -9,6 +9,14 @@
 
 > After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges.
 
+### The Origin Story
+
+This project started after I **downloaded and classified over 5,000 trading robots** from 90%+ of Telegram groups and channels about Trading and Expert Advisors. After extensive testing and analysis, I realized that **99.9% of trading bots are garbage** - either poorly coded, overfitted, or outright scams from vendors trying to steal your money.
+
+**No scammers. No fake vendors. No bullshit.**
+
+I decided to build my own robot from scratch, with proper backtesting, statistical validation, and real risk management. This is that journey.
+
 ### Keywords / Topics
 `algorithmic-trading` `xauusd` `gold-trading` `mql5` `metatrader5` `expert-advisor` `prop-firm` `apex-trader-funding` `nautilustrader` `python-trading` `smart-money-concepts` `order-flow` `machine-learning` `onnx` `quantitative-trading` `automated-trading` `scalping` `forex` `futures`
 
@@ -163,11 +171,15 @@ This is a **personal project** shared for educational purposes. Trading involves
 
 ---
 
-## Contact
+## Contact & Contributions
 
 This repository is maintained by **Franco** as a personal trading automation project.
 
-If you find this useful, feel free to star the repo!
+📬 **Telegram**: [@novtelfran](https://t.me/novtelfran)
+
+Questions? Want to contribute? Found a bug? Feel free to reach out!
+
+If you find this useful, give it a ⭐ star!
 
 ---
 
