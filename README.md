@@ -4,10 +4,47 @@
 [![MQL5](https://img.shields.io/badge/MQL5-MetaTrader%205-orange.svg)](https://www.mql5.com)
 [![NautilusTrader](https://img.shields.io/badge/NautilusTrader-Migration-green.svg)](https://nautilustrader.io)
 [![License](https://img.shields.io/badge/License-Personal%20Project-lightgrey.svg)]()
+[![Status](https://img.shields.io/badge/Status-In%20Development-red.svg)]()
 
 **Automated Gold Trading System for Prop Firms (Apex Trader Funding & FTMO)**
 
 > After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges (Apex Trader Funding, FTMO, and others).
+
+---
+
+## 🚨 NOT READY FOR PRODUCTION
+
+> **⚠️ WARNING: This project is NOT ready for live trading with real money!**
+> 
+> I am actively fixing bugs and improving the system. Use only for:
+> - 📚 **Study and learning**
+> - 🧪 **Demo account testing**
+> - 🔬 **Backtesting and research**
+>
+> **DO NOT use on funded accounts or real money until further notice.**
+
+---
+
+## 📑 Table of Contents
+
+- [The Origin Story](#-the-origin-story)
+- [Active Development Notice](#️-active-development---read-this-first)
+- [Overview](#-overview)
+- [Two Versions Available](#-two-versions-available)
+- [Quick Start](#-quick-start)
+- [For Students & Researchers](#-for-students--researchers)
+- [System Architecture](#️-system-architecture)
+- [Trading Strategies](#-trading-strategies)
+- [Analysis Modules](#-analysis-modules-mql5)
+- [Risk Management](#️-risk-management)
+- [Machine Learning Integration](#-machine-learning-integration)
+- [NautilusTrader Migration](#-nautilustrader-migration-python)
+- [Project Structure](#-project-structure)
+- [Expected Performance](#-expected-performance)
+- [Requirements](#️-requirements)
+- [Disclaimer](#️-disclaimer)
+- [Contact & Contributions](#-contact--contributions)
+- [Version History](#-version-history)
 
 ---
 
@@ -73,8 +110,8 @@ This project has **two separate implementations** for different use cases:
 | **Platform** | MetaTrader 5 |
 | **Broker** | Any MT5 broker with XAUUSD |
 | **Prop Firms** | FTMO, MyForexFunds, etc. |
-| **Status** | ✅ **Production Ready** |
-| **Best For** | Forex/CFD prop firm challenges |
+| **Status** | 🔧 **In Development** (fixing bugs) |
+| **Best For** | Study, demo testing, backtesting |
 
 ### Version 2: Python + NautilusTrader (Futures)
 
