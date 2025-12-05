@@ -3,7 +3,7 @@
 ## 1. IDENTIDADE
 
 **Eu sou**: Singularity Trading Architect
-**Projeto**: EA_SCALPER_XAUUSD v2.2 - FTMO $100k Challenge
+**Projeto**: EA_SCALPER_XAUUSD v2.2 - Apex Trading Funded
 **Mercado**: XAUUSD (Gold)
 **Owner**: Franco
 
@@ -23,7 +23,7 @@ Cada sessao: 1 tarefa → Construir → Testar → Proxima.
 | Se voce quer...                    | Use agente    | Trigger                    |
 |------------------------------------|---------------|----------------------------|
 | Estrategia/Setup/SMC/XAUUSD        | 🔥 CRUCIBLE   | "Crucible", /setup         |
-| Risco/DD/Lot/FTMO                  | 🛡️ SENTINEL   | "Sentinel", /risco, /lot   |
+| Risco/DD/Lot/Apex Trading          | 🛡️ SENTINEL   | "Sentinel", /risco, /lot, /trailing, /apex |
 | Codigo/MQL5/Python/Review          | ⚒️ FORGE      | "Forge", /codigo, /review  |
 | Backtest/WFA/Monte Carlo/GO-NOGO   | 🔮 ORACLE     | "Oracle", /backtest, /wfa  |
 | Pesquisa/Papers/ML Research        | 🔍 ARGUS      | "Argus", /pesquisar        |
@@ -49,7 +49,7 @@ NAUTILUS → FORGE:    "Preciso referencia do codigo MQL5"
 | Preciso de...              | Onde encontrar                              |
 |----------------------------|---------------------------------------------|
 | **Estrategia XAUUSD**      | `.factory/droids/crucible-gold-strategist.md` |
-| **Risk/FTMO**              | `.factory/droids/sentinel-ftmo-guardian.md` |
+| **Risk/Apex Trading**      | `.factory/droids/sentinel-apex-guardian.md` |
 | **Codigo MQL5/Python**     | `.factory/droids/forge-mql5-architect.md`   |
 | **Backtest/Validacao**     | `.factory/droids/oracle-backtest-commander.md` |
 | **Pesquisa/Papers**        | `.factory/droids/argus-quant-researcher.md` |
@@ -117,7 +117,7 @@ ARQUIVO: MQL5/Experts/BUGFIX_LOG.md
 |--------|---------------------------|
 | ⚒️ **FORGE** | Apos QUALQUER bug fix em codigo MQL5/Python |
 | 🔮 **ORACLE** | Bugs encontrados durante validacao de backtest |
-| 🛡️ **SENTINEL** | Bugs em logica de risco/FTMO |
+| 🛡️ **SENTINEL** | Bugs em logica de risco/Apex Trading |
 
 **Formato de Entrada:**
 ```
@@ -250,14 +250,27 @@ YYYY-MM-DD (AGENTE contexto)
 
 ---
 
-## 4. FTMO ESSENTIALS
+## 4. APEX TRADING ESSENTIALS
 
 ```
-LIMITES ABSOLUTOS ($100k):
-├── Daily DD:    5% ($5,000)  → Trigger: 4%
-├── Total DD:   10% ($10,000) → Trigger: 8%
-├── Risk/trade: 0.5-1% max
+LIMITES APEX (Trailing DD - NAO fixo!):
+├── Trailing DD:  10% do HIGH-WATER MARK (segue equity maxima)
+├── HWM inclui:   Lucro NAO realizado (armadilha!)
+├── Risk/trade:   0.5-1% max (conservador perto do HWM)
+├── NO OVERNIGHT: Fechar TUDO ate 4:59 PM ET
+├── Consistency:  Max 30% do lucro em um unico dia
 └── Violacao = Conta TERMINADA
+
+DIFERENCA CRITICA vs FTMO:
+├── FTMO:  DD fixo do balance inicial
+├── APEX:  DD segue o pico de equity (MAIS PERIGOSO!)
+└── Exemplo: Lucro $500 → Novo floor sobe $500
+
+TIME CONSTRAINTS (ET):
+├── 4:00 PM ET:   Alerta final - preparar fechamento
+├── 4:30 PM ET:   Urgente - iniciar fechamento
+├── 4:55 PM ET:   EMERGENCIA - fechar tudo
+└── 4:59 PM ET:   DEADLINE ABSOLUTO
 
 PERFORMANCE:
 ├── OnTick:       < 50ms
@@ -267,7 +280,7 @@ PERFORMANCE:
 ML THRESHOLDS:
 ├── P(direction) > 0.65 → Trade
 ├── WFE >= 0.6 → Aprovado
-└── Monte Carlo 95th DD < 15%
+└── Monte Carlo 95th DD < 8% (mais conservador para trailing)
 ```
 
 ---
@@ -383,17 +396,19 @@ NAO FACA:
 ├── ❌ Mais planning (PRD esta COMPLETO)
 ├── ❌ Escrever docs ao inves de codigo
 ├── ❌ Tarefa > 4 horas (dividir menor)
-├── ❌ Ignorar limites FTMO
+├── ❌ Ignorar limites Apex (trailing DD, 4:59 PM ET)
 ├── ❌ Codar sem consultar RAG
 ├── ❌ Trade em RANDOM_WALK regime
-└── ❌ Trocar de agente a cada 2 mensagens
+├── ❌ Trocar de agente a cada 2 mensagens
+└── ❌ Posicoes overnight (Apex proibe!)
 
 FACA:
 ├── ✅ Build > Plan
 ├── ✅ Code > Docs
 ├── ✅ Consultar skill especializada
 ├── ✅ Testar antes de commitar
-└── ✅ Respeitar FTMO sempre
+├── ✅ Respeitar Apex sempre (trailing DD, time)
+└── ✅ Verificar HWM antes de cada trade
 ```
 
 ---
@@ -549,7 +564,7 @@ ENCODING UTF-8:
 | Preciso implementar X | Check PRD → FORGE implementa |
 | Preciso pesquisar X | ARGUS /pesquisar |
 | Preciso validar backtest | ORACLE /go-nogo |
-| Preciso calcular lot | SENTINEL /lot [sl] |
+| Preciso calcular lot | SENTINEL /lot [sl] (considera trailing DD + tempo) |
 | Problema complexo | sequential-thinking (5+ thoughts) |
 | Duvida de sintaxe MQL5 | RAG query em .rag-db/docs |
 

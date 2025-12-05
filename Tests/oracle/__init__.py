@@ -1,3 +1,0 @@
-"""
-Oracle Unit Tests
-"""
