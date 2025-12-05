@@ -21,6 +21,29 @@ I decided to build my own robot from scratch, with proper backtesting, statistic
 
 ---
 
+## ⚠️ ACTIVE DEVELOPMENT - READ THIS FIRST
+
+> **This project is under active development!** Things may not work as expected, and that's okay.
+
+### Common Issues & Solutions
+
+| Issue | Possible Cause | Solution |
+|-------|----------------|----------|
+| **No trades opening** | Filters are very strict (by design) | Check: Session (London/NY only), Regime (no random walk), Spread, News |
+| **Compilation errors** | Missing include files | Ensure all files in `MQL5/Include/EA_SCALPER/` are present |
+| **ONNX not loading** | Model path wrong | Check `models/` folder and input parameters |
+| **Too few trades** | High confluence requirement | Lower `InpExecutionThreshold` from 85 to 70 for testing |
+
+### Found a Bug? Have a Suggestion?
+
+- 📬 **Telegram**: [@novtelfran](https://t.me/novtelfran) (fastest response)
+- 🐛 **GitHub Issues**: Open an issue with details
+- 💬 **Discussions**: Start a discussion for questions/ideas
+
+**Please include**: MT5 version, broker, timeframe, logs/screenshots if possible.
+
+---
+
 ## 🎯 Overview
 
 EA_SCALPER_XAUUSD is an advanced Expert Advisor (trading robot) designed specifically for **XAUUSD (Gold)** scalping on MetaTrader 5. It combines:
@@ -30,6 +53,185 @@ EA_SCALPER_XAUUSD is an advanced Expert Advisor (trading robot) designed specifi
 - **Multi-Timeframe Analysis (MTF)** - H1/M15/M5 for maximum precision
 - **Order Flow Analysis** - Footprint/Cluster chart style confirmation
 - **Prop Firm Compliance** - Strict rules for FTMO/Apex
+
+---
+
+## 🔀 Two Versions Available
+
+This project has **two separate implementations** for different use cases:
+
+### Version 1: MQL5 Only (MetaTrader 5)
+
+```
+📁 MQL5/
+├── Experts/EA_SCALPER_XAUUSD.mq5    # Main robot
+└── Include/EA_SCALPER/              # All modules
+```
+
+| Aspect | Details |
+|--------|---------|
+| **Platform** | MetaTrader 5 |
+| **Broker** | Any MT5 broker with XAUUSD |
+| **Prop Firms** | FTMO, MyForexFunds, etc. |
+| **Status** | ✅ **Production Ready** |
+| **Best For** | Forex/CFD prop firm challenges |
+
+### Version 2: Python + NautilusTrader (Futures)
+
+```
+📁 nautilus_gold_scalper/
+├── src/                             # Python modules
+└── scripts/                         # Backtest runners
+```
+
+| Aspect | Details |
+|--------|---------|
+| **Platform** | NautilusTrader → NinjaTrader/Tradovate |
+| **Broker** | Tradovate (via Apex Trader Funding) |
+| **Prop Firms** | Apex Trader Funding (Futures) |
+| **Status** | 🔄 **In Development** |
+| **Best For** | Futures trading on Apex |
+
+### Which Version Should I Use?
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         WHICH VERSION TO USE?                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Want to trade FOREX/CFD on MT5?                                          │
+│   └──▶ Use MQL5 Version (FTMO, MyForexFunds, etc.)                        │
+│                                                                             │
+│   Want to trade FUTURES on Apex Trader Funding?                            │
+│   └──▶ Use Python/NautilusTrader Version (via NinjaTrader/Tradovate)      │
+│                                                                             │
+│   Want to study the code and learn?                                        │
+│   └──▶ Both! MQL5 is complete, Python shows modern architecture           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
+
+### Option A: Run on MetaTrader 5 (MQL5 Version)
+
+**Step 1: Install MetaTrader 5**
+- Download from your broker or [MetaQuotes](https://www.metatrader5.com)
+- Create demo account with XAUUSD access
+
+**Step 2: Copy Files**
+```
+Copy entire MQL5/ folder to:
+C:\Users\[YourUser]\AppData\Roaming\MetaQuotes\Terminal\[ID]\MQL5\
+```
+
+**Step 3: Compile**
+- Open MetaEditor (F4 in MT5)
+- Open `Experts/EA_SCALPER_XAUUSD.mq5`
+- Press F7 to compile
+- Fix any path issues if errors appear
+
+**Step 4: Attach to Chart**
+- Open XAUUSD M5 chart
+- Drag EA from Navigator to chart
+- Enable "Allow Algo Trading"
+- Configure inputs (start with defaults)
+
+**Step 5: Monitor**
+- Check Experts tab for logs
+- If no trades: check Journal for filter reasons
+- Normal to wait hours for valid setup!
+
+### Option B: Study & Learn (For Developers)
+
+**Step 1: Clone Repository**
+```bash
+git clone https://github.com/francomascareloai/EA_SCALPER_XAUUSD.git
+```
+
+**Step 2: Explore Structure**
+```
+Start here:
+├── MQL5/Include/EA_SCALPER/INDEX.md     # Architecture documentation
+├── MQL5/Experts/EA_SCALPER_XAUUSD.mq5   # Main EA (read OnTick flow)
+├── DOCS/                                 # Detailed documentation
+└── nautilus_gold_scalper/               # Python implementation
+```
+
+**Step 3: Key Files to Study**
+
+| File | What You'll Learn |
+|------|-------------------|
+| `Analysis/CRegimeDetector.mqh` | Hurst Exponent, Shannon Entropy |
+| `Analysis/EliteOrderBlock.mqh` | SMC Order Block detection |
+| `Analysis/CMTFManager.mqh` | Multi-timeframe architecture |
+| `Risk/FTMO_RiskManager.mqh` | Prop firm risk management |
+| `Bridge/COnnxBrain.mqh` | ML/ONNX integration in MQL5 |
+
+---
+
+## 📚 For Students & Researchers
+
+### How to Compile MQL5 Files
+
+**Using MetaEditor (GUI):**
+1. Open MetaTrader 5 → Press F4 (opens MetaEditor)
+2. File → Open → Navigate to `EA_SCALPER_XAUUSD.mq5`
+3. Press F7 to compile
+4. Check "Errors" tab at bottom
+
+**Using Command Line (Advanced):**
+```powershell
+# Path to MetaEditor
+$metaeditor = "C:\Program Files\MetaTrader 5\metaeditor64.exe"
+
+# Compile with includes
+& $metaeditor /compile:"MQL5\Experts\EA_SCALPER_XAUUSD.mq5" /inc:"MQL5" /log
+
+# Check log for errors
+Get-Content "MQL5\Experts\EA_SCALPER_XAUUSD.log"
+```
+
+### Common Compilation Errors
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `'file.mqh' - file not found` | Include path wrong | Check file exists in `Include/EA_SCALPER/` |
+| `'CClassName' - undeclared identifier` | Missing #include | Add the required include at top of file |
+| `'OnTick' - function already defined` | Duplicate EA | Only one EA per compilation |
+
+### Understanding the Code Flow
+
+```
+OnInit()                    # EA starts
+    │
+    ├── Initialize modules
+    ├── Load ONNX model
+    └── Setup risk parameters
+    
+OnTick()                    # Every price change
+    │
+    ├── Gate 1: Check emergency mode
+    ├── Gate 2: Check risk limits
+    ├── Gate 3: Check session (London/NY)
+    ├── Gate 4: Check news filter
+    ├── Gate 5: Check regime (Hurst/Entropy)
+    ├── Gate 6: Check H1 trend direction
+    ├── Gate 7: Check structure (BOS/CHoCH)
+    ├── Gate 8: Check MTF confirmation
+    ├── Gate 9: Calculate confluence score
+    ├── Gate 10: Optimize entry
+    │
+    └── If ALL gates pass → Execute Trade
+    
+OnTimer()                   # Every second
+    │
+    ├── Update regime metrics
+    ├── Manage open positions
+    └── Check partial TPs
+```
 
 ---
 
