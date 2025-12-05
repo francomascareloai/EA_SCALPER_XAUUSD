@@ -918,43 +918,8 @@ bool CStructureAnalyzer::IsMTFAligned()
 //| CONSOLIDATION BOUNCE MODE - Inspired by Choon Chiat (FTMO #1)    |
 //| Detects range-bound markets and generates bounce signals         |
 //+------------------------------------------------------------------+
-
-// === CONSOLIDATION STRUCTURES ===
-struct SConsolidation
-{
-   double   high;              // Range high
-   double   low;               // Range low
-   double   mid;               // Equilibrium (50%)
-   double   range_size;        // High - Low
-   int      bars_in_range;     // How many bars in consolidation
-   int      touches_high;      // Times price touched high
-   int      touches_low;       // Times price touched low
-   datetime start_time;        // When consolidation started
-   datetime last_update;       // Last update time
-   bool     is_valid;          // Is this a valid consolidation?
-   double   atr_ratio;         // Range relative to ATR (< 2.5 = consolidation)
-};
-
-enum ENUM_CONSOLIDATION_SIGNAL
-{
-   CONS_SIGNAL_NONE = 0,       // No signal
-   CONS_SIGNAL_BUY_BOUNCE,     // Buy at support bounce
-   CONS_SIGNAL_SELL_BOUNCE,    // Sell at resistance bounce
-   CONS_SIGNAL_BREAKOUT_UP,    // Bullish breakout
-   CONS_SIGNAL_BREAKOUT_DOWN   // Bearish breakout
-};
-
-struct SConsolidationSignal
-{
-   ENUM_CONSOLIDATION_SIGNAL type;
-   double   entry_price;
-   double   stop_loss;
-   double   take_profit;
-   double   risk_reward;
-   int      strength;          // 0-100 signal strength
-   string   reason;
-   bool     is_valid;
-};
+// NOTE: SConsolidation, ENUM_CONSOLIDATION_SIGNAL, SConsolidationSignal 
+//       are defined at the top of this file (lines 94-130)
 
 // === CONSOLIDATION DETECTION METHODS ===
 
