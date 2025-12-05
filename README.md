@@ -1,8 +1,16 @@
 # EA_SCALPER_XAUUSD v2.2
 
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![MQL5](https://img.shields.io/badge/MQL5-MetaTrader%205-orange.svg)](https://www.mql5.com)
+[![NautilusTrader](https://img.shields.io/badge/NautilusTrader-Migration-green.svg)](https://nautilustrader.io)
+[![License](https://img.shields.io/badge/License-Personal%20Project-lightgrey.svg)]()
+
 **Automated Gold Trading System for Apex Trader Funding**
 
 > After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges.
+
+### Keywords / Topics
+`algorithmic-trading` `xauusd` `gold-trading` `mql5` `metatrader5` `expert-advisor` `prop-firm` `apex-trader-funding` `nautilustrader` `python-trading` `smart-money-concepts` `order-flow` `machine-learning` `onnx` `quantitative-trading` `automated-trading` `scalping` `forex` `futures`
 
 ---
 
@@ -66,6 +74,51 @@ EA_SCALPER_XAUUSD/
 | `CRiskManager` | Position sizing and drawdown protection |
 | `CTradeManager` | Order execution and management |
 | `CMTFManager` | Multi-timeframe data aggregation |
+
+---
+
+## NautilusTrader Migration (Python)
+
+We are actively migrating this trading system to **[NautilusTrader](https://nautilustrader.io)** - a high-performance algorithmic trading platform written in Python and Cython.
+
+### Why NautilusTrader?
+
+| Feature | Benefit |
+|---------|---------|
+| **Event-Driven Architecture** | Realistic backtesting without look-ahead bias |
+| **High Performance** | Cython core for institutional-grade speed |
+| **Multi-Venue Support** | Trade futures on Tradovate (Apex) |
+| **Unified Backtesting/Live** | Same code for simulation and production |
+| **Python Ecosystem** | Full access to ML/AI libraries (scikit-learn, PyTorch, etc.) |
+
+### Migration Progress
+
+```
+nautilus_gold_scalper/
+├── src/
+│   ├── strategies/          # Trading strategies (SMC, Breakout)
+│   ├── actors/              # Data processors (Regime, Session)
+│   ├── indicators/          # Custom indicators
+│   └── models/              # Data models
+├── scripts/                 # Backtest runners
+├── tests/                   # Unit tests
+└── data/                    # Historical data (Parquet)
+```
+
+**Modules Migrated:**
+- [x] Session Filter (London/NY detection)
+- [x] Regime Detector (Hurst + Entropy)
+- [ ] Order Block Detector (in progress)
+- [ ] SMC Strategy (planned)
+- [ ] Risk Manager (planned)
+
+### Tech Stack
+
+- **Python 3.10+** with type hints
+- **NautilusTrader** for backtesting and live trading
+- **Polars/Pandas** for data manipulation
+- **ParquetDataCatalog** for efficient data storage
+- **ONNX Runtime** for ML model inference
 
 ---
 
