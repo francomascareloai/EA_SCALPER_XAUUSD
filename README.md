@@ -1,4 +1,4 @@
-# EA_SCALPER_XAUUSD v2.2
+# EA_SCALPER_XAUUSD v3.30
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![MQL5](https://img.shields.io/badge/MQL5-MetaTrader%205-orange.svg)](https://www.mql5.com)
@@ -9,7 +9,9 @@
 
 > After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges (Apex Trader Funding, FTMO, and others).
 
-### The Origin Story
+---
+
+## 📖 The Origin Story
 
 This project started after I **downloaded and classified over 5,000 trading robots** from 90%+ of Telegram groups and channels about Trading and Expert Advisors. After extensive testing and analysis, I realized that **99.9% of trading bots are garbage** - either poorly coded, overfitted, or outright scams from vendors trying to steal your money.
 
@@ -19,138 +21,391 @@ I decided to build my own robot from scratch, with proper backtesting, statistic
 
 ---
 
-## Overview
+## 🎯 Overview
 
-EA_SCALPER_XAUUSD is an advanced Expert Advisor (trading robot) designed specifically for **XAUUSD (Gold)** scalping on MetaTrader 5. The system is optimized for **Apex Trader Funding** challenges, with strict risk management and compliance with prop firm rules.
+EA_SCALPER_XAUUSD is an advanced Expert Advisor (trading robot) designed specifically for **XAUUSD (Gold)** scalping on MetaTrader 5. It combines:
 
-### Key Features
-
-- **Smart Money Concepts (SMC)** - Order blocks, liquidity sweeps, fair value gaps
-- **Multi-Timeframe Analysis** - M1 execution with H1/H4 bias confirmation
-- **Session-Based Trading** - Optimized for London and New York sessions
-- **Regime Detection** - ML-powered market regime classification (Trend/Range/Volatile)
-- **Advanced Risk Management** - Trailing drawdown protection, position sizing, circuit breakers
-- **ONNX Integration** - Machine learning models for direction prediction
+- **Smart Money Concepts (SMC)** - Institutional trading methodology
+- **Machine Learning (ONNX)** - Direction models trained in Python
+- **Multi-Timeframe Analysis (MTF)** - H1/M15/M5 for maximum precision
+- **Order Flow Analysis** - Footprint/Cluster chart style confirmation
+- **Prop Firm Compliance** - Strict rules for FTMO/Apex
 
 ---
 
-## Trading Strategies
-
-### 1. SMC Scalping (Primary)
-- Identifies institutional order blocks and liquidity zones
-- Trades retracements to order blocks with confluence
-- Targets 1:2 to 1:3 risk-reward ratios
-
-### 2. Session Breakout
-- Captures London and New York session volatility
-- Breakout entries with momentum confirmation
-- Time-based position management
-
-### 3. Regime-Adaptive
-- Uses ML to classify current market regime
-- Adjusts strategy parameters based on regime
-- Avoids trading in unfavorable conditions (random walk)
-
----
-
-## Architecture
+## 🏗️ System Architecture
 
 ```
-EA_SCALPER_XAUUSD/
-├── MQL5/                    # MetaTrader 5 source code
-│   ├── Experts/             # Main EA files
-│   ├── Include/EA_SCALPER/  # Modular components
-│   └── Scripts/             # Utility scripts
-├── models/                  # ONNX ML models
-├── scripts/                 # Python analysis tools
-│   ├── oracle/              # Backtest validation (WFA, Monte Carlo)
-│   └── backtest/            # Strategy testing
-├── nautilus_gold_scalper/   # NautilusTrader migration (Python)
-└── DOCS/                    # Documentation
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    EA_SCALPER_XAUUSD v3.30 ARCHITECTURE                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐ │
+│   │   H1 (HTF)  │───▶│  M15 (MTF)  │───▶│  M5 (LTF)   │───▶│ ORDER FLOW  │ │
+│   │   FILTER    │    │   ZONES     │    │  EXECUTION  │    │ CONFIRMATION│ │
+│   └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘ │
+│         │                  │                  │                  │         │
+│         ▼                  ▼                  ▼                  ▼         │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    CONFLUENCE SCORER (0-100)                        │  │
+│   │   Combines: Trend + Structure + OB + FVG + Sweep + Regime + Delta   │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                        │
+│                                    ▼                                        │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    10-GATE VALIDATION SYSTEM                         │  │
+│   │   Gate 1: Emergency  │  Gate 6: MTF Direction                       │  │
+│   │   Gate 2: Risk       │  Gate 7: Structure/Signal                    │  │
+│   │   Gate 3: Session    │  Gate 8: MTF Confirmation                    │  │
+│   │   Gate 4: News       │  Gate 9: Confluence Score                    │  │
+│   │   Gate 5: Regime     │  Gate 10: Entry Optimization                 │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                        │
+│                                    ▼                                        │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    TRADE EXECUTION                                   │  │
+│   │   Entry: Optimized │ SL: Structure-based │ TP: Partial (40/30/30)   │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-### Core Modules
-
-| Module | Description |
-|--------|-------------|
-| `CRegimeDetector` | ML-based market regime classification |
-| `CSessionFilter` | Trading session management |
-| `COrderBlockDetector` | SMC order block identification |
-| `CRiskManager` | Position sizing and drawdown protection |
-| `CTradeManager` | Order execution and management |
-| `CMTFManager` | Multi-timeframe data aggregation |
 
 ---
 
-## NautilusTrader Migration (Python)
+## 📊 Trading Strategies
 
-We are actively migrating this trading system to **[NautilusTrader](https://nautilustrader.io)** - a high-performance algorithmic trading platform written in Python and Cython.
+### Strategy 1: SMC Scalping (Primary)
+
+```
+                BULLISH ORDER BLOCK                    BEARISH ORDER BLOCK
+                
+                        │ Rally                              │ Drop
+                        │   ↑                                │   ↓
+                     ┌──┴───┴──┐                          ┌──┴───┴──┐
+              ══════▶│  ENTRY  │◀══════            ══════▶│  ENTRY  │◀══════
+                     │  ZONE   │                          │  ZONE   │
+                     └─────────┘                          └─────────┘
+                     Last Down                            Last Up
+                     Candle                               Candle
+```
+
+| Feature | Description |
+|---------|-------------|
+| **Entry** | Retracement to Order Block (70% level) |
+| **SL** | Below/Above OB with ATR buffer |
+| **TP** | 1:2 to 1:3 Risk-Reward |
+| **Filter** | Only trade fresh OBs (first touch) |
+
+### Strategy 2: Fair Value Gap (FVG) Trading
+
+```
+              BULLISH FVG                         BEARISH FVG
+              
+           Candle 3 ──►  ┌───┐                    ┌───┐  ◄── Candle 1
+                         │   │                    │   │
+           GAP ────────► │░░░│ ◄── 50% Fill       │░░░│ ◄── GAP
+                         │░░░│     Entry          │░░░│
+                         └───┘                    └───┘
+           Candle 1 ──►  ┌───┐                    ┌───┐  ◄── Candle 3
+                         │   │                    │   │
+                         └───┘                    └───┘
+```
+
+| Feature | Description |
+|---------|-------------|
+| **Entry** | 50% FVG fill (optimal R:R) |
+| **Target** | Opposite side of FVG |
+| **Best** | FVG + OB confluence |
+
+### Strategy 3: Liquidity Sweep + Reversal
+
+```
+              LIQUIDITY SWEEP PATTERN
+              
+              BSL (Buy-Side Liquidity) ═══════════════════
+                          │
+                   ┌──────┼──────┐
+                   │      │      │
+                   │   SWEEP ────┼──── Price breaks above
+                   │      │      │     grabs stops
+                   │      │      │     and REVERSES
+                   │      ▼      │
+                   │   ══════    │
+                   │             │
+              SSL (Sell-Side Liquidity) ═══════════════════
+```
+
+| Feature | Description |
+|---------|-------------|
+| **Setup** | Equal highs/lows (liquidity pools) |
+| **Trigger** | Price sweeps level and rejects |
+| **Entry** | After confirmation candle |
+| **Target** | Opposite liquidity pool |
+
+### Strategy 4: AMD Cycle (Accumulation → Manipulation → Distribution)
+
+```
+         ACCUMULATION              MANIPULATION              DISTRIBUTION
+         
+         ┌─────────────┐          ┌─────────────┐          ┌─────────────┐
+         │ ═══════════ │          │     ↑ Fake  │          │         ↗   │
+         │ ═══════════ │    ──▶   │ ════╱ Break │    ──▶   │       ↗     │
+         │  Range      │          │    ↓        │          │     ↗  REAL │
+         │  (Wait)     │          │  (Prepare)  │          │   ↗  MOVE   │
+         └─────────────┘          └─────────────┘          └─────────────┘
+              ❌                        ⚠️                        ✅
+           Don't Trade             Get Ready                   ENTER!
+```
+
+---
+
+## 🧠 Analysis Modules (MQL5)
+
+### Core Analysis Modules
+
+| Module | Purpose | Key Features |
+|--------|---------|--------------|
+| **CMTFManager** | Multi-Timeframe Coordination | H1 trend filter, M15 zones, M5 execution |
+| **CStructureAnalyzer** | Market Structure | BOS, CHoCH, Swing Points detection |
+| **EliteOrderBlock** | Order Block Detection | Quality scoring (0-100), freshness tracking |
+| **EliteFVG** | Fair Value Gap Detection | Fill percentage, state management |
+| **CLiquiditySweepDetector** | Liquidity Analysis | BSL/SSL pools, sweep detection |
+| **CRegimeDetector** | Market Regime | Hurst Exponent + Shannon Entropy |
+| **CAMDCycleTracker** | AMD Phase Detection | Accumulation/Manipulation/Distribution |
+| **CFootprintAnalyzer** | Order Flow Analysis | Delta, Imbalance, Absorption |
+
+### Regime Detection Matrix
+
+```
+┌─────────────────┬───────────────┬───────────────┐
+│                 │ Entropy < 1.5 │ Entropy >= 1.5│
+│                 │  (Low Noise)  │ (High Noise)  │
+├─────────────────┼───────────────┼───────────────┤
+│  Hurst > 0.55   │ ✅ TRENDING   │ ⚠️ NOISY      │
+│  (Persistent)   │ Size: 100%    │ Size: 50%     │
+├─────────────────┼───────────────┼───────────────┤
+│  Hurst < 0.45   │ ✅ REVERTING  │ ⚠️ NOISY      │
+│  (Mean-Revert)  │ Size: 100%    │ Size: 50%     │
+├─────────────────┼───────────────┼───────────────┤
+│  Hurst ≈ 0.50   │ ❌ RANDOM     │ ❌ RANDOM     │
+│  (Random Walk)  │ NO TRADE      │ NO TRADE      │
+└─────────────────┴───────────────┴───────────────┘
+```
+
+### Order Flow Analysis (Footprint)
+
+```
+   TRADITIONAL CANDLE              FOOTPRINT CHART
+   
+        ┌───┐                   Price │ Bid x Ask │ Delta
+        │   │                   ──────┼───────────┼──────
+        │   │                   2650.5│ 120 x 450 │ +330 [BUY IMB]
+        │   │                   2650.0│ 280 x 310 │ +30  ◄─ POC
+        │   │                   2649.5│ 350 x 180 │ -170 [SELL IMB]
+        └───┘                   2649.0│ 190 x 220 │ +30
+                                2648.5│  90 x 150 │ +60
+```
+
+| Pattern | Detection | Meaning |
+|---------|-----------|---------|
+| **Stacked Buy Imbalance** | 3+ consecutive buy imbalances | Strong support |
+| **Stacked Sell Imbalance** | 3+ consecutive sell imbalances | Strong resistance |
+| **Buy Absorption** | High volume + delta ~0 on drop | Buyers absorbing sells |
+| **Sell Absorption** | High volume + delta ~0 on rise | Sellers absorbing buys |
+| **Unfinished Auction** | Close=High/Low + delta confirms | Continuation expected |
+
+---
+
+## 🛡️ Risk Management
+
+### Safety Layer Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           SAFETY LAYER                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────────────┐         ┌─────────────────────┐                  │
+│   │   CIRCUIT BREAKER   │         │   SPREAD MONITOR    │                  │
+│   ├─────────────────────┤         ├─────────────────────┤                  │
+│   │ Daily DD: 4% → STOP │         │ Normal: 100% size   │                  │
+│   │ Total DD: 8% → CLOSE│         │ Elevated: 50% size  │                  │
+│   │ 5 Losses → COOLDOWN │         │ High: 25% size      │                  │
+│   │ Emergency → HALT    │         │ Extreme: NO TRADE   │                  │
+│   └─────────────────────┘         └─────────────────────┘                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Prop Firm Compliance
+
+| Rule | Apex | FTMO | Our Buffer | Implementation |
+|------|------|------|------------|----------------|
+| **Max Drawdown** | 10% trailing | 10% total | 8% | Real-time HWM tracking |
+| **Daily Drawdown** | N/A | 5% | 4% | Daily loss circuit breaker |
+| **Overnight** | ❌ Prohibited | ✅ Allowed | Auto-close | Time-based closure |
+| **Consistency** | 30% max/day | N/A | Monitor | Daily profit cap |
+| **Risk/Trade** | 0.5-1% | 0.5-1% | 0.5% | Dynamic position sizing |
+
+### Position Sizing Formula
+
+```
+Lot Size = (Account Equity × Risk%) / (SL Points × Tick Value)
+         × Regime Multiplier (0.5 or 1.0)
+         × MTF Multiplier (0.5, 0.75, or 1.0)
+         × Spread Multiplier (0.25 to 1.0)
+```
+
+---
+
+## 🤖 Machine Learning Integration
+
+### ONNX Brain - Direction Prediction
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        ONNX INFERENCE PIPELINE                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   FEATURES (15)              MODEL                    OUTPUT                │
+│   ┌─────────────┐      ┌─────────────┐         ┌─────────────┐             │
+│   │ Returns     │      │             │         │             │             │
+│   │ RSI (3 TFs) │      │    LSTM     │         │ P(Bearish)  │             │
+│   │ ATR Norm    │ ───▶ │    MODEL    │ ───▶    │ P(Bullish)  │             │
+│   │ Hurst       │      │   (ONNX)    │         │             │             │
+│   │ Entropy     │      │             │         │ If > 0.65   │             │
+│   │ Session     │      └─────────────┘         │ = CONFIRM   │             │
+│   │ ...         │           < 5ms              └─────────────┘             │
+│   └─────────────┘                                                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 15 Model Features
+
+| # | Feature | Calculation |
+|---|---------|-------------|
+| 1 | Returns | (close - prev) / prev |
+| 2 | Log Returns | log(close / prev) |
+| 3 | Range % | (high - low) / close |
+| 4-6 | RSI (M5/M15/H1) | RSI(14) / 100 |
+| 7 | ATR Normalized | ATR(14) / close |
+| 8 | MA Distance | (close - MA20) / MA20 |
+| 9 | BB Position | (close - mid) / width |
+| 10 | Hurst | Rolling Hurst(100) |
+| 11 | Entropy | Rolling Entropy(100) / 4 |
+| 12 | Session | 0=Asia, 1=London, 2=NY |
+| 13-14 | Hour Encoding | sin/cos(2π × hour / 24) |
+| 15 | OB Distance | Distance to OB / ATR |
+
+---
+
+## 🐍 NautilusTrader Migration (Python)
+
+We are actively migrating to **[NautilusTrader](https://nautilustrader.io)** - a high-performance algorithmic trading platform.
 
 ### Why NautilusTrader?
 
 | Feature | Benefit |
 |---------|---------|
-| **Event-Driven Architecture** | Realistic backtesting without look-ahead bias |
+| **Event-Driven** | Realistic backtesting without look-ahead bias |
 | **High Performance** | Cython core for institutional-grade speed |
-| **Multi-Venue Support** | Trade futures on Tradovate (Apex) |
-| **Unified Backtesting/Live** | Same code for simulation and production |
-| **Python Ecosystem** | Full access to ML/AI libraries (scikit-learn, PyTorch, etc.) |
+| **Multi-Venue** | Trade futures on Tradovate (Apex) |
+| **Unified Code** | Same code for backtest and live |
+| **Python Ecosystem** | Full ML/AI libraries access |
 
 ### Migration Progress
 
 ```
 nautilus_gold_scalper/
 ├── src/
-│   ├── strategies/          # Trading strategies (SMC, Breakout)
-│   ├── actors/              # Data processors (Regime, Session)
+│   ├── strategies/          # Trading strategies
 │   ├── indicators/          # Custom indicators
-│   └── models/              # Data models
+│   ├── signals/             # Signal generators
+│   ├── risk/                # Risk management
+│   ├── ml/                  # Machine learning
+│   ├── execution/           # Trade execution
+│   └── core/                # Core definitions
 ├── scripts/                 # Backtest runners
 ├── tests/                   # Unit tests
-└── data/                    # Historical data (Parquet)
+└── data/                    # Historical data
 ```
 
-**Modules Migrated:**
-- [x] Session Filter (London/NY detection)
-- [x] Regime Detector (Hurst + Entropy)
-- [ ] Order Block Detector (in progress)
-- [ ] SMC Strategy (planned)
-- [ ] Risk Manager (planned)
+### Modules Status
 
-### Tech Stack
-
-- **Python 3.10+** with type hints
-- **NautilusTrader** for backtesting and live trading
-- **Polars/Pandas** for data manipulation
-- **ParquetDataCatalog** for efficient data storage
-- **ONNX Runtime** for ML model inference
-
----
-
-## Prop Firm Compliance (Apex & FTMO)
-
-This EA is designed to comply with major prop firm rules:
-
-| Rule | Apex | FTMO | Implementation |
-|------|------|------|----------------|
-| **Max Drawdown** | 10% trailing (HWM) | 10% total | Real-time tracking |
-| **Daily Drawdown** | N/A | 5% daily | Daily loss limit |
-| **Overnight Positions** | ❌ Prohibited | ✅ Allowed | Auto-close option |
-| **Consistency Rule** | 30% max/day | N/A | Daily profit cap |
-| **Risk per Trade** | 0.5-1% | 0.5-1% | Position sizing |
+| Module | MQL5 | Python | Status |
+|--------|------|--------|--------|
+| Session Filter | ✅ | ✅ | **Migrated** |
+| Regime Detector | ✅ | ✅ | **Migrated** |
+| Order Block | ✅ | ✅ | **Migrated** |
+| FVG Detector | ✅ | ✅ | **Migrated** |
+| Liquidity Sweep | ✅ | ✅ | **Migrated** |
+| Footprint Analyzer | ✅ | ✅ | **Migrated** |
+| Confluence Scorer | ✅ | ✅ | **Migrated** |
+| Risk Manager | ✅ | ✅ | **Migrated** |
+| Trade Manager | ✅ | 🔄 | In Progress |
+| SMC Strategy | ✅ | 🔄 | In Progress |
 
 ---
 
-## Requirements
+## 📁 Project Structure
 
-- **Platform**: MetaTrader 5 (FTMO/Apex terminal recommended)
-- **Broker**: Any with XAUUSD and low spreads
-- **Account**: $50,000+ recommended for proper position sizing
+```
+EA_SCALPER_XAUUSD/
+│
+├── MQL5/                           # MetaTrader 5 Source
+│   ├── Experts/                    # Main EA
+│   │   └── EA_SCALPER_XAUUSD.mq5   # Entry point
+│   ├── Include/EA_SCALPER/         # Modules
+│   │   ├── Analysis/               # Technical analysis
+│   │   ├── Signal/                 # Signal generation
+│   │   ├── Risk/                   # Risk management
+│   │   ├── Execution/              # Trade execution
+│   │   ├── Bridge/                 # External integrations
+│   │   ├── Safety/                 # Circuit breakers
+│   │   └── Core/                   # Core definitions
+│   └── Models/                     # ONNX models
+│
+├── nautilus_gold_scalper/          # NautilusTrader (Python)
+│   ├── src/                        # Source code
+│   ├── tests/                      # Unit tests
+│   └── scripts/                    # Backtest scripts
+│
+├── scripts/                        # Analysis tools
+│   ├── oracle/                     # WFA, Monte Carlo
+│   └── forge/                      # Code analysis
+│
+├── models/                         # ML models
+├── data/                           # Market data
+└── DOCS/                           # Documentation
+```
+
+---
+
+## 📈 Expected Performance
+
+| Metric | Target | Notes |
+|--------|--------|-------|
+| **Win Rate** | 65-75% | MTF + SMC + ML confluence |
+| **Average R:R** | 2.0-2.5 | Entry optimization |
+| **Profit Factor** | 2.0+ | High WR × High R:R |
+| **Max Drawdown** | < 8% | Prop firm buffer |
+| **Trades/Day** | 3-8 | Quality over quantity |
+| **Monthly Return** | 5-15% | Conservative estimate |
+
+---
+
+## ⚙️ Requirements
+
+- **Platform**: MetaTrader 5
+- **Broker**: Any with XAUUSD (low spread preferred)
+- **Account**: $50,000+ recommended
 - **VPS**: Recommended for 24/5 operation
+- **Python**: 3.10+ (for NautilusTrader)
 
 ---
 
-## Disclaimer
+## ⚠️ Disclaimer
 
 This is a **personal project** shared for educational purposes. Trading involves substantial risk of loss and is not suitable for all investors.
 
@@ -161,23 +416,28 @@ This is a **personal project** shared for educational purposes. Trading involves
 
 ---
 
-## Status
-
-**Current Version**: v2.2  
-**Status**: Active Development  
-**Target**: Apex Trader Funding Challenges
-
----
-
-## Contact & Contributions
+## 📬 Contact & Contributions
 
 This repository is maintained by **Franco** as a personal trading automation project.
 
-📬 **Telegram**: [@novtelfran](https://t.me/novtelfran)
+**Telegram**: [@novtelfran](https://t.me/novtelfran)
 
 Questions? Want to contribute? Found a bug? Feel free to reach out!
 
 If you find this useful, give it a ⭐ star!
+
+---
+
+## 📜 Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| **3.30** | 2024-11 | Order Flow Edition: Footprint, Imbalance, Absorption |
+| **3.20** | 2024-11 | MTF Architecture (H1+M15+M5) |
+| **3.10** | 2024-11 | Entry Optimizer SL limits |
+| **3.00** | 2024-11 | Singularity Edition (ML/ONNX) |
+| **2.00** | 2024-10 | SMC Core Modules |
+| **1.00** | 2024-09 | Initial Release |
 
 ---
 
@@ -186,4 +446,4 @@ If you find this useful, give it a ⭐ star!
 ---
 
 ### Keywords
-`algorithmic-trading` `xauusd` `gold-trading` `mql5` `metatrader5` `expert-advisor` `prop-firm` `apex-trader-funding` `nautilustrader` `python-trading` `smart-money-concepts` `order-flow` `machine-learning` `onnx` `quantitative-trading` `automated-trading` `scalping` `forex` `futures` `trading-bot` `quant` `financial-analysis`
+`algorithmic-trading` `xauusd` `gold-trading` `mql5` `metatrader5` `expert-advisor` `prop-firm` `apex-trader-funding` `ftmo` `nautilustrader` `python-trading` `smart-money-concepts` `order-flow` `machine-learning` `onnx` `quantitative-trading` `automated-trading` `scalping` `forex` `futures` `trading-bot` `quant` `financial-analysis` `institutional-trading` `footprint-chart`
