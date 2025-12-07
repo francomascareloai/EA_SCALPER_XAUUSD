@@ -80,7 +80,7 @@ class GoldScalperConfig(BaseStrategyConfig, frozen=True):
     prop_firm_enabled: bool = True
     account_balance: float = 100000.0
     daily_loss_limit_pct: float = 5.0
-    total_loss_limit_pct: float = 10.0
+    total_loss_limit_pct: float = 5.0  # Apex trailing DD limit
     
     # News / event filters
     use_news_filter: bool = True

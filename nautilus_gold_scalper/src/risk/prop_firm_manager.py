@@ -16,7 +16,7 @@ from .consistency_tracker import ConsistencyTracker
 
 
 class AccountTerminatedException(Exception):
-    """Raised when Apex Trading limits are breached (DD > 10% or consistency rule violated)."""
+    """Raised when Apex Trading limits are breached (DD > 5% or consistency rule violated)."""
     pass
 
 

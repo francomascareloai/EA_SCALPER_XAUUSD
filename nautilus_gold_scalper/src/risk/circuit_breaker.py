@@ -125,7 +125,7 @@ class CircuitBreaker:
     def __init__(
         self,
         daily_loss_limit: float = 0.05,  # 5% daily loss limit (generic)
-        total_loss_limit: float = 0.10,  # 10% Apex trailing DD limit
+        total_loss_limit: float = 0.05,  # 5% Apex trailing DD limit
         enable_auto_recovery: bool = True,
     ) -> None:
         """
@@ -535,6 +535,6 @@ class CircuitBreaker:
 # - Bounds & Null: Lock protects concurrent access, Optional types for nullable fields
 # - Division by zero: Equity checks before percentage calculations
 # - Resource management: Thread lock properly used with context manager
-# - Apex compliance: Trailing DD 10% enforced, daily monitoring
+# - Apex compliance: Trailing DD 5% enforced, daily monitoring
 # - Regression: No dependent modules yet (new implementation)
 # - Bug patterns: Thread-safe, proper state management, logging

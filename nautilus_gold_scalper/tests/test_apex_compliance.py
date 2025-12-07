@@ -108,7 +108,7 @@ class TestApexCompliance:
         limits = PropFirmLimits(
             account_size=100_000.0,
             daily_loss_limit=5_000.0,  # 5%
-            trailing_drawdown=10_000.0,  # 10%
+            trailing_drawdown=5_000.0,  # 5% Apex trailing DD
         )
         prop_mgr = PropFirmManager(limits=limits)
         prop_mgr.initialize(100_000.0)
@@ -117,29 +117,29 @@ class TestApexCompliance:
         prop_mgr.update_equity(105_000.0)
         assert prop_mgr._high_water == 105_000.0, "HWM should update when equity increases"
         
-        # Test: Equity drops to $95k (10k loss from HWM = 9.52% DD - below 10%)
-        prop_mgr.update_equity(95_000.0)
+        # Test: Equity drops to $100k (5k loss from HWM = 4.76% DD - below 5%)
+        prop_mgr.update_equity(100_000.0)
         state = prop_mgr.get_state()
-        assert state.trailing_dd_current == 10_000.0, "Trailing DD should be $10k"
-        assert state.is_trading_allowed == True, "Trading allowed at 9.52% DD"
+        assert state.trailing_dd_current == 5_000.0, "Trailing DD should be $5k"
+        assert state.is_trading_allowed == True, "Trading allowed at 4.76% DD"
         
-        # Test: Equity drops to $94.5k (10.5k loss from HWM = 10% DD - AT LIMIT)
-        prop_mgr.update_equity(94_500.0)
+        # Test: Equity drops to $99.75k (5.25k loss from HWM = 5% DD - AT LIMIT)
+        prop_mgr.update_equity(99_750.0)
         state = prop_mgr.get_state()
-        assert state.trailing_dd_current == 10_500.0, "Trailing DD should be $10.5k"
-        assert state.is_hard_breached == True, "Should breach at 10% DD"
+        assert state.trailing_dd_current == 5_250.0, "Trailing DD should be $5.25k"
+        assert state.is_hard_breached == True, "Should breach at 5% DD"
     
     def test_account_termination_on_breach(self):
         """Test that PropFirmManager raises AccountTerminatedException on breach."""
         limits = PropFirmLimits(
             account_size=100_000.0,
-            trailing_drawdown=10_000.0,  # 10%
+            trailing_drawdown=5_000.0,  # 5% Apex trailing DD
         )
         prop_mgr = PropFirmManager(limits=limits)
         prop_mgr.initialize(100_000.0)
         
-        # Update equity to $90k (10k loss = 10% DD)
-        prop_mgr.update_equity(90_000.0)
+        # Update equity to $95k (5k loss = 5% DD)
+        prop_mgr.update_equity(95_000.0)
         
         # Test: can_trade() should trigger _hard_stop() which raises exception
         with pytest.raises(AccountTerminatedException):
