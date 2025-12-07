@@ -33,10 +33,19 @@ class TestApexCompliance:
     def test_time_constraint_4_59_pm_et(self):
         """Test that TimeConstraintManager blocks trading at 4:59 PM ET."""
         # Create mock strategy
+        class MockConfig:
+            instrument_id = "XAUUSD"
+        
+        class MockCache:
+            def positions_open(self):
+                return []
+        
         class MockStrategy:
             def __init__(self):
                 self._is_trading_allowed = True
                 self.log = MockLogger()
+                self.config = MockConfig()
+                self.cache = MockCache()
             
             def close_all_positions(self, instrument_id):
                 pass
@@ -170,28 +179,28 @@ if __name__ == "__main__":
     
     print("Testing Time Constraint (4:59 PM ET)...")
     test.test_time_constraint_4_59_pm_et()
-    print("✅ PASS\n")
+    print("PASS\n")
     
     print("Testing Consistency Rule (30%)...")
     test.test_consistency_rule_30_percent()
-    print("✅ PASS\n")
+    print("PASS\n")
     
     print("Testing Circuit Breaker Integration...")
     test.test_circuit_breaker_integration()
-    print("✅ PASS\n")
+    print("PASS\n")
     
     print("Testing Trailing DD Calculation...")
     test.test_trailing_dd_calculation()
-    print("✅ PASS\n")
+    print("PASS\n")
     
     print("Testing Account Termination...")
     test.test_account_termination_on_breach()
-    print("✅ PASS\n")
+    print("PASS\n")
     
     print("Testing Config Values...")
     test.test_config_values_loaded()
-    print("✅ PASS\n")
+    print("PASS\n")
     
     print("=" * 60)
-    print("ALL APEX COMPLIANCE TESTS PASSED ✅")
+    print("ALL APEX COMPLIANCE TESTS PASSED")
     print("=" * 60)
