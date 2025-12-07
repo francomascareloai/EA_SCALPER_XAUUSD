@@ -103,6 +103,7 @@ def run_nautilus_backtest(
     end_date: str = "2024-12-31",
     initial_balance: float = 100_000.0,
     log_level: str = "INFO",
+    config_path: str = "nautilus_gold_scalper/configs/strategy_config.yaml",
 ):
     """Run backtest using NautilusTrader's native engine."""
     
@@ -165,32 +166,36 @@ def run_nautilus_backtest(
     
     print(f"Added {len(bars)} M5 bars to engine")
     
-    # Configure strategy
+    # Configure strategy via YAML (single source of truth)
+    cfg = {}
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        cfg = {}
+    confluence_cfg = cfg.get("confluence", {}) if isinstance(cfg, dict) else {}
+    risk_cfg = cfg.get("risk", {}) if isinstance(cfg, dict) else {}
+    exec_cfg = cfg.get("execution", {}) if isinstance(cfg, dict) else {}
+
     strategy_config = GoldScalperConfig(
         strategy_id="GOLD-SCALPER-001",
         instrument_id=xauusd.id,
         ltf_bar_type=bar_type,
-        
-        # Scoring thresholds
-        execution_threshold=70,
-        min_mtf_confluence=50.0,
-        
-        # Risk settings
-        risk_per_trade=Decimal("0.5"),
-        max_daily_loss_pct=Decimal("5.0"),
-        max_total_loss_pct=Decimal("10.0"),
-        
-        # Feature flags
-        use_session_filter=False,  # Disable for testing
-        use_regime_filter=False,  # Disable for testing
-        use_mtf=False,  # Single TF for now
-        use_footprint=False,  # Disable for testing
-        
-        # Prop firm
-        prop_firm_enabled=False,  # Disable for testing
-        account_balance=initial_balance,
-        
-        # Debug
+        execution_threshold=int(confluence_cfg.get("execution_threshold", 70)),
+        min_mtf_confluence=float(confluence_cfg.get("min_score_to_trade", 50)),
+        risk_per_trade=Decimal(str(risk_cfg.get("max_risk_per_trade", 0.5))),
+        max_daily_loss_pct=Decimal(str(risk_cfg.get("dd_soft", 5.0))) if risk_cfg.get("dd_soft", 5.0) >= 1 else Decimal(str(risk_cfg.get("dd_soft", 0.05) * 100)),
+        max_total_loss_pct=Decimal(str(risk_cfg.get("dd_hard", 10.0))) if risk_cfg.get("dd_hard", 10.0) >= 1 else Decimal(str(risk_cfg.get("dd_hard", 0.10) * 100)),
+        use_session_filter=exec_cfg.get("use_session_filter", False),
+        use_regime_filter=exec_cfg.get("use_regime_filter", False),
+        use_mtf=exec_cfg.get("use_mtf", False),
+        use_footprint=exec_cfg.get("use_footprint", False),
+        prop_firm_enabled=exec_cfg.get("prop_firm_enabled", False),
+        account_balance=exec_cfg.get("initial_balance", initial_balance),
+        flatten_time_et=exec_cfg.get("flatten_time_et", "16:59"),
+        allow_overnight=exec_cfg.get("allow_overnight", False),
+        slippage_ticks=int(exec_cfg.get("slippage_ticks", 2)),
+        commission_per_contract=float(exec_cfg.get("commission_per_contract", 2.5)),
         debug_mode=True,
     )
     
