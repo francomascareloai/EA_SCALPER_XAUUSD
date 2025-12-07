@@ -259,6 +259,7 @@ class BaseGoldStrategy(Strategy):
         """Handle position closed event."""
         if self._position and self._position.id == event.position_id:
             pnl = float(self._position.realized_pnl)
+            qty = self._position.quantity.as_double()
             self._daily_pnl += pnl
             self._equity_base += pnl
             
@@ -271,6 +272,20 @@ class BaseGoldStrategy(Strategy):
             if getattr(self, "_drawdown_tracker", None):
                 analysis = self._drawdown_tracker.update(self._equity_base, pnl=pnl)
                 self._apply_drawdown_limits(analysis)
+            
+            # Prop-firm tracking: feed realized result
+            if getattr(self, "_prop_firm", None):
+                try:
+                    self._prop_firm.register_trade_close(contracts=qty, profit=pnl)
+                except Exception as exc:
+                    self.log.debug(f"Prop firm update failed on close: {exc}")
+
+            # Circuit breaker trade result
+            if getattr(self, "_circuit_breaker", None):
+                try:
+                    self._circuit_breaker.register_trade_result(pnl=pnl, is_win=pnl > 0)
+                except Exception as exc:
+                    self.log.debug(f"Circuit breaker trade update failed: {exc}")
             
             # Check daily loss limit as % of balance
             account_balance = float(getattr(self.config, "account_balance", self._equity_base or 100000.0))
@@ -410,7 +425,8 @@ class BaseGoldStrategy(Strategy):
         else:
             unrealized = (entry - mid) * qty * point_value
 
-        return self._equity_base + self._daily_pnl + unrealized
+        # _equity_base already includes realized PnL; avoid double-counting _daily_pnl
+        return self._equity_base + unrealized
 
     def _apply_drawdown_limits(self, analysis: Optional[Any]) -> None:
         """Block trading when drawdown thresholds are breached."""

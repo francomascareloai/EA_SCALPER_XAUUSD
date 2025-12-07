@@ -49,6 +49,8 @@ from .drawdown_tracker import DrawdownTracker, DrawdownSnapshot
 from .var_calculator import VaRCalculator
 from .circuit_breaker import CircuitBreaker, CircuitBreakerLevel, CircuitBreakerState
 from .spread_monitor import SpreadMonitor, SpreadState, SpreadSnapshot as SpreadSnapshot_
+from .time_constraint_manager import TimeConstraintManager
+from .consistency_tracker import ConsistencyTracker
 
 __all__ = [
     "PropFirmManager",
@@ -63,6 +65,8 @@ __all__ = [
     "SpreadMonitor",
     "SpreadState",
     "SpreadSnapshot_",
+    "TimeConstraintManager",
+    "ConsistencyTracker",
 ]
 
 __version__ = "1.1.0"

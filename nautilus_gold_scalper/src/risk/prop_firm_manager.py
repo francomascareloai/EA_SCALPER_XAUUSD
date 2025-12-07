@@ -11,6 +11,8 @@ from enum import IntEnum
 from typing import Optional, Tuple
 from datetime import datetime, timezone
 
+from .consistency_tracker import ConsistencyTracker
+
 
 class RiskLevel(IntEnum):
     NORMAL = 0
@@ -59,6 +61,8 @@ class PropFirmManager:
         self._consecutive_wins = 0
         self._consecutive_losses = 0
         self._last_update = datetime.now(timezone.utc)
+        self._strategy = None  # optional hook for stop/flatten on breach
+        self._consistency = ConsistencyTracker(initial_balance=self.limits.account_size)
 
     # -------------------- lifecycle
     def initialize(self, starting_equity: float) -> None:
@@ -70,6 +74,10 @@ class PropFirmManager:
         self._consecutive_losses = 0
         self._initialized = True
         self._last_update = datetime.now(timezone.utc)
+
+    def set_strategy(self, strategy) -> None:
+        """Optional: attach strategy for hard stops/flatten on breach."""
+        self._strategy = strategy
 
     # -------------------- updates
     def update_equity(self, equity: float) -> None:
@@ -88,6 +96,7 @@ class PropFirmManager:
             self._consecutive_losses += 1
             self._consecutive_wins = 0
         self.update_equity(self._equity + profit)
+        self._consistency.update_profit(profit, datetime.now(timezone.utc))
 
     def on_new_day(self, current_equity: Optional[float] = None) -> None:
         """
@@ -101,10 +110,15 @@ class PropFirmManager:
         self._consecutive_wins = 0
         self._consecutive_losses = 0
         self._last_update = datetime.now(timezone.utc)
+        self._consistency.reset_daily()
 
     # -------------------- checks
     def can_trade(self) -> bool:
         state = self.get_state()
+        if not state.is_trading_allowed:
+            self._hard_stop(state)
+        if state.is_trading_allowed and not self._consistency.can_trade(datetime.now(timezone.utc)):
+            return False
         return state.is_trading_allowed
 
     def validate_trade(self, risk_amount: float, contracts: float) -> Tuple[bool, str]:
@@ -163,6 +177,24 @@ class PropFirmManager:
         if self._consecutive_losses >= 2:
             return 0.70
         return 1.0
+
+    # -------------------- hard stop helpers
+    def _hard_stop(self, state: PropFirmState) -> None:
+        """
+        Stop strategy and flatten positions when breach occurs.
+        """
+        if self._strategy is None:
+            return
+        try:
+            self._strategy.log.critical(
+                f"APEX DD BREACH - stopping strategy. Daily={state.daily_loss_current:.2f}, "
+                f"Trailing={state.trailing_dd_current:.2f}"
+            )
+            self._strategy.close_all_positions(self._strategy.config.instrument_id)
+            self._strategy.stop()
+        except Exception:
+            # last resort: mark trading not allowed
+            self._strategy._is_trading_allowed = False
 
     # -------------------- compatibility for run_backtest
     def check_can_trade(self) -> bool:

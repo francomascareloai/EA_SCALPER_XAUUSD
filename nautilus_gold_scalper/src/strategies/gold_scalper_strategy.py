@@ -49,6 +49,9 @@ from ..risk.prop_firm_manager import PropFirmManager
 from ..risk.position_sizer import PositionSizer
 from ..risk.drawdown_tracker import DrawdownTracker
 from ..risk.spread_monitor import SpreadMonitor, SpreadState
+from ..risk.circuit_breaker import CircuitBreaker
+from ..risk.time_constraint_manager import TimeConstraintManager
+from .strategy_selector import StrategySelector, StrategyType, MarketContext
 
 
 class GoldScalperConfig(BaseStrategyConfig, frozen=True):
@@ -130,6 +133,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
         self._news_size_mult: float = 1.0
         self._spread_monitor: Optional[SpreadMonitor] = None
         self._spread_snapshot: Optional[Any] = None
+        self._time_manager: Optional[TimeConstraintManager] = None
+        self._circuit_breaker: Optional[CircuitBreaker] = None
+        self._trading_blocked_today: bool = False
+        self._strategy_selector: Optional[StrategySelector] = None
         
         # Analysis state (per timeframe)
         self._htf_bias: MarketBias = MarketBias.RANGING
@@ -185,6 +192,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
                 trailing_drawdown=self.config.account_balance * float(self.config.total_loss_limit_pct) / 100,
             )
             self._prop_firm = PropFirmManager(limits=limits)
+            self._prop_firm.set_strategy(self)
             
             self._position_sizer = PositionSizer(
                 risk_per_trade=float(self.config.risk_per_trade) / 100,
@@ -204,6 +212,22 @@ class GoldScalperStrategy(BaseGoldStrategy):
             max_spread_pips=float(self.config.max_spread_points) / 10.0,  # convert points->pips (pip_factor=10)
             pip_factor=10.0,
         )
+
+        # Apex time cutoff manager
+        self._time_manager = TimeConstraintManager(
+            strategy=self,
+            allow_overnight=self.config.allow_overnight,
+            cutoff=self._parse_cutoff(self.config.flatten_time_et),
+        )
+
+        # Circuit breaker integration
+        self._circuit_breaker = CircuitBreaker(
+            daily_loss_limit=float(self.config.daily_loss_limit_pct) / 100.0,
+            total_loss_limit=float(self.config.total_loss_limit_pct) / 100.0,
+        )
+
+        # Strategy selector (regime/session/safety aware)
+        self._strategy_selector = StrategySelector()
         
         # Validate all critical analyzers
         if not self._validate_analyzers():
@@ -277,6 +301,11 @@ class GoldScalperStrategy(BaseGoldStrategy):
             # Reset drawdown tracker if active
             if self._drawdown_tracker is not None and hasattr(self._drawdown_tracker, 'on_new_day'):
                 self._drawdown_tracker.on_new_day()
+
+            if self._time_manager:
+                self._time_manager.reset_daily()
+            if self._circuit_breaker:
+                self._circuit_breaker.reset()
             
             self._last_reset_date = current_date
             self.log.info("Daily reset complete")
@@ -344,7 +373,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
     def _on_ltf_bar(self, bar: Bar) -> None:
         """Process M5 bar - Update execution-level analysis."""
         # Enforce intraday operational rules (Apex)
-        self._enforce_cutoff(bar.ts_event)
+        if self._time_manager and not self._time_manager.check(bar.ts_event):
+            return
         # Main signal checking done in _check_for_signal
         pass
     
@@ -379,11 +409,49 @@ class GoldScalperStrategy(BaseGoldStrategy):
                 return
 
         # Apex cutoff / overnight guard (block new trades after cutoff)
+        if self._time_manager and not self._time_manager.check(bar.ts_event):
+            return
         if getattr(self, "_trading_blocked_today", False):
             return
         
         # Check prop firm limits (only if enabled)
         if self.config.prop_firm_enabled and self._prop_firm and not self._prop_firm.can_trade():
+            self._is_trading_allowed = False
+            return
+
+        # Circuit breaker gate
+        if self._circuit_breaker and not self._circuit_breaker.can_trade():
+            return
+
+        # Strategy selector gate (regime/session/safety context)
+        if self._strategy_selector:
+            context = MarketContext(
+                hurst=self._current_regime.hurst_exponent if self._current_regime else 0.5,
+                entropy=self._current_regime.shannon_entropy if self._current_regime else 2.0,
+                is_trending=self._current_regime.regime == MarketRegime.REGIME_PRIME_TRENDING if self._current_regime else False,
+                is_reverting=self._current_regime.regime in [MarketRegime.REGIME_PRIME_REVERTING, MarketRegime.REGIME_NOISY_REVERTING] if self._current_regime else False,
+                is_random=self._current_regime.regime == MarketRegime.REGIME_RANDOM_WALK if self._current_regime else True,
+                is_london=self._current_session.session == TradingSession.SESSION_LONDON if self._current_session else False,
+                is_newyork=self._current_session.session == TradingSession.SESSION_NY if self._current_session else False,
+                is_overlap=self._current_session.session == TradingSession.SESSION_LONDON_NY_OVERLAP if self._current_session else False,
+                is_asian=self._current_session.session == TradingSession.SESSION_ASIAN if self._current_session else False,
+                circuit_ok=True if not self._circuit_breaker else self._circuit_breaker.can_trade(),
+                spread_ok=self._spread_snapshot.can_trade if self._spread_snapshot else True,
+                spread_ratio=self._spread_snapshot.spread_ratio if self._spread_snapshot and hasattr(self._spread_snapshot, "spread_ratio") else 1.0,
+                daily_dd_percent=self._drawdown_tracker.get_daily_drawdown_pct() if self._drawdown_tracker else 0.0,
+                total_dd_percent=self._drawdown_tracker.get_total_drawdown_pct() if self._drawdown_tracker else 0.0,
+            )
+            selection = self._strategy_selector.select_strategy(context)
+            if selection.strategy in (StrategyType.STRATEGY_NONE, StrategyType.STRATEGY_SAFE_MODE):
+                return
+
+        # Consistency rule (30% daily of cumulative profit)
+        if self._consistency_tracker and not self._consistency_tracker.can_trade():
+            self._is_trading_allowed = False
+            return
+
+        # Circuit breaker guard
+        if self._circuit_breaker and not self._circuit_breaker.can_trade():
             self._is_trading_allowed = False
             return
         
@@ -720,6 +788,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
         # Calculate base size
         news_mult = getattr(self, "_news_size_mult", 1.0)
         risk_pct = float(self.config.risk_per_trade) * news_mult * spread_mult
+        if self._circuit_breaker:
+            risk_pct *= self._circuit_breaker.get_size_multiplier()
         
         # Use PositionSizer.calculate_lot
         sl_pips = sl_distance / XAUUSD_POINT  # convert price distance to pips (0.01 per point)
@@ -738,6 +808,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
     def on_quote_tick(self, tick: QuoteTick) -> None:
         """Track spread for spread filter."""
         super().on_quote_tick(tick)
+
+        # Apex time guard on every tick
+        if self._time_manager and not self._time_manager.check(tick.ts_event):
+            return
         
         spread = float(tick.ask_price - tick.bid_price)
         if self.instrument:
@@ -758,40 +832,46 @@ class GoldScalperStrategy(BaseGoldStrategy):
             if equity is not None:
                 try:
                     self._prop_firm.update_equity(equity)
+                    # stop immediately if breach occurs
+                    if not self._prop_firm.can_trade():
+                        return
                 except Exception as exc:
                     logger.debug(f"Prop firm equity update failed: {exc}")
 
-        # After close of trading window flatten positions
-        self._enforce_cutoff(tick.ts_event)
+        # Circuit breaker equity feed
+        if self._circuit_breaker:
+            equity = self._compute_equity_from_tick(tick)
+            if equity is not None:
+                try:
+                    self._circuit_breaker.update_equity(equity)
+                except Exception as exc:
+                    logger.debug(f"Circuit breaker equity update failed: {exc}")
+
+        # TimeConstraintManager handles cutoff/flatten logic
 
     # ========== Operational helpers ==========
-    def _enforce_cutoff(self, ts_ns: int) -> None:
-        """
-        Enforce end-of-day cutoff and no-overnight rules.
-        Closes open positions and blocks new trades after cutoff.
-        """
+    @staticmethod
+    def _parse_cutoff(cutoff_str: str):
+        """Parse HH:MM string to time."""
         from datetime import time
+        parts = cutoff_str.split(":")
+        hour = int(parts[0])
+        minute = int(parts[1]) if len(parts) > 1 else 0
+        return time(hour=hour, minute=minute)
+
+    def _compute_equity_from_tick(self, tick: QuoteTick) -> Optional[float]:
+        """
+        Compute mark-to-market equity including unrealized PnL.
+        """
         try:
-            from zoneinfo import ZoneInfo
-            eastern = ZoneInfo("America/New_York")
-        except Exception:
-            eastern = timezone.utc
-
-        if getattr(self.config, "allow_overnight", False):
-            return
-
-        dt_utc = datetime.fromtimestamp(ts_ns / 1e9, tz=timezone.utc)
-        dt_et = dt_utc.astimezone(eastern)
-
-        cutoff_h, cutoff_m = map(int, self.config.flatten_time_et.split(":"))
-        cutoff = time(hour=cutoff_h, minute=cutoff_m)
-
-        if dt_et.time() >= cutoff:
-            if not getattr(self, "_trading_blocked_today", False):
-                self._trading_blocked_today = True
-                self.log.warning(f"Cutoff reached ({dt_et.time()} ET) - blocking new trades")
+            equity = float(self._equity_base)
             if self._position:
-                self._close_position()
-            self._is_trading_allowed = False
-        else:
-            self._trading_blocked_today = False
+                from nautilus_trader.model.enums import PositionSide
+                mkt_price = tick.bid_price if self._position.side == PositionSide.LONG else tick.ask_price
+                unreal = self._position.unrealized_pnl(mkt_price)
+                equity += float(unreal)
+            return equity
+        except Exception as exc:
+            self.log.debug(f"Equity computation failed: {exc}")
+            return None
+
