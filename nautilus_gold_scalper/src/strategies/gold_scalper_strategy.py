@@ -14,11 +14,12 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Any
 import random
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 from nautilus_trader.config import StrategyConfig
-from nautilus_trader.model import Bar, BarType, QuoteTick
+from nautilus_trader.model import Bar, BarType, QuoteTick, TradeTick
 from nautilus_trader.model import InstrumentId
 from nautilus_trader.model.objects import Price, Quantity
 
@@ -54,6 +55,8 @@ from ..risk.spread_monitor import SpreadMonitor, SpreadState
 from ..risk.circuit_breaker import CircuitBreaker
 from ..risk.time_constraint_manager import TimeConstraintManager
 from .strategy_selector import StrategySelector, StrategyType, MarketContext
+from ..utils.telemetry import TelemetrySink
+from ..utils.metrics import MetricsCalculator, PerformanceMetrics
 
 
 class GoldScalperConfig(BaseStrategyConfig, frozen=True):
@@ -92,6 +95,37 @@ class GoldScalperConfig(BaseStrategyConfig, frozen=True):
     latency_ms: int = 0
     partial_fill_prob: float = 0.0  # 0-1
     partial_fill_ratio: float = 0.5  # fraction to fill if partial triggers
+    use_selector: bool = True
+    fill_reject_base: float = 0.0
+    fill_reject_spread_factor: float = 0.0
+    fill_model: str = "realistic"
+    max_spread_pips: float = 50.0
+    spread_warning_ratio: float = 2.0
+    spread_block_ratio: float = 5.0
+    spread_history_size: int = 200
+    spread_update_interval: int = 1
+    spread_pip_factor: float = 10.0
+    time_warning_et: str = "16:00"
+    time_urgent_et: str = "16:30"
+    time_emergency_et: str = "16:55"
+    cb_level_1_losses: int = 3
+    cb_level_2_losses: int = 5
+    cb_level_3_dd: float = 3.0
+    cb_level_4_dd: float = 4.0
+    cb_level_5_dd: float = 4.5
+    cb_cooldown_1: int = 5
+    cb_cooldown_2: int = 15
+    cb_cooldown_3: int = 30
+    cb_cooldown_4: int = 1440
+    cb_size_mult_2: float = 0.75
+    cb_size_mult_3: float = 0.5
+    cb_auto_recovery: bool = True
+    consistency_cap_pct: float = 30.0
+    telemetry_enabled: bool = True
+    telemetry_path: str = "logs/telemetry.jsonl"
+    telemetry_capture_spread: bool = True
+    telemetry_capture_circuit: bool = True
+    telemetry_capture_cutoff: bool = True
 
 
 class GoldScalperStrategy(BaseGoldStrategy):
@@ -146,7 +180,14 @@ class GoldScalperStrategy(BaseGoldStrategy):
         self._fill_costs: Dict[str, float] = {}
         self._consistency_tracker = None
         self._last_spread_state: Optional[int] = None
+        self._last_cb_level: Optional[int] = None
+        self._telemetry: Optional[TelemetrySink] = None
         
+        
+        # Performance metrics tracking
+        self._trade_pnl_history: List[float] = []
+        self._metrics_calculator: Optional[MetricsCalculator] = None
+        self._last_metrics_emit: int = 0
         # Analysis state (per timeframe)
         self._htf_bias: MarketBias = MarketBias.RANGING
         self._mtf_order_blocks: List[OrderBlock] = []
@@ -216,12 +257,33 @@ class GoldScalperStrategy(BaseGoldStrategy):
             self._prop_firm.initialize(starting_equity=float(self.config.account_balance))
             # Expose consistency tracker for strategy-level guards/resets
             self._consistency_tracker = getattr(self._prop_firm, "_consistency", None)
+            if self._consistency_tracker:
+                try:
+                    self._consistency_tracker.consistency_limit = Decimal(str(self.config.consistency_cap_pct / 100.0))
+                except Exception:
+                    pass
+
+        # Telemetry sink
+        self._telemetry = TelemetrySink(
+            Path(getattr(self.config, "telemetry_path", "logs/telemetry.jsonl")),
+            enabled=bool(getattr(self.config, "telemetry_enabled", True)),
+        
+        # Initialize metrics calculator
+        self._metrics_calculator = MetricsCalculator(
+            risk_free_rate=0.05,
+            trading_days_per_year=252
+        )
+        )
 
         # Spread monitor (risk realism)
         self._spread_monitor = SpreadMonitor(
             symbol="XAUUSD",
-            max_spread_pips=float(self.config.max_spread_points) / 10.0,  # convert points->pips (pip_factor=10)
-            pip_factor=10.0,
+            history_size=int(self.config.spread_history_size),
+            warning_ratio=float(self.config.spread_warning_ratio),
+            block_ratio=float(self.config.spread_block_ratio),
+            max_spread_pips=float(self.config.max_spread_pips),
+            update_interval=int(self.config.spread_update_interval),
+            pip_factor=float(self.config.spread_pip_factor),
         )
 
         # Apex time cutoff manager
@@ -229,6 +291,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
             strategy=self,
             allow_overnight=self.config.allow_overnight,
             cutoff=self._parse_cutoff(self.config.flatten_time_et),
+            warning=self._parse_cutoff(self.config.time_warning_et),
+            urgent=self._parse_cutoff(self.config.time_urgent_et),
+            emergency=self._parse_cutoff(self.config.time_emergency_et),
+            telemetry=self._telemetry if getattr(self.config, "telemetry_capture_cutoff", True) else None,
         )
 
         # Circuit breaker integration
@@ -236,10 +302,23 @@ class GoldScalperStrategy(BaseGoldStrategy):
             daily_loss_limit=float(self.config.daily_loss_limit_pct) / 100.0,
             total_loss_limit=float(self.config.total_loss_limit_pct) / 100.0,
         )
+        if self._circuit_breaker:
+            self._circuit_breaker.LEVEL_1_LOSSES = int(self.config.cb_level_1_losses)
+            self._circuit_breaker.LEVEL_2_LOSSES = int(self.config.cb_level_2_losses)
+            self._circuit_breaker.LEVEL_3_DD = float(self.config.cb_level_3_dd)
+            self._circuit_breaker.LEVEL_4_DD = float(self.config.cb_level_4_dd)
+            self._circuit_breaker.LEVEL_5_DD = float(self.config.cb_level_5_dd)
+            self._circuit_breaker.LEVEL_1_COOLDOWN = int(self.config.cb_cooldown_1)
+            self._circuit_breaker.LEVEL_2_COOLDOWN = int(self.config.cb_cooldown_2)
+            self._circuit_breaker.LEVEL_3_COOLDOWN = int(self.config.cb_cooldown_3)
+            self._circuit_breaker.LEVEL_4_COOLDOWN = int(self.config.cb_cooldown_4)
+            self._circuit_breaker.LEVEL_2_SIZE_MULT = float(self.config.cb_size_mult_2)
+            self._circuit_breaker.LEVEL_3_SIZE_MULT = float(self.config.cb_size_mult_3)
+            self._circuit_breaker._enable_auto_recovery = bool(self.config.cb_auto_recovery)
 
         # Execution realism (per-fill slippage + commission)
         try:
-            base_cents = Decimal(str(max(1, getattr(self.config, "slippage_ticks", 2)))))
+            base_cents = Decimal(str(max(1, getattr(self.config, "slippage_ticks", 2))))
             comm_per_lot = Decimal(str(getattr(self.config, "commission_per_contract", 2.5)))
             costs = ExecutionCosts(
                 base_slippage_cents=base_cents,
@@ -252,7 +331,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
             self._execution_model = None
 
         # Strategy selector (regime/session/safety aware)
-        self._strategy_selector = StrategySelector()
+        if self.config.use_selector:
+            self._strategy_selector = StrategySelector()
         
         # Validate all critical analyzers
         if not self._validate_analyzers():
@@ -339,6 +419,9 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _on_strategy_stop(self) -> None:
         """Cleanup analyzers."""
+        # Calculate and emit final performance metrics
+        self._calculate_and_emit_metrics()
+        
         self.log.info("Gold Scalper Strategy cleanup complete")
     
     def _on_htf_bar(self, bar: Bar) -> None:
@@ -447,8 +530,29 @@ class GoldScalperStrategy(BaseGoldStrategy):
             return
 
         # Circuit breaker gate
-        if self._circuit_breaker and not self._circuit_breaker.can_trade():
-            return
+        if self._circuit_breaker:
+            cb_state = self._circuit_breaker.get_state()
+            if self._last_cb_level != cb_state.level:
+                self._last_cb_level = cb_state.level
+                self.log.warning(
+                    f'{{"event":"circuit_state","level":"{cb_state.level.name}","can_trade":{cb_state.can_trade},'
+                    f'"size_mult":{cb_state.size_multiplier:.2f},"daily_dd":{cb_state.daily_dd_percent:.2f},'
+                    f'"total_dd":{cb_state.total_dd_percent:.2f},"consec_losses":{cb_state.consecutive_losses}}}'
+                )
+                if self._telemetry and getattr(self.config, "telemetry_capture_circuit", True):
+                    self._telemetry.emit(
+                        "circuit_state",
+                        {
+                            "level": cb_state.level.name,
+                            "can_trade": cb_state.can_trade,
+                            "size_mult": cb_state.size_multiplier,
+                            "daily_dd": cb_state.daily_dd_percent,
+                            "total_dd": cb_state.total_dd_percent,
+                            "consec_losses": cb_state.consecutive_losses,
+                        },
+                    )
+            if not cb_state.can_trade:
+                return
 
         # Strategy selector gate (regime/session/safety context)
         if self._strategy_selector:
@@ -858,6 +962,19 @@ class GoldScalperStrategy(BaseGoldStrategy):
                         f"[SPREAD] state={snapshot.status.name} pts={snapshot.current_spread_points:.2f} "
                         f"pips={snapshot.current_spread_pips:.2f} ratio={snapshot.spread_ratio:.2f} can_trade={snapshot.can_trade}"
                     )
+                    if self._telemetry and getattr(self.config, "telemetry_capture_spread", True):
+                        self._telemetry.emit(
+                            "spread_state",
+                            {
+                                "state": snapshot.status.name,
+                                "points": snapshot.current_spread_points,
+                                "pips": snapshot.current_spread_pips,
+                                "ratio": snapshot.spread_ratio,
+                                "can_trade": snapshot.can_trade,
+                                "size_multiplier": snapshot.size_multiplier,
+                                "score_adjustment": snapshot.score_adjustment,
+                            },
+                        )
             except Exception:
                 self._spread_snapshot = None
         
@@ -889,11 +1006,43 @@ class GoldScalperStrategy(BaseGoldStrategy):
     def _parse_cutoff(cutoff_str: str):
         """Parse HH:MM string to time."""
         from datetime import time
-        parts = cutoff_str.split(":")
+        if isinstance(cutoff_str, time):
+            return cutoff_str
+        if not cutoff_str:
+            return time(16, 59)
+        parts = str(cutoff_str).split(":")
         hour = int(parts[0])
         minute = int(parts[1]) if len(parts) > 1 else 0
         return time(hour=hour, minute=minute)
 
+
+    def _calculate_and_emit_metrics(self) -> Optional[PerformanceMetrics]:
+        """Calculate and emit performance metrics to telemetry."""
+        if not self._metrics_calculator or not self._trade_pnl_history:
+            return None
+        
+        try:
+            metrics = self._metrics_calculator.calculate(
+                pnl_series=self._trade_pnl_history,
+                initial_balance=float(self.config.account_balance),
+            )
+            
+            # Emit to telemetry
+            if self._telemetry:
+                self._telemetry.emit('performance_metrics', metrics.to_dict())
+            
+            # Log summary
+            self.log.info(
+                f"Performance Metrics: Sharpe={metrics.sharpe_ratio:.2f}, "
+                f"Sortino={metrics.sortino_ratio:.2f}, Calmar={metrics.calmar_ratio:.2f}, "
+                f"SQN={metrics.sqn:.2f}, WinRate={metrics.win_rate:.1f}%, "
+                f"ProfitFactor={metrics.profit_factor:.2f}, MaxDD={metrics.max_drawdown_pct:.2f}%"
+            )
+            
+            return metrics
+        except Exception as exc:
+            self.log.error(f"Failed to calculate metrics: {exc}")
+            return None
     def _compute_equity_from_tick(self, tick: QuoteTick) -> Optional[float]:
         """
         Compute mark-to-market equity including unrealized PnL.

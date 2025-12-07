@@ -11,6 +11,7 @@ Provides abstract base class for all trading strategies with common functionalit
 from abc import abstractmethod
 from decimal import Decimal
 from typing import Dict, List, Optional, Any
+import random
 
 from nautilus_trader.config import StrategyConfig
 from nautilus_trader.core.message import Event
@@ -102,6 +103,8 @@ class BaseGoldStrategy(Strategy):
         self._current_regime: Optional[RegimeAnalysis] = None
         self._current_session: Optional[SessionInfo] = None
         self._last_confluence: Optional[ConfluenceResult] = None
+        self._execution_model = getattr(self, "_execution_model", None)
+        self._fill_costs = getattr(self, "_fill_costs", {})
     
     # ========== Lifecycle Methods ==========
     
@@ -129,6 +132,20 @@ class BaseGoldStrategy(Strategy):
         
         # Subscribe to quote ticks for spread monitoring
         self.subscribe_quote_ticks(self.config.instrument_id)
+        
+        # Schedule daily reset at midnight ET (Bug #4 fix)
+        # Note: In backtesting, this ensures multi-day resets work correctly
+        # In live trading, this handles daily counter resets for Apex rules
+        from datetime import timedelta
+        try:
+            self.clock.set_timer(
+                name="daily_reset",
+                interval=timedelta(days=1),
+                callback=self.on_new_day,
+            )
+            self.log.info("Daily reset timer scheduled for midnight ET")
+        except Exception as e:
+            self.log.warning(f"Could not schedule daily timer: {e}")
         
         # Strategy-specific initialization
         self._on_strategy_start()
@@ -170,6 +187,56 @@ class BaseGoldStrategy(Strategy):
         self._current_regime = None
         self._current_session = None
         self._last_confluence = None
+    
+    def on_new_day(self, event: Event) -> None:
+        """
+        Reset daily counters at midnight ET.
+        
+        Bug #4 Fix: Ensures daily metrics reset correctly across multi-day backtests
+        and live trading for Apex compliance (daily loss limits, consistency rule, etc.)
+        """
+        self.log.info("=== NEW TRADING DAY - Resetting daily counters ===")
+        
+        # Reset daily counters
+        self._daily_trades = 0
+        self._daily_pnl = 0.0
+        self._is_trading_allowed = True
+        
+        # Reset PropFirmManager daily counters (if exists)
+        if hasattr(self, 'prop_firm_manager') and self.prop_firm_manager is not None:
+            try:
+                if hasattr(self.prop_firm_manager, 'reset_daily'):
+                    self.prop_firm_manager.reset_daily()
+                    self.log.info("PropFirmManager daily counters reset")
+            except Exception as e:
+                self.log.error(f"Failed to reset PropFirmManager: {e}")
+        
+        # Reset ConsistencyTracker (if exists)
+        if hasattr(self, 'consistency_tracker') and self.consistency_tracker is not None:
+            try:
+                self.consistency_tracker.reset_daily()
+                self.log.info("ConsistencyTracker daily counters reset")
+            except Exception as e:
+                self.log.error(f"Failed to reset ConsistencyTracker: {e}")
+        
+        # Reset TimeConstraintManager warnings (if exists)
+        if hasattr(self, 'time_manager') and self.time_manager is not None:
+            try:
+                self.time_manager.reset_daily()
+                self.log.info("TimeConstraintManager warnings reset")
+            except Exception as e:
+                self.log.error(f"Failed to reset TimeConstraintManager: {e}")
+        
+        # Reset CircuitBreaker daily metrics (if applicable)
+        if hasattr(self, 'circuit_breaker') and self.circuit_breaker is not None:
+            try:
+                if hasattr(self.circuit_breaker, 'reset_daily_metrics'):
+                    self.circuit_breaker.reset_daily_metrics()
+                    self.log.info("CircuitBreaker daily metrics reset")
+            except Exception as e:
+                self.log.warning(f"Failed to reset CircuitBreaker: {e}")
+        
+        self.log.info("Daily reset complete")
     
     # ========== Data Handlers ==========
     
@@ -238,6 +305,7 @@ class BaseGoldStrategy(Strategy):
         """Handle position opened event."""
         self._position = self.cache.position(event.position_id)
         self._daily_trades += 1
+        qty = self._position.quantity.as_double()
         
         self.log.info(
             f"Position OPENED: {self._position.side} "
@@ -248,6 +316,19 @@ class BaseGoldStrategy(Strategy):
         # Submit SL/TP orders if pending
         if self._pending_sl or self._pending_tp:
             self._submit_bracket_orders()
+
+        # Apply execution costs (slippage + commission) on entry
+        open_cost = self._calculate_execution_cost(
+            side="buy" if self._position.side == PositionSide.LONG else "sell",
+            price=self._position.avg_px_open.as_double(),
+            quantity=qty,
+        )
+        if open_cost > 0:
+            self._daily_pnl -= open_cost
+            self._equity_base -= open_cost
+            if isinstance(self._fill_costs, dict):
+                self._fill_costs[str(event.position_id)] = open_cost
+            self.log.info(f"Execution cost (open): -${open_cost:.2f}")
         
         # Check if max daily trades reached
         if self._daily_trades >= self.config.max_trades_per_day:
@@ -263,31 +344,45 @@ class BaseGoldStrategy(Strategy):
         if self._position and self._position.id == event.position_id:
             pnl = float(self._position.realized_pnl)
             qty = self._position.quantity.as_double()
-            self._daily_pnl += pnl
-            self._equity_base += pnl
+
+            close_cost = self._calculate_execution_cost(
+                side="sell" if self._position.side == PositionSide.LONG else "buy",
+                price=getattr(self._position, "avg_px_close", self._position.avg_px_open).as_double()
+                if hasattr(self._position, "avg_px_close")
+                else self._position.avg_px_open.as_double(),
+                quantity=qty,
+            )
+            net_pnl = pnl - close_cost
+
+            self._daily_pnl += net_pnl
+            self._equity_base += net_pnl
             
             self.log.info(
-                f"Position CLOSED with PnL: {pnl:.2f} "
+                f"Position CLOSED with PnL: {pnl:.2f} (net {-close_cost:.2f} costs applied) "
                 f"(Daily PnL: {self._daily_pnl:.2f})"
             )
+
+            if isinstance(self._fill_costs, dict) and str(event.position_id) in self._fill_costs:
+                # Keep open cost only for reporting; already applied on entry
+                self._fill_costs.pop(str(event.position_id), None)
             
             # Update drawdown tracker with realized PnL
             if getattr(self, "_drawdown_tracker", None):
                 now_dt = datetime.now(timezone.utc)
-                analysis = self._drawdown_tracker.update(self._equity_base, pnl=pnl, now=now_dt)
+                analysis = self._drawdown_tracker.update(self._equity_base, pnl=net_pnl, now=now_dt)
                 self._apply_drawdown_limits(analysis)
             
             # Prop-firm tracking: feed realized result
             if getattr(self, "_prop_firm", None):
                 try:
-                    self._prop_firm.register_trade_close(contracts=qty, profit=pnl)
+                    self._prop_firm.register_trade_close(contracts=qty, profit=net_pnl)
                 except Exception as exc:
                     self.log.debug(f"Prop firm update failed on close: {exc}")
 
             # Circuit breaker trade result
             if getattr(self, "_circuit_breaker", None):
                 try:
-                    self._circuit_breaker.register_trade_result(pnl=pnl, is_win=pnl > 0)
+                    self._circuit_breaker.register_trade_result(pnl=net_pnl, is_win=net_pnl > 0)
                 except Exception as exc:
                     self.log.debug(f"Circuit breaker trade update failed: {exc}")
             
@@ -316,6 +411,13 @@ class BaseGoldStrategy(Strategy):
                 quantity = quantity * Decimal(str(self.config.partial_fill_ratio))
                 self.log.info(f"Partial fill simulated (LONG): qty adjusted to {quantity}")
 
+        # Partial fill simulation
+        quantity = self._simulate_partial_fill(quantity, side="BUY")
+
+        if quantity.as_double() <= 0:
+            self.log.warning("Partial fill simulation resulted in zero quantity; skipping order")
+            return
+
         # Create market order
         order = self.order_factory.market(
             instrument_id=self.config.instrument_id,
@@ -342,6 +444,13 @@ class BaseGoldStrategy(Strategy):
             if random.random() < float(self.config.partial_fill_prob):
                 quantity = quantity * Decimal(str(self.config.partial_fill_ratio))
                 self.log.info(f"Partial fill simulated (SHORT): qty adjusted to {quantity}")
+
+        # Partial fill simulation
+        quantity = self._simulate_partial_fill(quantity, side="SELL")
+
+        if quantity.as_double() <= 0:
+            self.log.warning("Partial fill simulation resulted in zero quantity; skipping order")
+            return
 
         order = self.order_factory.market(
             instrument_id=self.config.instrument_id,
@@ -401,11 +510,81 @@ class BaseGoldStrategy(Strategy):
                 reduce_only=True,
             )
             self.submit_order(tp_order)
-            self.log.info(f"TP order submitted @ {self._pending_tp}")
+        self.log.info(f"TP order submitted @ {self._pending_tp}")
         
         # Clear pending
         self._pending_sl = None
         self._pending_tp = None
+
+    def _simulate_partial_fill(self, quantity: Quantity, side: str) -> Quantity:
+        """
+        Apply a simple partial fill model:
+        - Base probability from config.partial_fill_prob
+        - Spread-aware degradation: higher spread ratio => lower fill ratio
+        """
+        fill_ratio = 1.0
+        cfg_prob = float(getattr(self.config, "partial_fill_prob", 0.0))
+        cfg_ratio = float(getattr(self.config, "partial_fill_ratio", 0.5))
+        reject_base = float(getattr(self.config, "fill_reject_base", 0.0))
+        reject_spread = float(getattr(self.config, "fill_reject_spread_factor", 0.0))
+        fill_model = str(getattr(self.config, "fill_model", "realistic"))
+
+        snap = getattr(self, "_spread_snapshot", None)
+        spread_ratio = getattr(snap, "spread_ratio", 1.0) if snap else 1.0
+        if snap:
+            # degrade size as spread widens; clamp between 0.2 and 1.0
+            ratio_factor = 1.0 / max(1.0, spread_ratio)
+            fill_ratio *= max(0.2, min(1.0, ratio_factor))
+            if not snap.can_trade:
+                fill_ratio = 0.0
+            # volatility-aware degradation using std_dev normalized by avg spread
+            if getattr(snap, "average_spread", 0) > 0:
+                vol_factor = min(2.0, getattr(snap, "std_dev", 0) / snap.average_spread)
+                fill_ratio *= max(0.3, 1.0 - 0.2 * vol_factor)
+
+        # Optional partial fill probability
+        if cfg_prob > 0 and random.random() < cfg_prob:
+            fill_ratio *= cfg_ratio
+
+        # Fill rejection modeled by spread + base
+        reject_prob = max(0.0, reject_base + max(0.0, spread_ratio - 1.0) * reject_spread)
+        if fill_model == "worst_case":
+            reject_prob += 0.1
+        elif fill_model == "immediate":
+            reject_prob = 0.0
+
+        if reject_prob > 0 and random.random() < reject_prob:
+            self.log.warning(
+                f'{{"event":"fill_reject","side":"{side}","spread_ratio":{spread_ratio:.2f},"reject_prob":{reject_prob:.2f}}}'
+            )
+            sink = getattr(self, "_telemetry", None)
+            if sink:
+                sink.emit(
+                    "fill_reject",
+                    {"side": side, "spread_ratio": spread_ratio, "reject_prob": reject_prob},
+                )
+            return Quantity.from_str("0")
+
+        if fill_ratio >= 1.0:
+            return quantity
+
+        adj = quantity.as_double() * fill_ratio
+        self.log.info(
+            f'{{"event":"partial_fill","side":"{side}","orig_qty":{quantity.as_double():.2f},"fill_ratio":{fill_ratio:.2f},"new_qty":{adj:.2f}}}'
+        )
+        sink = getattr(self, "_telemetry", None)
+        if sink:
+            sink.emit(
+                "partial_fill",
+                {
+                    "side": side,
+                    "orig_qty": quantity.as_double(),
+                    "fill_ratio": fill_ratio,
+                    "new_qty": adj,
+                    "spread_ratio": spread_ratio,
+                },
+            )
+        return Quantity.from_str(str(round(max(0.0, adj), 2)))
     
     # ========== Utility Methods ==========
     
@@ -443,6 +622,24 @@ class BaseGoldStrategy(Strategy):
 
         # _equity_base already includes realized PnL; avoid double-counting _daily_pnl
         return self._equity_base + unrealized
+
+    def _calculate_execution_cost(self, side: str, price: float, quantity: float) -> float:
+        """
+        Calculate per-fill slippage + commission using configured ExecutionModel.
+        """
+        try:
+            if not self._execution_model or quantity <= 0:
+                return 0.0
+            slip_price = self._execution_model.apply_slippage(
+                side=side,
+                current_price=Decimal(str(price)),
+            )
+            slip_cost = abs(float(slip_price) - float(price)) * float(quantity)
+            commission_cost = float(self._execution_model.commission(Decimal(str(quantity))))
+            return slip_cost + commission_cost
+        except Exception as exc:  # pragma: no cover
+            self.log.debug(f"Execution cost calc failed: {exc}")
+            return 0.0
 
     def _apply_drawdown_limits(self, analysis: Optional[Any]) -> None:
         """Block trading when drawdown thresholds are breached."""

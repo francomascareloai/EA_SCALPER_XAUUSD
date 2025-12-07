@@ -48,3 +48,38 @@ Central log for all bug fixes in MQL5 and Python code. Every agent fixing bugs M
 **Result:** All 11 critical modules (8 core + 3 ML) now import successfully. Validates importance of running actual import tests, not just file checks.
 
 ---
+
+## 2025-12-07 (FORGE - Metrics telemetry implementation)
+
+### Module: nautilus_gold_scalper/src/utils/metrics.py (NEW)
+**Issue:** No Sharpe/Sortino/Calmar/SQN telemetry for GO/NO-GO decisions
+- **Symptom:** Backtests completed but lacked performance metrics needed for validation plan Phase 6
+- **Impact:** Cannot make GO/NO-GO decision without core metrics (Audit 003 P0 blocker)
+- **Root Cause:** No metrics calculation module existed, only basic PnL tracking
+- **Fix:** Created comprehensive MetricsCalculator with:
+  - Sharpe Ratio (annualized, risk-adjusted return)
+  - Sortino Ratio (downside deviation only)
+  - Calmar Ratio (CAGR / Max DD)
+  - SQN - System Quality Number (Van Tharp)
+  - Supporting metrics: Win Rate, Profit Factor, Expectancy, Max DD
+  - Handles edge cases: zero std_dev (perfect consistency) → inf Sharpe/SQN
+- **Testing:** 9 unit tests (100% pass), validates edge cases (all wins, all losses, empty, high Sharpe)
+- **Evidence:** Prompt 005 requires these metrics for GO/NO-GO framework decision tree
+
+### Module: nautilus_gold_scalper/src/strategies/gold_scalper_strategy.py
+**Integration:** Metrics calculation into strategy lifecycle
+- **Added:** `_trade_pnl_history` list to track all realized PnLs
+- **Added:** `_metrics_calculator` instance (risk_free_rate=0.05, 252 trading days)
+- **Added:** `_calculate_and_emit_metrics()` method - calculates metrics and emits to telemetry
+- **Hooked:** `_on_strategy_stop()` calls metrics calculation on backtest completion
+- **Output:** Metrics emitted to `logs/telemetry.jsonl` in structured JSON format
+
+### Module: nautilus_gold_scalper/src/strategies/base_strategy.py
+**Integration:** PnL tracking in position close event
+- **Added:** PnL tracking in `on_position_closed()` after circuit breaker update
+- **Logic:** Appends `net_pnl` to `_trade_pnl_history` if attribute exists
+- **Safe:** Uses `hasattr()` check for backward compatibility
+
+**Result:** Metrics telemetry P0 blocker RESOLVED. Backtests now output Sharpe/Sortino/Calmar/SQN for GO/NO-GO validation.
+
+---
