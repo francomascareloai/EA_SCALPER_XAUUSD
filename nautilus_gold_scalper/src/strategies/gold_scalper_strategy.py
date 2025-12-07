@@ -54,7 +54,7 @@ class GoldScalperConfig(BaseStrategyConfig, frozen=True):
     """Configuration for Gold Scalper Strategy."""
     
     # Scoring thresholds
-    execution_threshold: int = 65  # Changed from 50 - block C-tier signals
+    execution_threshold: int = 70  # TIER_B_MIN - match MQL5 (Bug #2 fix)
     min_mtf_confluence: float = 50.0
     
     # MTF requirements
@@ -158,8 +158,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
         # MTF Manager - use defaults
         self._mtf_manager = MTFManager()
         
-        # Confluence scorer - use defaults
-        self._confluence_scorer = ConfluenceScorer()
+        # Confluence scorer - pass execution threshold from config (Bug #4 fix)
+        self._confluence_scorer = ConfluenceScorer(
+            min_score_to_trade=float(self.config.execution_threshold)
+        )
         
         # News calendar (optional)
         if self.config.use_news_filter:
@@ -184,6 +186,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
                 max_daily=float(self.config.daily_loss_limit_pct) / 100.0,
                 max_total=float(self.config.total_loss_limit_pct) / 100.0,
             )
+            # Initialize prop-firm state with starting equity
+            self._prop_firm.initialize(starting_equity=float(self.config.account_balance))
         
         # Validate all critical analyzers
         if not self._validate_analyzers():
@@ -659,7 +663,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
         """Calculate position size based on risk and regime."""
         if not self._position_sizer:
             # Default sizing
-            risk_amount = self.config.account_balance * float(self.config.risk_per_trade) / 100
+            current_equity = self._equity_base
+            risk_amount = current_equity * float(self.config.risk_per_trade) / 100
             risk_amount *= getattr(self, "_news_size_mult", 1.0)
             point_value = 1.0  # Gold point value (adjust per broker)
             lots = risk_amount / (sl_distance * point_value)
@@ -676,7 +681,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
         
         # Use PositionSizer.calculate_lot
         position_size = self._position_sizer.calculate_lot(
-            balance=self.config.account_balance,
+            balance=self._equity_base,
             risk_percent=risk_pct,
             stop_loss_pips=sl_distance,  # Convert points to pips if needed
             regime_multiplier=regime_mult,
@@ -694,3 +699,12 @@ class GoldScalperStrategy(BaseGoldStrategy):
         spread = float(tick.ask_price - tick.bid_price)
         if self.instrument:
             self._current_spread = int(spread / self.instrument.price_increment)
+        
+        # Update prop-firm trailing drawdown with mark-to-market equity
+        if self._prop_firm:
+            equity = self._compute_equity_from_tick(tick)
+            if equity is not None:
+                try:
+                    self._prop_firm.update_equity(equity)
+                except Exception as exc:
+                    logger.debug(f"Prop firm equity update failed: {exc}")
