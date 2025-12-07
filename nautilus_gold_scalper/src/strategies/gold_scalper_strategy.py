@@ -267,12 +267,12 @@ class GoldScalperStrategy(BaseGoldStrategy):
         self._telemetry = TelemetrySink(
             Path(getattr(self.config, "telemetry_path", "logs/telemetry.jsonl")),
             enabled=bool(getattr(self.config, "telemetry_enabled", True)),
+        )
         
         # Initialize metrics calculator
         self._metrics_calculator = MetricsCalculator(
             risk_free_rate=0.05,
             trading_days_per_year=252
-        )
         )
 
         # Spread monitor (risk realism)

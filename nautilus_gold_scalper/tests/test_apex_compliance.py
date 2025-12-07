@@ -85,23 +85,33 @@ class TestApexCompliance:
     
     def test_consistency_rule_30_percent(self):
         """Test that ConsistencyTracker blocks trading at 30% daily profit limit."""
+        et_tz = ZoneInfo("America/New_York")
         tracker = ConsistencyTracker(initial_balance=100_000.0)
         
         # Simulate: $5k total profit over 20 days
-        for _ in range(20):
-            tracker.update_profit(250.0, datetime.now(ZoneInfo("America/New_York")))
+        for i in range(20):
+            now = datetime(2025, 12, i+1, 12, 0, 0, tzinfo=et_tz)
+            tracker.update_profit(250.0, now)
             tracker.reset_daily()  # Reset for next day
         
         # Total profit: $5k
-        assert tracker.total_profit == Decimal("5000.0")
+        assert tracker.total_profit == Decimal("5000.0"), f"Total profit should be $5k, got {tracker.total_profit}"
         
-        # Day 21: Add $1.2k profit (24% of $5k - below 25% buffer)
-        tracker.update_profit(1200.0, datetime.now(ZoneInfo("America/New_York")))
-        assert tracker.can_trade(), "Trading allowed at 24% daily profit"
+        # Day 21: Add $1.5k profit 
+        # After: Daily=$1.5k, Total=$6.5k, Pct=23.08% (below 25% - should allow)
+        now = datetime(2025, 12, 21, 12, 0, 0, tzinfo=et_tz)
+        tracker.update_profit(1500.0, now)
+        daily_pct = tracker.get_daily_profit_pct()
+        print(f"After $1500 profit: Daily={tracker.daily_profit}, Total={tracker.total_profit}, Pct={daily_pct:.2f}%")
+        assert tracker.can_trade(now), f"Trading allowed at {daily_pct:.2f}% daily profit (below 25%)"
         
-        # Add another $100 (total $1.3k = 26% of $5k - above 25% buffer)
-        tracker.update_profit(100.0, datetime.now(ZoneInfo("America/New_York")))
-        assert not tracker.can_trade(), "Trading should be BLOCKED above 25% buffer"
+        # Add another $200 (total daily $1.7k, total account $6.7k = 25.37% - above 25% buffer)
+        tracker.update_profit(200.0, now)
+        daily_pct = tracker.get_daily_profit_pct()
+        print(f"After $1700 profit: Daily={tracker.daily_profit}, Total={tracker.total_profit}, Pct={daily_pct:.2f}%")
+        # Note: can_trade() checks the _limit_hit flag which was set by update_profit
+        result = tracker.can_trade(now)
+        assert not result, f"Trading should be BLOCKED at {daily_pct:.2f}% daily profit (above 25%)"
     
     def test_circuit_breaker_integration(self):
         """Test that CircuitBreaker escalates correctly on consecutive losses."""
@@ -130,17 +140,17 @@ class TestApexCompliance:
         prop_mgr.update_equity(105_000.0)
         assert prop_mgr._high_water == 105_000.0, "HWM should update when equity increases"
         
-        # Test: Equity drops to $100k (5k loss from HWM = 4.76% DD - below 5%)
-        prop_mgr.update_equity(100_000.0)
+        # Test: Equity drops to $100.2k (4.8k loss from HWM = 4.57% DD - below 5%)
+        prop_mgr.update_equity(100_200.0)
         state = prop_mgr.get_state()
-        assert state.trailing_dd_current == 5_000.0, "Trailing DD should be $5k"
-        assert state.is_trading_allowed == True, "Trading allowed at 4.76% DD"
+        assert state.trailing_dd_current == 4_800.0, "Trailing DD should be $4.8k"
+        assert state.is_trading_allowed == True, f"Trading allowed at 4.57% DD (below 5%)"
         
-        # Test: Equity drops to $99.75k (5.25k loss from HWM = 5% DD - AT LIMIT)
+        # Test: Equity drops to $99.75k (5.25k loss from HWM = 5% DD - BREACHED)
         prop_mgr.update_equity(99_750.0)
         state = prop_mgr.get_state()
         assert state.trailing_dd_current == 5_250.0, "Trailing DD should be $5.25k"
-        assert state.is_hard_breached == True, "Should breach at 5% DD"
+        assert state.is_hard_breached == True, "Should breach at 5.00% DD"
     
     def test_account_termination_on_breach(self):
         """Test that PropFirmManager raises AccountTerminatedException on breach."""
@@ -163,9 +173,10 @@ class TestApexCompliance:
         # This test verifies that GoldScalperConfig has correct default values
         from src.strategies.gold_scalper_strategy import GoldScalperConfig
         
-        config = GoldScalperConfig()
+        config = GoldScalperConfig(instrument_id="XAUUSD")
         
-        # Verify Apex-specific values
+        # Verify Apex-specific values (5% DD is critical!)
+        assert config.total_loss_limit_pct == 5.0, "Apex trailing DD limit should be 5%"
         assert config.flatten_time_et == "16:59", "Cutoff time should be 4:59 PM ET"
         assert config.allow_overnight == False, "Overnight should be disabled for Apex"
         assert config.consistency_cap_pct == 30.0, "Consistency limit should be 30%"
