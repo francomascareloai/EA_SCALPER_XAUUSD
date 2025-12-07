@@ -1,481 +1,569 @@
-# Remaining 12 Droids Analysis (LAYER 2)
+# LAYER 2: Remaining 12 Droids Analysis
+
+**Analysis Date:** 2025-12-07
+**Analyst:** Elite Quantitative Research Analyst (deep-researcher subagent)
+**Confidence:** HIGH (comprehensive file analysis completed)
+
+---
 
 ## Executive Summary
-- **Total size**: ~193KB (50% of ecosystem, NOT in TOP 5)
-- **Estimated redundancy**: ~130KB (67% similar to TOP 5 pattern)
-- **Potential savings**: ~130KB (67% reduction)
-- **Critical droids**: orchestrator (MAESTRO candidate), onnx-model-builder (ML pipeline)
-- **Low-priority droids**: personal droids (if not used for project)
+
+| Metric | Value |
+|--------|-------|
+| **Total Size** | 163KB (12 droids) |
+| **Estimated Redundancy** | ~98KB (60%) |
+| **Potential Savings** | ~98KB |
+| **Critical Droids** | 2 (orchestrator, onnx-model-builder) |
+| **High Priority** | 3 (code-architect-reviewer, crucible, argus) |
+| **Merge Candidates** | 3 (argus + deep-researcher + research-analyst-pro) |
+| **Remove Candidates** | 2 (sentinel-ftmo-guardian, bmad-builder) |
 
 ---
 
-## Critical Droids (MUST REFACTOR)
+## Per-Droid Analysis
 
-### ea-scalper-xauusd-orchestrator ⚠️ **MAESTRO CANDIDATE**
-- **Size**: ~20KB
-- **Redundancy**: ~60% (generic orchestration patterns)
-- **Specialization**: 
-  - Coordinates 6 droids (CRUCIBLE, SENTINEL, FORGE, ORACLE, ARGUS, NAUTILUS)
-  - Routes based on trigger keywords
-  - Enforces Apex Trading constraints
-  - BUILD>PLAN philosophy enforcement
-- **Priority**: **CRITICAL** (should be MAESTRO)
-- **Recommendation**: **REFACTOR NOW + ELEVATE TO MAESTRO**
-  - Add workflow DAG knowledge (3 workflows: Strategy Dev, Code Review, Research→Design)
-  - Implement automatic invocation based on dependency graph
-  - Add decision_hierarchy awareness (7 levels)
-  - Elevate to priority 7 in AGENTS.md authority hierarchy
-- **Current issues**:
-  - Coordination is manual (user must invoke correct droid)
-  - No automatic workflow execution
-  - No conflict resolution logic
-- **Proposed enhancements**:
-  - Auto-detect workflow from user intent
-  - Invoke droids in correct DAG order
-  - Handle conditional steps (e.g., "only if ORACLE says NO-GO")
-  - Loop when needed (fix → re-test → validate)
-  - Report progress transparently
+### 1. code-architect-reviewer.md (28KB) - HIGH Priority
 
----
+**Current Size:** 28KB
+**Estimated Redundancy:** 65% (~18KB)
+**Specialization:** Systemic code review, nth-order consequence analysis
 
-### onnx-model-builder ⚠️ **ML CRITICAL**
-- **Size**: ~20KB
-- **Redundancy**: ~65%
-- **Specialization**:
-  - ML model design (LSTM, GRU, CNN, Transformer)
-  - Feature engineering for trading
-  - ONNX export for MQL5 integration
-  - Regime detection models (Hurst, Entropy, HMM)
-  - WFA validation (WFE ≥0.6 required)
-- **Priority**: **CRITICAL** (ML is core to strategy)
-- **Recommendation**: **REFACTOR NOW**
-- **Integration gaps**:
-  - Does NOT auto-hand off to ORACLE for validation (should)
-  - Does NOT integrate with FORGE for code review (should)
-  - No dependency on ARGUS for research (could benefit)
-- **Proposed workflow**:
-  - ARGUS researches ML approach → ONNX-MODEL-BUILDER trains model → ORACLE validates WFE → FORGE integrates into strategy → NAUTILUS backtests
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Code review with dependency mapping and cascade analysis |
+| **Project-Specific** | Yes - prop firm compliance, trading system patterns |
+| **Overlap** | FORGE (both do code review) - SIGNIFICANT OVERLAP |
+| **Usage Frequency** | HIGH - Pre-commit audits |
+
+#### Unique Domain Knowledge (KEEP)
+
+- 5-Layer Review Process (context, immediate, dependency, consequence, solutions)
+- nth-Order Consequence Analysis (1st → 4th order + prop firm cascade)
+- Quality Scoring System (0-100 with detailed breakdown)
+- Dependency mapping workflow
+- Multi-solution ranking with pros/cons
+
+#### Redundant Sections (REMOVE)
+
+- Generic coding principles (~3KB)
+- ASCII art and banners (~1KB)
+- Generic guardrails (~2KB)
+- Output templates duplicated from FORGE (~4KB)
+- Generic proactive triggers (~2KB)
+- Language-specific checks (duplicated in FORGE) (~6KB)
+
+#### Recommendation
+
+**REFACTOR LATER (Phase 2)**
+- Keep as dedicated REVIEWER role
+- Remove overlap with FORGE
+- Focus on: Consequence cascade, dependency mapping, scoring
+- FORGE handles: Day-to-day coding, debugging
+- code-architect-reviewer handles: Pre-commit audits, architectural review
 
 ---
 
-## High Priority Droids (REFACTOR SOON)
+### 2. onnx-model-builder.md (28KB) - CRITICAL Priority
 
-### crucible-gold-strategist
-- **Size**: ~10KB
-- **Redundancy**: ~70%
-- **Specialization**:
-  - XAUUSD-specific strategy analysis
-  - SMC patterns (Order Blocks, FVG, Liquidity)
-  - Backtest quality validation (realism gates)
-  - Prop firm rules (Apex, Tradovate)
-- **Priority**: **HIGH**
-- **Overlap**: **ORACLE** (both validate backtests)
-  - CRUCIBLE: Setup quality + backtest realism
-  - ORACLE: Statistical validation (WFA, Monte Carlo)
-  - Resolution: Keep both, CRUCIBLE → ORACLE handoff
-- **Recommendation**: **REFACTOR LATER** (after TOP 5 + orchestrator + onnx)
+**Current Size:** 28KB
+**Estimated Redundancy:** 50% (~14KB)
+**Specialization:** ML model training, ONNX export, MQL5 integration
 
----
+#### Analysis
 
-### argus-quant-researcher
-- **Size**: ~15KB
-- **Redundancy**: ~70%
-- **Specialization**:
-  - Quant/trading-specific research
-  - Multi-source triangulation
-  - arXiv/SSRN paper analysis
-  - Evidence-based synthesis
-- **Priority**: **HIGH**
-- **Overlap**: **research-analyst-pro** (similar triangulation methodology)
-  - ARGUS: Trading/quant-specific
-  - research-analyst-pro: General multi-source research
-  - Resolution: Keep both OR add domain parameter
-- **Recommendation**: **REFACTOR LATER** (after CRITICAL droids)
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | ML/AI for trading - unique and critical |
+| **Project-Specific** | Yes - direction prediction, regime detection |
+| **Overlap** | None - unique specialization |
+| **Usage Frequency** | MEDIUM (ML development phases) |
 
----
+#### Unique Domain Knowledge (KEEP - ALL CRITICAL)
 
-### code-architect-reviewer
-- **Size**: ~12KB
-- **Redundancy**: ~75%
-- **Specialization**:
-  - Architecture/design review
-  - High-level code structure
-  - System design patterns
-- **Priority**: **MEDIUM**
-- **Overlap**: **senior-code-reviewer** (personal droid) + **FORGE**
-  - code-architect-reviewer: Architecture focus
-  - senior-code-reviewer: General best practices
-  - FORGE: Python/Nautilus-specific
-  - Resolution: **MERGE** code-architect-reviewer + senior-code-reviewer → generic-code-reviewer
-- **Recommendation**: **MERGE + REFACTOR** (Phase 2)
+- Feature engineering templates for trading (~4KB)
+- Model architectures (LSTM, GRU, CNN, Transformer) (~6KB)
+- Walk-Forward validation for ML (~3KB)
+- ONNX export workflow with MQL5 integration code (~5KB)
+- Normalization parameter management (~2KB)
+- RAG database queries for books/docs (~3KB)
+- Quality standards (WFE≥0.6, <50ms inference) (~2KB)
+
+#### Redundant Sections (REMOVE)
+
+- Generic workflow descriptions (~3KB)
+- Generic constraints inherited from AGENTS.md (~2KB)
+- Verbose code templates (can be skills) (~6KB)
+- Generic guardrails (~2KB)
+
+#### Recommendation
+
+**REFACTOR NOW (Phase 1)**
+- CRITICAL for ML-based strategy components
+- Unique integration: Python training → ONNX → MQL5
+- No other droid provides this capability
+- Priority: Elevate alongside TOP 5
 
 ---
 
-### project-reader
-- **Size**: ~8KB
-- **Redundancy**: ~65%
-- **Specialization**:
-  - Project structure analysis
-  - Codebase orientation
-  - Documentation navigation
-- **Priority**: **MEDIUM**
-- **Recommendation**: **REFACTOR LATER** (Phase 2)
-- **Usage**: Infrequent (onboarding, initial project exploration)
+### 3. sentinel-ftmo-guardian.md (20KB) - LOW Priority / REMOVE CANDIDATE
+
+**Current Size:** 20KB
+**Estimated Redundancy:** 95% with SENTINEL-APEX
+**Specialization:** FTMO rules (5% daily, 10% total)
+
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | FTMO prop firm compliance |
+| **Project-Specific** | NO - Project targets APEX, not FTMO |
+| **Overlap** | SENTINEL-APEX covers 95% functionality |
+| **Usage Frequency** | ZERO (project uses Apex/Tradovate) |
+
+#### Key Differences from SENTINEL-APEX
+
+| Rule | FTMO | APEX |
+|------|------|------|
+| Daily DD | 5% FIXED | N/A (no daily limit) |
+| Total DD | 10% FIXED | 10% TRAILING from HWM |
+| Overnight | Allowed | PROHIBITED |
+| Close Time | None | 4:59 PM ET |
+| Automation | Allowed | NOT on funded |
+
+#### Recommendation
+
+**CONSIDER REMOVAL**
+- Project exclusively targets Apex/Tradovate
+- SENTINEL-APEX already handles all risk calculations
+- If FTMO needed in future: Add as SENTINEL mode/config, not separate droid
+- Alternative: Archive to `.factory/droids/archived/`
 
 ---
 
-### trading-project-documenter
-- **Size**: ~10KB
-- **Redundancy**: ~70%
-- **Specialization**:
-  - Trading system documentation
-  - MQL5 EA documentation
-  - Multi-strategy architecture docs
-- **Priority**: **MEDIUM**
-- **Recommendation**: **REFACTOR LATER** (Phase 2)
-- **Usage**: Infrequent (after major milestones)
+### 4. crucible-gold-strategist.md (17KB) - HIGH Priority
+
+**Current Size:** 17KB
+**Estimated Redundancy:** 55% (~9KB)
+**Specialization:** Backtest realism, XAUUSD-specific execution modeling
+
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Backtest quality, slippage/spread/fill modeling |
+| **Project-Specific** | Yes - XAUUSD, NautilusTrader, Apex |
+| **Overlap** | ORACLE (both validate backtests) - Complementary not duplicate |
+| **Usage Frequency** | HIGH - Every backtest validation |
+
+#### Unique Domain Knowledge (KEEP)
+
+- 25 Realism Gates (~5KB)
+- XAUUSD spread model by session (~2KB)
+- Slippage model configuration (~2KB)
+- NautilusTrader BacktestEngine realism settings (~3KB)
+- GO/NO-GO thresholds (Realism Score ≥90%) (~1KB)
+
+#### Relationship with ORACLE
+
+```
+CRUCIBLE: Execution REALISM (slippage, spread, fills)
+         └── "Is the backtest modeling real execution?"
+         
+ORACLE: Statistical VALIDITY (WFA, Monte Carlo, overfitting)
+        └── "Are the results statistically robust?"
+
+WORKFLOW: CRUCIBLE validates realism → ORACLE validates statistics
+          Both must PASS for GO decision
+```
+
+#### Recommendation
+
+**REFACTOR LATER (Phase 2)**
+- Keep as complementary to ORACLE
+- Focus exclusively on execution realism
+- Remove overlap with ORACLE's statistical validation
+- Add clear handoff protocol in AGENTS.md
 
 ---
 
-### deep-researcher
-- **Size**: ~12KB
-- **Redundancy**: ~70%
-- **Specialization**:
-  - Deep multi-layer research
-  - Complex trading/quant topics
-  - Triangulation (academic + industry + empirical)
-- **Priority**: **MEDIUM**
-- **Overlap**: **argus-quant-researcher** + **research-analyst-pro**
-  - All 3 do multi-source research with triangulation
-  - deep-researcher: Most comprehensive (v2.1 enhanced)
-  - ARGUS: Quant-focused
-  - research-analyst-pro: General
-  - Resolution: Consider **MERGING** into single research droid with complexity parameter
-- **Recommendation**: **EVALUATE MERGE** (Phase 3)
+### 5. argus-quant-researcher.md (15KB) - MERGE CANDIDATE
+
+**Current Size:** 15KB
+**Estimated Redundancy:** 80% with research-analyst-pro + deep-researcher
+**Specialization:** Trading/quant research with triangulation
+
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Research triangulation for trading |
+| **Project-Specific** | Partially (order flow, SMC, ML trading) |
+| **Overlap** | research-analyst-pro (same methodology), deep-researcher (same purpose) |
+| **Usage Frequency** | MEDIUM |
+
+#### Overlap Analysis
+
+| Feature | ARGUS | RESEARCH-ANALYST-PRO | deep-researcher |
+|---------|-------|---------------------|-----------------|
+| Multi-source triangulation | ✅ | ✅ | ✅ |
+| Confidence levels | ✅ | ✅ | ✅ |
+| Academic + Practical + Empirical | ✅ | ✅ | ✅ |
+| Trading-specific keywords | ✅ | ❌ | ✅ |
+| RAG database queries | ✅ | ❌ | ❌ |
+| Size | 15KB | 31KB | 12KB |
+
+**Total overlap:** 58KB across 3 droids doing essentially the same job
+
+#### Recommendation
+
+**MERGE INTO SINGLE RESEARCH DROID**
+- Combine: argus + research-analyst-pro + deep-researcher
+- Name: ARGUS (keeps trading focus)
+- Features: Best of all three
+- Savings: 58KB → ~15KB = 43KB saved
 
 ---
 
-## NANO Versions (Special Case)
+### 6. git-guardian.md (15KB) - MEDIUM Priority
 
-### nautilus-nano
-- **Size**: ~4KB (compact version of nautilus-trader-architect)
-- **Purpose**: Party Mode efficiency
-- **Status**: Already optimized
-- **Recommendation**: **KEEP AS-IS** (serves specific use case)
+**Current Size:** 15KB
+**Estimated Redundancy:** 40% (~6KB)
+**Specialization:** Git operations with security focus
 
----
+#### Analysis
 
-## Secondary Droids (Lower Priority)
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Version control, secrets detection |
+| **Project-Specific** | No - Generic git operations |
+| **Overlap** | None - Unique purpose |
+| **Usage Frequency** | HIGH (every commit) but invoked implicitly |
 
-### sentinel-ftmo-guardian
-- **Size**: ~15KB
-- **Redundancy**: ~70%
-- **Specialization**: FTMO prop firm rules (10% fixed DD, different from Apex)
-- **Priority**: **LOW** (project uses Apex, not FTMO)
-- **Recommendation**: **ARCHIVE** or keep if planning FTMO challenge later
+#### Unique Domain Knowledge (KEEP)
 
----
+- Pre-flight checklist (status, branch, diff, stash, log)
+- Security scan patterns (API keys, passwords, tokens)
+- File safety matrix
+- Recovery playbook
+- Emergency commands
 
-### git-guardian
-- **Size**: ~6KB
-- **Redundancy**: ~60%
-- **Specialization**: Git workflow management, commit templates
-- **Priority**: **LOW**
-- **Recommendation**: **REFACTOR LATER** (Phase 3) or merge into generic devops droid
+#### Recommendation
 
----
-
-### bmad-builder
-- **Size**: ~8KB
-- **Redundancy**: ~65%
-- **Specialization**: BMAD methodology builder (project-specific)
-- **Priority**: **LOW-MEDIUM**
-- **Recommendation**: **REFACTOR LATER** (Phase 3)
+**KEEP AS-IS or LIGHT REFACTOR**
+- Useful for preventing credential leaks
+- Not redundant with other droids
+- Consider: Move to skill (`.factory/skills/git-guardian/`)
 
 ---
 
-## Personal/Global Droids (18 total, DETAILED ANALYSIS)
+### 7. deep-researcher.md (12KB) - MERGE CANDIDATE
 
-**Context**: These are in `~/.factory/droids/` (personal/global scope, not project-specific)
+**Current Size:** 12KB
+**Estimated Redundancy:** 90% with argus + research-analyst-pro
+**Specialization:** Deep research with scientific critical thinking
 
-**Total size estimated**: ~180-200KB (based on pattern analysis)
+#### Analysis
 
-### Analysis by Category
+See ARGUS analysis above - these three should merge.
 
-#### 🤖 AI/ML Engineering (3 droids)
-**ai-engineer** (~10KB)
-- **Specialization**: LLM applications, RAG systems, prompt pipelines, vector search
-- **Redundancy**: ~65% (generic AI patterns)
-- **Project relevance**: **LOW** (project uses ONNX models, not LLM/RAG)
-- **Recommendation**: **LEAVE AS-IS** (not used for trading project)
+#### Recommendation
 
-**mcp-testing-engineer** (~12KB)
-- **Specialization**: MCP server testing, JSON schema validation, protocol compliance
-- **Redundancy**: ~60%
-- **Project relevance**: **MEDIUM** (project uses MCPs: Twelve-Data, memory, time, etc)
-- **Recommendation**: **EVALUATE** - Could be useful for MCP validation
-
-**prompt-optimizer** (~8KB)
-- **Specialization**: Optimize prompts using 23 principles
-- **Redundancy**: ~70%
-- **Project relevance**: **LOW** (not prompt-heavy project)
-- **Recommendation**: **LEAVE AS-IS**
+**MERGE INTO ARGUS**
+- Contributes: Scientific critical thinking validation checklist
+- After merge: Archive or delete this file
 
 ---
 
-#### 💻 Backend Engineering (3 droids)
-**python-backend-engineer** (~15KB)
-- **Specialization**: Python backend (FastAPI, Django, SQLAlchemy, uv tooling)
-- **Redundancy**: ~70%
-- **Project relevance**: **MEDIUM** (project is Python backend for Nautilus)
-- **Overlap**: FORGE (also does Python) but less backend-focused
-- **Recommendation**: **EVALUATE FOR MERGE** with FORGE or keep if backend-specific tasks needed
+### 8. nautilus-nano.md (8KB) - KEEP (PARTY MODE)
 
-**backend-typescript-architect** (~15KB)
-- **Specialization**: TypeScript backend with Bun runtime
-- **Redundancy**: ~70%
-- **Project relevance**: **NONE** (project is Python/MQL5, not TypeScript)
-- **Recommendation**: **LEAVE AS-IS** (not used for trading project)
+**Current Size:** 8KB
+**Estimated Redundancy:** 0% (designed to be compact)
+**Specialization:** Compact NAUTILUS for multi-agent sessions
 
-**network-engineer** (~10KB)
-- **Specialization**: Network connectivity, DNS, SSL/TLS, CDN, load balancers
-- **Redundancy**: ~65%
-- **Project relevance**: **LOW** (trading system doesn't need network engineering)
-- **Recommendation**: **LEAVE AS-IS**
+#### Analysis
 
----
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | NautilusTrader migration (compact) |
+| **Project-Specific** | Yes - Same as NAUTILUS but optimized |
+| **Overlap** | NAUTILUS (by design - nano version) |
+| **Usage Frequency** | HIGH (Party Mode) |
 
-#### 🗄️ Database (2 droids)
-**database-optimizer** (~12KB)
-- **Specialization**: SQL optimization, query tuning, indexing, migrations
-- **Redundancy**: ~70%
-- **Project relevance**: **NONE** (project uses Parquet files, not SQL databases)
-- **Recommendation**: **LEAVE AS-IS**
+#### Unique Value
 
-**database-optimization** (~12KB)
-- **Specialization**: Database performance tuning (appears to be duplicate?)
-- **Redundancy**: ~70%
-- **Project relevance**: **NONE**
-- **Recommendation**: **REMOVE** (duplicate of database-optimizer?)
+- 8KB vs 53KB NAUTILUS = 85% smaller
+- Keeps: Migration essentials, MQL5 mapping, anti-patterns
+- Removes: Full templates, diagrams, long explanations
+- Perfect for: Multi-agent sessions with context limits
+
+#### Recommendation
+
+**KEEP AS-IS**
+- Serves specific purpose (Party Mode)
+- Already optimized
+- Model for how to create "nano" versions of other droids
 
 ---
 
-#### 👨‍💻 Code Review (1 droid)
-**senior-code-reviewer** (~15KB)
-- **Specialization**: Comprehensive code review (fullstack, security, performance)
-- **Redundancy**: ~75%
-- **Project relevance**: **MEDIUM** (general code review could help)
-- **Overlap**: code-architect-reviewer (project droid)
-- **Recommendation**: **MERGE** with code-architect-reviewer → generic-code-reviewer (already recommended in LAYER 4)
+### 9. project-reader.md (6KB) - LOW Priority
+
+**Current Size:** 6KB
+**Estimated Redundancy:** 60% (~3.5KB)
+**Specialization:** Project structure analysis
+
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Codebase understanding, orientation |
+| **Project-Specific** | No - Generic |
+| **Overlap** | None |
+| **Usage Frequency** | LOW (onboarding, occasional) |
+
+#### Recommendation
+
+**KEEP AS-IS or CONVERT TO SKILL**
+- Small footprint (6KB)
+- Useful for new sessions
+- Consider: Move to skill
 
 ---
 
-#### 🎨 Frontend (1 droid)
-**ui-engineer** (~12KB)
-- **Specialization**: Frontend UI components, React, responsive design
-- **Redundancy**: ~70%
-- **Project relevance**: **NONE** (trading system has no UI, only backend)
-- **Recommendation**: **LEAVE AS-IS**
+### 10. bmad-builder.md (5KB) - REMOVE CANDIDATE
+
+**Current Size:** 5KB
+**Estimated Redundancy:** N/A
+**Specialization:** BMad Method module builder
+
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | BMad methodology |
+| **Project-Specific** | NO - BMad is separate system |
+| **Overlap** | None |
+| **Usage Frequency** | ZERO for this project |
+
+#### Recommendation
+
+**REMOVE or ARCHIVE**
+- Not used in EA_SCALPER_XAUUSD project
+- BMad is separate methodology
+- Archive to `.factory/droids/archived/`
 
 ---
 
-#### 📊 Business/Analytics (1 droid)
-**business-analyst** (~10KB)
-- **Specialization**: Metrics, KPIs, reports, dashboards, revenue models
-- **Redundancy**: ~65%
-- **Project relevance**: **LOW** (trading project doesn't need business analytics)
-- **Recommendation**: **LEAVE AS-IS**
+### 11. trading-project-documenter.md (5KB) - LOW Priority
+
+**Current Size:** 5KB
+**Estimated Redundancy:** 50% (~2.5KB)
+**Specialization:** Trading system documentation
+
+#### Analysis
+
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Documentation for trading EAs |
+| **Project-Specific** | Partially |
+| **Overlap** | None |
+| **Usage Frequency** | LOW |
+
+#### Recommendation
+
+**KEEP AS-IS or CONVERT TO SKILL**
+- Small footprint
+- Useful when documentation needed
+- EDIT > CREATE principle should be enforced
 
 ---
 
-#### ☁️ Cloud/DevOps (2 droids)
-**cloud-architect** (~15KB)
-- **Specialization**: AWS/Azure/GCP infrastructure, Terraform, auto-scaling
-- **Redundancy**: ~70%
-- **Project relevance**: **LOW** (trading system runs locally or on VPS, not cloud)
-- **Recommendation**: **LEAVE AS-IS**
+### 12. ea-scalper-xauusd-orchestrator.md (4KB) - CRITICAL Priority / ELEVATE
 
-**command-expert** (~8KB)
-- **Specialization**: CLI commands, automation, tooling
-- **Redundancy**: ~60%
-- **Project relevance**: **LOW**
-- **Recommendation**: **LEAVE AS-IS**
+**Current Size:** 4KB (surprisingly small for orchestrator)
+**Estimated Redundancy:** 10%
+**Specialization:** Central coordination hub
 
----
+#### Analysis
 
-#### 🛠️ Utilities (5 droids)
-**markdown-syntax-formatter** (~6KB)
-- **Specialization**: Fix markdown formatting, convert text to markdown
-- **Redundancy**: ~55%
-- **Project relevance**: **LOW** (documentation formatting, not critical)
-- **Recommendation**: **LEAVE AS-IS**
+| Aspect | Assessment |
+|--------|------------|
+| **Domain** | Workflow orchestration, droid routing |
+| **Project-Specific** | YES - Project-specific coordinator |
+| **Overlap** | None |
+| **Usage Frequency** | Should be HIGH (currently underutilized) |
 
-**subagent-auditor** (~8KB)
-- **Specialization**: Audit subagent configurations
-- **Redundancy**: ~60%
-- **Project relevance**: **MEDIUM** (project has many droids/subagents)
-- **Recommendation**: **EVALUATE** - Could help with droid quality
+#### Current Content Review
 
-**slash-command-auditor** (~7KB)
-- **Specialization**: Audit slash commands
-- **Redundancy**: ~60%
-- **Project relevance**: **LOW**
-- **Recommendation**: **LEAVE AS-IS**
+Current orchestrator is **TOO BASIC**:
+- Simple description paragraph
+- Lists agents (CRUCIBLE, SENTINEL, FORGE, ORACLE, ARGUS, NAUTILUS)
+- Mentions BUILD>PLAN philosophy
+- Mentions Apex constraints
+- **MISSING:** Workflow DAGs, automatic invocation, conditional steps
 
-**skill-auditor** (~8KB)
-- **Specialization**: Audit skill configurations
-- **Redundancy**: ~60%
-- **Project relevance**: **MEDIUM** (project has 6 skills)
-- **Recommendation**: **EVALUATE** - Could help with skill quality
+#### What Orchestrator SHOULD Have
 
-**jailbreak** (~5KB)
-- **Specialization**: (Purpose unclear, possibly testing/security)
-- **Redundancy**: ~50%
-- **Project relevance**: **UNKNOWN**
-- **Recommendation**: **REVIEW** - Unclear purpose, may be deprecated
+```xml
+<orchestrator_requirements>
+  <must_have>
+    <item>Dependency graph of all droids</item>
+    <item>Workflow definitions (Strategy Dev, Code Review, Research)</item>
+    <item>Automatic invocation based on triggers</item>
+    <item>Conditional step handling</item>
+    <item>Loop support (fix → re-test → validate)</item>
+    <item>Progress tracking across sessions</item>
+  </must_have>
+  
+  <workflows>
+    <workflow name="Strategy Development">
+      CRUCIBLE → SENTINEL → NAUTILUS → ORACLE → [FORGE if NO-GO] → loop
+    </workflow>
+    <workflow name="Code Review">
+      FORGE → NAUTILUS → FORGE → ORACLE
+    </workflow>
+    <workflow name="Research to Strategy">
+      ARGUS → ONNX-MODEL-BUILDER → CRUCIBLE → NAUTILUS → ORACLE
+    </workflow>
+  </workflows>
+</orchestrator_requirements>
+```
 
----
+#### Recommendation
 
-### Summary: Personal Droids
-
-| Category | Droids | Total Size | Project Relevance | Recommendation |
-|----------|--------|------------|-------------------|----------------|
-| AI/ML | 3 | ~30KB | LOW-MEDIUM | Evaluate mcp-testing, leave others |
-| Backend | 3 | ~40KB | MEDIUM | Evaluate python-backend-engineer |
-| Database | 2 | ~24KB | NONE | Leave as-is (not used) |
-| Code Review | 1 | ~15KB | MEDIUM | **MERGE** with code-architect-reviewer |
-| Frontend | 1 | ~12KB | NONE | Leave as-is (no UI) |
-| Business | 1 | ~10KB | LOW | Leave as-is |
-| Cloud/DevOps | 2 | ~23KB | LOW | Leave as-is |
-| Utilities | 5 | ~34KB | LOW-MEDIUM | Evaluate auditors, leave others |
-| **TOTAL** | **18** | **~188KB** | **Mostly LOW** | **Selective refactoring** |
-
-### Project-Relevant Personal Droids (Potential Refactoring)
-
-**MEDIUM Priority (Consider for Phase 3)**:
-1. **senior-code-reviewer** → Already recommended for merge with code-architect-reviewer
-2. **python-backend-engineer** → Evaluate merge with FORGE or keep if backend-specific needed
-3. **mcp-testing-engineer** → Could validate Twelve-Data MCP, memory MCP, time MCP
-4. **subagent-auditor** → Could audit droid configurations (meta-analysis)
-5. **skill-auditor** → Could audit 6 skills (argus, crucible, forge, oracle, sentinel, nautilus)
-
-**Estimated savings IF refactored**:
-- 5 project-relevant droids: ~60KB current → ~20KB after (40KB saved)
-- Remaining 13 non-relevant: Leave as-is (no savings, no effort wasted)
-
-### Updated Recommendation
-
-**Personal droids strategy**:
-- **DO NOT refactor all 18** (13 are not project-relevant, waste of effort)
-- **Selectively refactor 5 project-relevant** in Phase 3 (40KB savings)
-- **Total ecosystem** with personal droids considered:
-  - Before: 389KB (project) + 188KB (personal) = **577KB total**
-  - After: 101KB (project) + 148KB (personal, 5 refactored) = **249KB total**
-  - **Savings: 328KB (57% reduction)** across full ecosystem
+**REFACTOR NOW + ELEVATE TO MAESTRO ROLE**
+- Currently 4KB is too small - should be ~15-20KB
+- Add: Dependency graph, workflow definitions, automatic routing
+- Priority 7 in decision hierarchy (coordinates but doesn't override)
+- This is the MISSING PIECE for ecosystem coordination
 
 ---
 
 ## Priority Matrix
 
-| Droid | Size | Redundancy | Priority | Recommendation | Phase |
-|-------|------|------------|----------|----------------|-------|
-| **orchestrator** | 20KB | 60% | CRITICAL | REFACTOR + MAESTRO | 1 |
-| **onnx-model-builder** | 20KB | 65% | CRITICAL | REFACTOR NOW | 1 |
-| crucible | 10KB | 70% | HIGH | REFACTOR LATER | 2 |
-| argus | 15KB | 70% | HIGH | REFACTOR LATER | 2 |
-| code-architect-reviewer | 12KB | 75% | MEDIUM | MERGE + REFACTOR | 2 |
-| project-reader | 8KB | 65% | MEDIUM | REFACTOR LATER | 2 |
-| trading-documenter | 10KB | 70% | MEDIUM | REFACTOR LATER | 2 |
-| deep-researcher | 12KB | 70% | MEDIUM | EVALUATE MERGE | 3 |
-| nautilus-nano | 4KB | N/A | N/A | KEEP AS-IS | N/A |
-| sentinel-ftmo | 15KB | 70% | LOW | ARCHIVE or LATER | 3 |
-| git-guardian | 6KB | 60% | LOW | LATER or MERGE | 3 |
-| bmad-builder | 8KB | 65% | LOW-MEDIUM | LATER | 3 |
-| personal droids | ~80KB | ~70% | TBD | IF USED: Phase 3 | 3 |
+| Droid | Size | Redundancy | Priority | Recommendation |
+|-------|------|------------|----------|----------------|
+| ea-scalper-xauusd-orchestrator | 4KB | 10% | **CRITICAL** | REFACTOR NOW + ELEVATE |
+| onnx-model-builder | 28KB | 50% | **CRITICAL** | REFACTOR NOW |
+| crucible-gold-strategist | 17KB | 55% | **HIGH** | REFACTOR LATER |
+| code-architect-reviewer | 28KB | 65% | **HIGH** | REFACTOR LATER |
+| argus-quant-researcher | 15KB | 80% | **HIGH** | MERGE (with research droids) |
+| deep-researcher | 12KB | 90% | **MEDIUM** | MERGE INTO ARGUS |
+| git-guardian | 15KB | 40% | **MEDIUM** | KEEP or SKILL |
+| nautilus-nano | 8KB | 0% | **MEDIUM** | KEEP AS-IS |
+| project-reader | 6KB | 60% | **LOW** | KEEP or SKILL |
+| trading-project-documenter | 5KB | 50% | **LOW** | KEEP or SKILL |
+| sentinel-ftmo-guardian | 20KB | 95% | **LOW** | REMOVE/ARCHIVE |
+| bmad-builder | 5KB | N/A | **LOW** | REMOVE/ARCHIVE |
 
 ---
 
 ## Refactoring Roadmap
 
-### Phase 1 (WITH TOP 5 - Week 1)
-- **orchestrator** (MAESTRO role) ← CRITICAL
-- **onnx-model-builder** (ML pipeline) ← CRITICAL
+### Phase 1 (with TOP 5) - Week 1
 
-### Phase 2 (AFTER TOP 5 - Week 2)
-- crucible
-- argus
-- code-architect-reviewer (merge with senior-code-reviewer)
-- project-reader
-- trading-documenter
+| Droid | Action | Estimated Time |
+|-------|--------|----------------|
+| ea-scalper-xauusd-orchestrator | Refactor + Elevate to MAESTRO | 4-6 hours |
+| onnx-model-builder | Refactor (50% reduction) | 2-3 hours |
 
-### Phase 3 (Lower Priority - Week 3)
-- deep-researcher (evaluate merge with argus + research-analyst-pro)
-- sentinel-ftmo (if FTMO challenge planned)
-- git-guardian (or merge into devops droid)
-- bmad-builder
-- personal droids (if used for project)
+**Reason:** Critical for project success, currently underutilized
 
----
+### Phase 2 (after TOP 5) - Week 2
 
-## Total Savings Estimate
+| Droid | Action | Estimated Time |
+|-------|--------|----------------|
+| crucible-gold-strategist | Refactor (55% reduction) | 2 hours |
+| code-architect-reviewer | Refactor (65% reduction) | 2 hours |
+| argus + deep-researcher + research-analyst-pro | MERGE into ARGUS | 4 hours |
 
-### Project Droids Only (Original Scope)
-**Before**:
-- TOP 5: 196KB
-- Remaining 12 (project): ~120KB
-- **Total project**: 316KB
+**Savings from merge:** 58KB → 15KB = 43KB saved
 
-**After** (all project droids refactored):
-- TOP 5: 61KB (135KB saved)
-- Remaining 12: 40KB (80KB saved)
-- **Total project**: 101KB
-- **Savings**: **215KB (68% reduction)**
+### Phase 3 (lower priority) - Week 3
 
----
+| Droid | Action | Estimated Time |
+|-------|--------|----------------|
+| git-guardian | Optional skill conversion | 1 hour |
+| project-reader | Optional skill conversion | 30 min |
+| trading-project-documenter | Optional skill conversion | 30 min |
 
-### Full Ecosystem (Project + Personal Droids)
-**Before**:
-- Project droids (17): 389KB
-- Personal droids (18): ~188KB
-- **Total ecosystem**: **577KB**
+### Phase 4 (cleanup) - Week 4
 
-**After** (selective refactoring):
-- Project droids (17 refactored): 101KB
-- Personal droids (5 project-relevant refactored, 13 left as-is):
-  - 5 refactored: ~20KB (from ~60KB, 40KB saved)
-  - 13 not refactored: ~128KB (unchanged)
-  - Subtotal: 148KB
-- **Total ecosystem**: **249KB**
-- **Savings**: **328KB (57% reduction)**
+| Droid | Action |
+|-------|--------|
+| sentinel-ftmo-guardian | Archive to `.factory/droids/archived/` |
+| bmad-builder | Archive to `.factory/droids/archived/` |
 
 ---
 
-### Token Impact
-**Project droids only**:
-- Before: 97,250 tokens
-- After: 25,250 tokens
-- **Savings**: 72,000 tokens (74%)
+## Total Savings (All 12 Droids)
 
-**Full ecosystem**:
-- Before: 144,250 tokens (577KB / 4)
-- After: 62,250 tokens (249KB / 4)
-- **Savings**: 82,000 tokens (57%)
+| Phase | Droids | Before | After | Savings |
+|-------|--------|--------|-------|---------|
+| Phase 1 | 2 | 32KB | 22KB | 10KB |
+| Phase 2 | 5 | 101KB | 40KB | 61KB |
+| Phase 3 | 3 | 26KB | ~20KB (skills) | 6KB |
+| Phase 4 | 2 | 25KB | 0KB | 25KB |
+| **TOTAL** | **12** | **184KB** | **82KB** | **102KB (55%)** |
 
-**Party Mode impact**:
-- Before overhead: 144,250 tokens (full ecosystem loaded)
-- After overhead: 62,250 tokens
-- **Freed budget**: +82,000 tokens (57% improvement)
-
----
-
-## Key Insights
-
-1. **Orchestrator is underutilized** - Has coordination logic but not automatic, should be MAESTRO
-2. **ML pipeline incomplete** - onnx-model-builder doesn't hand off to ORACLE/FORGE automatically
-3. **Research droids overlap** - 3 droids (ARGUS, research-analyst-pro, deep-researcher) do similar triangulation
-4. **Code review droids redundant** - 3 droids (code-architect-reviewer, senior-code-reviewer, FORGE) review code
-5. **FTMO droid unused** - Project uses Apex, not FTMO (sentinel-ftmo-guardian low priority)
+**Combined with TOP 5:**
+- TOP 5: 131KB saved
+- Remaining 12: 102KB saved
+- **TOTAL ECOSYSTEM SAVINGS: 233KB (60%)**
 
 ---
 
-**Next**: Execute LAYER 3 (Gap Analysis) to identify 5 critical droids MISSING from ecosystem.
+## Appendix: Research Droid Merge Plan
+
+### Current State (3 droids, 58KB)
+
+```
+argus-quant-researcher.md (15KB)
+├── Trading-specific triangulation
+├── RAG database queries
+├── Priority areas table
+└── Automatic alerts
+
+research-analyst-pro.md (31KB)
+├── Generic research methodology
+├── Quality assurance framework
+├── Report structure template
+└── Multi-phase workflow
+
+deep-researcher.md (12KB)
+├── Scientific critical thinking
+├── Multi-layer research execution
+├── Confidence assessment
+└── Deliverable format
+```
+
+### After Merge: ARGUS v3.0 (15KB)
+
+```
+argus-quant-researcher.md (15KB - MERGED)
+├── From ARGUS:
+│   ├── Trading-specific focus
+│   ├── RAG database queries (mql5-books, mql5-docs)
+│   ├── Priority areas (order flow, SMC, ML trading)
+│   └── Automatic alerts
+├── From RESEARCH-ANALYST-PRO:
+│   ├── Quality assurance checklist (condensed)
+│   └── Confidence level framework
+├── From deep-researcher:
+│   ├── Scientific critical thinking checklist
+│   └── Multi-layer research phases (condensed)
+└── Inherits from AGENTS.md:
+    ├── Generic workflow templates
+    ├── Output format templates
+    └── Constraints/guardrails
+```
+
+### Merge Benefits
+
+| Metric | Before | After | Improvement |
+|--------|--------|-------|-------------|
+| Total size | 58KB | 15KB | -43KB (74%) |
+| Tokens | 14,500 | 3,750 | -10,750 |
+| Droids to maintain | 3 | 1 | -2 droids |
+| Confusion factor | HIGH | NONE | "Which research droid to use?" eliminated |

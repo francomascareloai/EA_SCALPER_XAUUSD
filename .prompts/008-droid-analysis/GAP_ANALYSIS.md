@@ -1,431 +1,613 @@
-# Droid Gap Analysis (LAYER 3)
+# LAYER 3: Gap Analysis - Missing Critical Droids
+
+**Analysis Date:** 2025-12-07
+**Analyst:** Elite Quantitative Research Analyst (deep-researcher subagent)
+**Confidence:** HIGH (systematic gap identification)
+
+---
 
 ## Executive Summary
-- **Gaps identified**: 5 critical droids **MISSING** from ecosystem
-- **Highest priority**: **SECURITY-COMPLIANCE** (compliance + money = can't fail)
-- **Second priority**: **PERFORMANCE-OPTIMIZER** (OnTick <50ms is critical)
-- **Total estimated effort**: ~15-20 days
-- **Risk without gaps filled**: **HIGH** (security/compliance/performance vulnerabilities)
+
+| Metric | Value |
+|--------|-------|
+| **Gaps Identified** | 5 critical droids missing |
+| **Highest Priority** | SECURITY-COMPLIANCE (compliance + money) |
+| **Total Estimated Effort** | 8-12 days |
+| **Risk Without Gaps Filled** | HIGH (security, performance, monitoring) |
+
+### Gap Priority Overview
+
+| # | Gap | Priority | Effort | ROI | Risk if Missing |
+|---|-----|----------|--------|-----|-----------------|
+| 1 | Security-Compliance | **CRITICAL** | 2-3 days | HIGH | Credential leak, compliance violation |
+| 2 | Performance-Optimizer | **HIGH** | 2-3 days | HIGH | Missed trades, slippage, budget breach |
+| 3 | Data-Pipeline | **MEDIUM-HIGH** | 3-4 days | MEDIUM | Bad data, biased backtests |
+| 4 | Monitoring-Alerting | **MEDIUM** | 2-3 days | MEDIUM | Account blow without warning |
+| 5 | Deployment-DevOps | **LOW** | 3-4 days | LOW | Manual deployment errors |
 
 ---
 
-## GAP 1: SECURITY-COMPLIANCE Droid 🔐
+## GAP 1: SECURITY-COMPLIANCE Droid
 
-### Why Critical
-- **Money at stake**: Trading system handles REAL MONEY (Apex Trading challenge account, $50K-$200K)
-- **Compliance requirements**: 10% trailing DD, 4:59 PM ET deadline, 30% consistency rule
-- **Credential management**: API keys for Twelve-Data, Tradovate, broker connections
-- **Risk if missing**:
-  - Credential leaks (API keys committed to git, hardcoded secrets)
-  - Compliance violations (account terminated by Apex)
-  - Unauthorized access (no access control on risk parameters)
-  - No audit trail (who modified what, when)
+### 🔐 Why Critical
 
-### Justification
-**Current state audit**:
-- ✅ SENTINEL: Risk management (DD, position sizing) - but NOT security/compliance
-- ❌ No automated secret scanning (could commit `.env` file to git)
-- ❌ No comprehensive compliance validation layer
-- ❌ No access control (anyone can modify risk parameters in code)
-- ❌ No audit trail for sensitive operations
+Trading systems handle **real money** and must comply with strict **prop firm rules**. Security failures have catastrophic consequences:
 
-**Conclusion**: Gap is REAL. No existing droid covers security/compliance comprehensively.
+| Risk | Consequence | Likelihood |
+|------|-------------|------------|
+| Credential leak | API keys exposed → unauthorized trading | MEDIUM |
+| Compliance violation | Apex rule breach → account termination | HIGH |
+| Data exposure | User/trade data leaked | LOW |
+| Unauthorized access | Malicious trade execution | LOW |
+
+### Current State (GAP)
+
+- **No dedicated security scanning** - Code reviewed ad-hoc
+- **No credential management validation** - .env usage not verified
+- **Compliance checks scattered** - In SENTINEL but not systematic
+- **No audit trail** - Sensitive operations not logged
 
 ### Proposed Droid
 
-```markdown
-# security-compliance-guardian.md
+```yaml
+name: security-compliance-guardian
+version: 1.0
+priority: CRITICAL
 
-## Mission
-Prevent catastrophic failures: credential leaks, compliance violations, unauthorized access.
+responsibilities:
+  security_audit:
+    - Scan code for hardcoded secrets (API keys, passwords, tokens)
+    - Verify .env usage (no secrets in code/logs)
+    - Check for insecure patterns (SQL injection, XSS in logs)
+    - Validate input sanitization
+    
+  credential_management:
+    - Audit .env.example completeness
+    - Verify no secrets in git history
+    - Check API key rotation policies
+    - Validate broker API security
+    
+  compliance_validation:
+    - Verify Apex rules enforced in code
+    - Trailing DD calculation correctness
+    - Time constraint enforcement (4:59 PM ET)
+    - 30% consistency rule compliance
+    
+  access_control:
+    - Document who can modify risk parameters
+    - Review deployment permissions
+    - Validate trade execution authorization
+    
+  audit_trail:
+    - Log all sensitive operations
+    - Track configuration changes
+    - Record risk parameter modifications
 
-## Capabilities
-1. **Security Audit**
-   - Scan code for hardcoded secrets (API keys, passwords, tokens)
-   - Validate `.env` usage (no secrets in code/logs/commits)
-   - Check for common security anti-patterns (SQL injection, command injection)
+commands:
+  /security-scan [file|module]: Scan for security vulnerabilities
+  /compliance-audit: Full Apex compliance verification
+  /secrets-check: Search for exposed credentials
+  /audit-log: Review sensitive operation history
 
-2. **Credential Management**
-   - Verify all secrets loaded from `.env` or secure vault
-   - No secrets in git history (scan commits)
-   - No secrets in logs/output (redaction)
-
-3. **Compliance Validation**
-   - Verify Apex rules enforced: 10% trailing DD, 4:59 PM deadline, 30% consistency
-   - Validate position sizing respects risk limits
-   - Check for overnight position prevention
-
-4. **Access Control**
-   - Who can modify risk parameters? (code review + approval required)
-   - Who can deploy to live? (deployment authorization)
-
-5. **Audit Trail**
-   - Log all sensitive operations (risk param changes, deployments, trades)
-   - Tamper-proof logging (append-only)
-   - Compliance report generation
-
-## Triggers
-- "security", "compliance", "audit", "secrets", "credentials", "Apex rules"
+integration:
+  invoke_before: Any deployment
+  invoke_after: Risk parameter changes
+  handoff_to: FORGE (for fixes), SENTINEL (for risk assessment)
 ```
 
-### Priority Assessment
-- **Priority**: **CRITICAL** (highest)
-- **Effort**: **MEDIUM** (2-3 days to implement)
-- **ROI**: **HIGH** (prevents catastrophic failure)
-- **Workaround**: Manual security audits (not scalable, error-prone)
+### Justification Matrix
+
+| Factor | Assessment |
+|--------|------------|
+| **What problem does it solve?** | Prevents credential leaks, ensures prop firm compliance |
+| **Risk if missing?** | Account termination, unauthorized trades, data breach |
+| **Workaround exists?** | Manual security audits (not scalable, error-prone) |
+| **Implementation effort** | MEDIUM (2-3 days) |
+| **ROI** | HIGH (prevents catastrophic failure) |
 
 ### Recommendation
-**CREATE IMMEDIATELY** (Phase 1, Week 1)
+
+**CREATE IMMEDIATELY (Phase 1)**
 
 ---
 
-## GAP 2: PERFORMANCE-OPTIMIZER Droid ⚡
+## GAP 2: PERFORMANCE-OPTIMIZER Droid
 
-### Why Critical
-- **OnTick budget**: <50ms is CRITICAL for scalping (miss this = missed trades = lost money)
-- **ONNX inference budget**: <5ms (model too slow = useless)
-- **Python performance**: Bottlenecks common (loops, memory leaks, blocking I/O)
-- **Risk if missing**:
-  - Performance degradation over time (no monitoring)
-  - Missed trades due to slow execution
-  - Slippage from execution delays
-  - Opportunity cost (could be faster)
+### ⚡ Why Critical
 
-### Justification
-**Current state audit**:
-- ✅ FORGE: Mentions performance ("blocking in on_tick" anti-pattern) - but NOT deep optimization
-- ❌ No systematic profiling (cProfile, line_profiler, memory_profiler)
-- ❌ No bottleneck analysis (O(n²) algorithms, unnecessary loops)
-- ❌ No budget tracking (OnTick timing, ONNX inference timing, memory usage)
-- ❌ No regression prevention (performance tests, budget alerts)
+Trading systems have **hard performance budgets** that directly impact profitability:
 
-**Conclusion**: Gap is REAL. FORGE checks basic anti-patterns but not comprehensive performance optimization.
+| Budget | Target | Consequence of Breach |
+|--------|--------|----------------------|
+| OnTick handler | <50ms | Missed trades, slippage |
+| ONNX inference | <5ms | Model unusable in production |
+| Python Hub | <400ms | Strategy execution delays |
+| Memory usage | <500MB | System crashes, instability |
+
+### Current State (GAP)
+
+- **No systematic profiling** - Performance issues found ad-hoc
+- **No bottleneck analysis** - O(n²) algorithms undetected
+- **No budget tracking** - Timing not monitored
+- **No regression prevention** - Performance degradation unnoticed
 
 ### Proposed Droid
 
-```markdown
-# performance-optimizer.md
+```yaml
+name: performance-optimizer
+version: 1.0
+priority: HIGH
 
-## Mission
-Ensure system meets hard real-time constraints: OnTick <50ms, ONNX <5ms.
+responsibilities:
+  profiling:
+    - cProfile on Python modules
+    - line_profiler for hot paths
+    - memory_profiler for leaks
+    - Timing analysis for critical functions
+    
+  bottleneck_analysis:
+    - Identify O(n²) algorithms
+    - Detect unnecessary loops
+    - Find blocking I/O operations
+    - Locate memory-intensive operations
+    
+  optimization_suggestions:
+    - Numpy vectorization opportunities
+    - Cython compilation candidates
+    - Async pattern improvements
+    - Memory optimization strategies
+    
+  budget_tracking:
+    - OnTick timing monitoring
+    - ONNX inference timing
+    - Handler latency distribution
+    - Memory usage trending
+    
+  regression_prevention:
+    - Performance test suite
+    - Budget alerts
+    - Benchmark comparisons
+    - Degradation detection
 
-## Capabilities
-1. **Profiling**
-   - cProfile: Function-level timing
-   - line_profiler: Line-by-line hotspots
-   - memory_profiler: Memory allocation tracking
-   - py-spy: Sampling profiler for production
+commands:
+  /profile [module]: Profile module with cProfile
+  /memory [module]: Memory usage analysis
+  /benchmark [function]: Timing benchmark
+  /budget-check: Verify all performance budgets met
+  /optimize [file]: Suggest optimizations
 
-2. **Bottleneck Analysis**
-   - Identify O(n²) algorithms (replace with O(n log n) or O(n))
-   - Find unnecessary loops (vectorize with numpy)
-   - Detect blocking I/O (use async/await)
-   - Locate memory leaks (objgraph, tracemalloc)
+performance_targets:
+  on_bar: <1ms (critical), <5ms (max)
+  on_tick: <100μs (critical), <500μs (max)
+  onnx_inference: <5ms
+  module_analyze: <500μs
 
-3. **Optimization Suggestions**
-   - Numpy vectorization (replace Python loops)
-   - Cython compilation (critical paths)
-   - Async patterns (non-blocking I/O)
-   - Caching (expensive calculations)
-   - Algorithmic improvements
-
-4. **Budget Tracking**
-   - OnTick timing per handler
-   - ONNX inference timing
-   - Memory usage per module
-   - Alert if budget exceeded
-
-5. **Regression Prevention**
-   - Performance tests (pytest-benchmark)
-   - Budget gates (CI/CD fails if >50ms)
-   - Continuous monitoring (production profiling)
-
-## Triggers
-- "performance", "slow", "bottleneck", "profiling", "optimize", "OnTick", "ONNX"
+integration:
+  invoke_before: Deploy to production
+  invoke_after: Major code changes
+  handoff_to: FORGE (for implementation)
 ```
 
-### Priority Assessment
-- **Priority**: **HIGH** (second after security)
-- **Effort**: **MEDIUM** (2-3 days)
-- **ROI**: **HIGH** (performance = $$$ in trading)
-- **Workaround**: Manual profiling (ad-hoc, not systematic)
+### Justification Matrix
+
+| Factor | Assessment |
+|--------|------------|
+| **What problem does it solve?** | Ensures trading system meets performance requirements |
+| **Risk if missing?** | Slow execution → missed trades → poor performance |
+| **Workaround exists?** | Manual profiling (tedious, inconsistent) |
+| **Implementation effort** | MEDIUM (2-3 days) |
+| **ROI** | HIGH (performance = $$$) |
 
 ### Recommendation
-**CREATE SOON** (Phase 1, Week 1)
+
+**CREATE SOON (Phase 1)**
 
 ---
 
-## GAP 3: DATA-PIPELINE Droid 📊
+## GAP 3: DATA-PIPELINE Droid
 
-### Why Needed
-- **Data quality**: Bad data = bad backtests = bad decisions
-- **ParquetDataCatalog**: Data ingestion, storage, retrieval for NautilusTrader
-- **Twelve-Data MCP**: Real-time + historical data integration
-- **Risk if missing**:
-  - Look-ahead bias (future data leaking into past)
-  - Missing data (gaps cause strategy failures)
-  - Corrupted feeds (bad OHLCV data)
-  - No data quality monitoring
+### 📊 Why Critical
 
-### Justification
-**Current state audit**:
-- ✅ NAUTILUS: Mentions ParquetDataCatalog setup - but NOT data quality/pipeline
-- ❌ No data ingestion automation (Twelve-Data → Parquet)
-- ❌ No data cleaning (gaps, duplicates, outliers)
-- ❌ No data validation (timestamp correctness, OHLCV integrity)
-- ❌ No storage optimization (compression, partitioning)
-- ❌ No quality monitoring (data freshness, feed health)
+Data quality directly determines backtest validity and trading decisions:
 
-**Conclusion**: Gap exists. NAUTILUS sets up backtest but doesn't manage data pipeline.
+| Issue | Consequence |
+|-------|-------------|
+| Missing data | Biased backtests, gaps in analysis |
+| Corrupted feeds | Wrong signals, bad trades |
+| Look-ahead bias | Overly optimistic backtests |
+| Timestamp errors | Order misalignment |
+
+### Current State (GAP)
+
+- **No data ingestion workflow** - Manual ParquetDataCatalog management
+- **No data cleaning** - Gaps, duplicates unhandled
+- **No data validation** - OHLCV integrity unchecked
+- **No quality monitoring** - Data freshness not tracked
 
 ### Proposed Droid
 
-```markdown
-# data-pipeline-engineer.md
+```yaml
+name: data-pipeline-engineer
+version: 1.0
+priority: MEDIUM-HIGH
 
-## Mission
-Ensure data quality: no look-ahead bias, no gaps, no corruption.
+responsibilities:
+  data_ingestion:
+    - Twelve-Data MCP → Parquet conversion
+    - Historical data download automation
+    - Real-time feed integration
+    - Multi-source data merging
+    
+  data_cleaning:
+    - Gap detection and interpolation
+    - Duplicate removal
+    - Outlier detection (flash crashes)
+    - Weekend gap handling
+    
+  data_validation:
+    - Timestamp correctness verification
+    - OHLCV integrity checks (High > Low, etc.)
+    - Volume sanity checks
+    - Point-in-time correctness (no look-ahead)
+    
+  storage_optimization:
+    - Parquet compression tuning
+    - Partitioning strategy
+    - Index optimization
+    - Archive management
+    
+  quality_monitoring:
+    - Data freshness tracking
+    - Feed health monitoring
+    - Coverage reports
+    - Quality metrics dashboard
 
-## Capabilities
-1. **Data Ingestion**
-   - Twelve-Data MCP → Parquet conversion
-   - Automated scheduled updates (cron/scheduler)
-   - Validation during ingestion
+commands:
+  /ingest [source] [symbol] [period]: Ingest data from source
+  /validate [dataset]: Validate data integrity
+  /clean [dataset]: Clean and fix data issues
+  /coverage [symbol]: Show data coverage report
+  /catalog: List available data in ParquetDataCatalog
 
-2. **Data Cleaning**
-   - Handle gaps (forward fill, interpolation, or exclude)
-   - Remove duplicates (timestamp-based)
-   - Outlier detection (Z-score, IQR)
+data_sources:
+  - Twelve-Data MCP (primary)
+  - MT5 export (secondary)
+  - CSV imports (manual)
 
-3. **Data Validation**
-   - Timestamp correctness (monotonic, no future data)
-   - OHLCV integrity (High ≥ Low, Close within [Low, High])
-   - Volume sanity checks (no negative, no zeros)
-
-4. **Storage Optimization**
-   - Parquet compression (zstd, snappy)
-   - Partitioning by date (year=2024/month=12/)
-   - Schema evolution (backward compatible)
-
-5. **Quality Monitoring**
-   - Data freshness alerts (if >1 day old)
-   - Feed health checks (Twelve-Data API status)
-   - Completeness metrics (expected bars vs actual)
-
-## Triggers
-- "data", "Parquet", "Twelve-Data", "ingestion", "quality", "gaps"
+integration:
+  invoke_before: Any backtest
+  invoke_after: Data ingestion
+  handoff_to: ORACLE (for backtest), NAUTILUS (for strategy)
 ```
 
-### Priority Assessment
-- **Priority**: **MEDIUM-HIGH**
-- **Effort**: **COMPLEX** (3-5 days)
-- **ROI**: **MEDIUM** (quality data = quality decisions)
-- **Workaround**: Manual data management (time-consuming)
+### Justification Matrix
+
+| Factor | Assessment |
+|--------|------------|
+| **What problem does it solve?** | Ensures data quality for reliable backtests |
+| **Risk if missing?** | Bad data → biased backtests → poor live performance |
+| **Workaround exists?** | Manual data management (error-prone) |
+| **Implementation effort** | COMPLEX (3-4 days) |
+| **ROI** | MEDIUM (quality data = quality decisions) |
 
 ### Recommendation
-**CREATE LATER** (Phase 2, Week 2)
+
+**CREATE LATER (Phase 2)**
 
 ---
 
-## GAP 4: MONITORING-ALERTING Droid 📡
+## GAP 4: MONITORING-ALERTING Droid
 
-### Why Needed
-- **Real-time monitoring**: Trailing DD, equity, position status
-- **Alerting**: Critical events (DD >8%, equity drop >5%, stuck positions)
-- **Anomaly detection**: Unusual patterns (unexpected drawdown, execution delays)
-- **Risk if missing**:
-  - Blow account without noticing (no alerts)
-  - Miss critical warnings (DD approaching limit)
-  - No visibility into system health
+### 📡 Why Critical
 
-### Justification
-**Current state audit**:
-- ✅ SENTINEL: Calculates DD, tracks equity - but NOT comprehensive monitoring/alerting
-- ❌ No real-time dashboards (current DD, equity curve, win rate)
-- ❌ No alerting system (Slack/email when DD >8%)
-- ❌ No anomaly detection (unusual drawdown patterns)
-- ❌ No circuit breaker integration (auto-trigger SENTINEL emergency)
+Real-time monitoring prevents account blows and catches issues early:
 
-**Conclusion**: Gap exists. SENTINEL checks constraints but doesn't monitor/alert proactively.
+| What to Monitor | Why |
+|-----------------|-----|
+| Trailing DD | Approaching 10% = emergency |
+| Equity curve | Anomalous drops = problem |
+| Position status | Stuck positions = risk |
+| Execution quality | Slippage trends = concern |
+
+### Current State (GAP)
+
+- **Trailing DD checked only on trade** - Not real-time
+- **No equity curve monitoring** - Anomalies undetected
+- **No position alerts** - Stuck positions unknown
+- **No dashboard** - Status requires manual queries
 
 ### Proposed Droid
 
-```markdown
-# monitoring-alerting-operator.md
+```yaml
+name: monitoring-alerting-operator
+version: 1.0
+priority: MEDIUM
 
-## Mission
-Be the safety net: alert on critical events BEFORE disaster.
+responsibilities:
+  real_time_monitoring:
+    - Trailing DD (from HIGH-WATER MARK)
+    - Current equity vs starting
+    - Open position status
+    - Time to market close (4:59 PM ET)
+    
+  alerting:
+    - DD >8%: Slack/email alert
+    - Equity drop >5% in 5min: Urgent alert
+    - Stuck position >4h: Warning
+    - <30min to close with positions: Critical
+    
+  anomaly_detection:
+    - Unusual drawdown patterns
+    - Execution delay spikes
+    - Abnormal trade frequency
+    - Strategy behavior changes
+    
+  dashboard:
+    - Real-time DD gauge
+    - Equity curve chart
+    - Win rate rolling
+    - Sharpe trailing
+    
+  circuit_breaker_integration:
+    - Trigger SENTINEL emergency protocols
+    - Auto-reduce risk on alerts
+    - Force position closure if needed
 
-## Capabilities
-1. **Real-Time Monitoring**
-   - Trailing DD from HWM (includes unrealized P&L)
-   - Equity curve tracking
-   - Position status (open, pending, stuck)
-   - Win rate, Sharpe, Sortino (rolling)
+commands:
+  /status: Real-time account status
+  /alerts: View recent alerts
+  /dashboard: Open monitoring dashboard
+  /anomaly [period]: Check for anomalies
 
-2. **Alerting**
-   - Slack webhook when DD >8% (WARNING)
-   - Email when DD >9.5% (DANGER)
-   - Alert on equity drop >5% in 5 minutes
-   - Alert on stuck position (>30 minutes)
+alert_levels:
+  INFO: Routine notifications
+  WARNING: Needs attention (DD >6%)
+  CRITICAL: Immediate action (DD >8%)
+  EMERGENCY: Account at risk (DD >9.5%)
 
-3. **Anomaly Detection**
-   - Unusual drawdown patterns (Bollinger Bands on DD)
-   - Execution delays (latency >100ms)
-   - Strategy behavior changes (win rate drop)
-
-4. **Dashboard**
-   - Real-time metrics (DD, equity, position count)
-   - Historical charts (equity curve, DD curve)
-   - Performance stats (Sharpe, Sortino, Calmar, SQN)
-
-5. **Circuit Breaker Integration**
-   - Auto-trigger SENTINEL emergency protocols (DD >9.5%)
-   - Auto-invoke PERFORMANCE-OPTIMIZER (if latency spikes)
-
-## Triggers
-- "monitoring", "alerting", "dashboard", "anomaly", "circuit breaker"
+integration:
+  always_running: True (background monitoring)
+  handoff_to: SENTINEL (for emergency protocols)
 ```
 
-### Priority Assessment
-- **Priority**: **MEDIUM**
-- **Effort**: **MEDIUM** (2-3 days)
-- **ROI**: **MEDIUM** (safety net, peace of mind)
-- **Workaround**: Manual monitoring (not scalable)
+### Justification Matrix
+
+| Factor | Assessment |
+|--------|------------|
+| **What problem does it solve?** | Early warning system for account risk |
+| **Risk if missing?** | Account blow without warning |
+| **Workaround exists?** | Manual monitoring (impossible 24/7) |
+| **Implementation effort** | MEDIUM (2-3 days) |
+| **ROI** | MEDIUM (safety net) |
 
 ### Recommendation
-**CREATE LATER** (Phase 2, Week 2)
+
+**CREATE LATER (Phase 2)**
 
 ---
 
-## GAP 5: DEPLOYMENT-DEVOPS Droid 🚀
+## GAP 5: DEPLOYMENT-DEVOPS Droid
 
-### Why Needed
-- **Deploy to production**: Live trading environment setup
-- **Environment management**: Dev/staging/prod configs
-- **Rollback on failure**: Revert to last stable version
-- **Risk if missing**:
-  - Manual deployment errors (wrong config, missing files)
-  - Downtime (no automated rollback)
-  - Configuration drift (dev ≠ prod)
+### 🚀 Why Critical (Lower Priority)
 
-### Justification
-**Current state audit**:
-- ❌ No CI/CD pipeline (automated testing → build → deploy)
-- ❌ No environment management (dev/staging/prod separation)
-- ❌ No deployment automation (manual steps error-prone)
-- ❌ No rollback capability (if deployment fails)
-- ❌ No health checks (post-deployment validation)
+Professional deployment practices prevent errors and enable rollback:
 
-**Conclusion**: Gap exists. No droid handles deployment/devops.
+| Issue | Consequence |
+|-------|-------------|
+| Manual deployment | Human errors, inconsistency |
+| No rollback | Stuck with broken version |
+| Config drift | Dev/staging/prod differences |
+| No health checks | Silent failures |
+
+### Current State (GAP)
+
+- **Manual deployment** - Copy files, restart services
+- **No CI/CD pipeline** - Tests run ad-hoc
+- **No environment management** - Config differences between environments
+- **No automated rollback** - Recovery is manual
 
 ### Proposed Droid
 
-```markdown
-# deployment-devops-engineer.md
+```yaml
+name: deployment-devops-engineer
+version: 1.0
+priority: LOW
 
-## Mission
-Ship safely: automated deployment with rollback capability.
+responsibilities:
+  ci_cd_pipeline:
+    - Automated test execution
+    - Build validation
+    - Deployment automation
+    - Integration testing
+    
+  environment_management:
+    - Dev/staging/prod config management
+    - Secrets management (vault integration)
+    - Environment parity verification
+    - Config version control
+    
+  deployment:
+    - Blue-green deployment support
+    - Canary releases (paper → live)
+    - Zero-downtime updates
+    - Database migration handling
+    
+  rollback:
+    - Automated rollback on failure
+    - Version tagging
+    - State preservation
+    - Quick recovery procedures
+    
+  health_checks:
+    - Post-deployment validation
+    - Smoke tests
+    - Integration verification
+    - Alert on deployment failure
 
-## Capabilities
-1. **CI/CD Pipeline**
-   - Automated testing (pytest, ORACLE validation)
-   - Build process (compile MQL5, bundle Python)
-   - Deploy to target environment
+commands:
+  /deploy [env]: Deploy to environment
+  /rollback [version]: Rollback to version
+  /status [env]: Check environment status
+  /config-diff [env1] [env2]: Compare configs
+  /health-check [env]: Run health checks
 
-2. **Environment Management**
-   - Dev/staging/prod configs (separate `.env` files)
-   - Secrets management (vault, encrypted storage)
-   - Infrastructure as Code (terraform, docker-compose)
+environments:
+  dev: Local development
+  staging: Paper trading / simulation
+  prod: Live trading
 
-3. **Deployment**
-   - Blue-green deployment (zero downtime)
-   - Canary releases (gradual rollout)
-   - Automated smoke tests
-
-4. **Rollback**
-   - Automated rollback on failure detection
-   - Version tagging (git tags, docker tags)
-   - Quick revert to last stable version
-
-5. **Health Checks**
-   - Post-deployment validation
-   - Smoke tests (basic functionality)
-   - Monitoring integration (alert if issues)
-
-## Triggers
-- "deployment", "deploy", "CI/CD", "rollback", "environment", "devops"
+integration:
+  invoke_after: All tests pass
+  requires: ORACLE validation for prod deploy
+  handoff_to: MONITORING (post-deploy)
 ```
 
-### Priority Assessment
-- **Priority**: **LOW** (maturity feature, not critical initially)
-- **Effort**: **COMPLEX** (4-6 days)
-- **ROI**: **LOW** (incremental improvement)
-- **Workaround**: Manual deployment (acceptable initially)
+### Justification Matrix
+
+| Factor | Assessment |
+|--------|------------|
+| **What problem does it solve?** | Professional deployment practices |
+| **Risk if missing?** | Deployment errors, no rollback capability |
+| **Workaround exists?** | Manual deployment (works but risky) |
+| **Implementation effort** | COMPLEX (3-4 days) |
+| **ROI** | LOW (maturity, not critical) |
 
 ### Recommendation
-**OPTIONAL** (Phase 4, Week 4 or later)
+
+**OPTIONAL (Phase 4)**
 
 ---
 
-## Priority Matrix
+## Priority Matrix Summary
 
-| Gap | Priority | Effort | ROI | Risk if Missing | Recommendation | Phase |
-|-----|----------|--------|-----|-----------------|----------------|-------|
-| **Security-Compliance** | CRITICAL | MEDIUM | HIGH | Account blown, compliance violation | CREATE NOW | 1 |
-| **Performance-Optimizer** | HIGH | MEDIUM | HIGH | Missed trades, slippage | CREATE SOON | 1 |
-| **Data-Pipeline** | MEDIUM-HIGH | COMPLEX | MEDIUM | Bad data, bad decisions | CREATE LATER | 2 |
-| **Monitoring-Alerting** | MEDIUM | MEDIUM | MEDIUM | No safety net | CREATE LATER | 2 |
-| **Deployment-DevOps** | LOW | COMPLEX | LOW | Manual errors | OPTIONAL | 4 |
+| Gap | Priority | Effort | ROI | Recommendation |
+|-----|----------|--------|-----|----------------|
+| Security-Compliance | **CRITICAL** | MEDIUM | HIGH | CREATE NOW |
+| Performance-Optimizer | **HIGH** | MEDIUM | HIGH | CREATE SOON |
+| Data-Pipeline | **MEDIUM** | COMPLEX | MEDIUM | CREATE LATER |
+| Monitoring-Alerting | **MEDIUM** | MEDIUM | MEDIUM | CREATE LATER |
+| Deployment-DevOps | **LOW** | COMPLEX | LOW | OPTIONAL |
 
 ---
 
 ## Implementation Roadmap
 
-### Phase 1 (Immediate - Week 1)
-1. **security-compliance-guardian** (CRITICAL) - 2-3 days
-2. **performance-optimizer** (HIGH) - 2-3 days
+### Phase 1 (Immediate) - Days 1-5
 
-**Rationale**: Security + performance are non-negotiable for live trading.
+```
+Day 1-2: security-compliance-guardian
+├── Security scanning module
+├── Compliance validation
+└── Audit trail setup
 
-### Phase 2 (After TOP 5 Refactoring - Week 2)
-3. **data-pipeline-engineer** (MEDIUM-HIGH) - 3-5 days
-4. **monitoring-alerting-operator** (MEDIUM) - 2-3 days
+Day 3-5: performance-optimizer
+├── Profiling integration
+├── Budget tracking
+└── Benchmark suite
+```
 
-**Rationale**: Data quality and monitoring are important but not blocking.
+### Phase 2 (After TOP 5 Refactoring) - Days 6-12
 
-### Phase 3 (Optional - Week 4+)
-5. **deployment-devops-engineer** (LOW) - 4-6 days
+```
+Day 6-9: data-pipeline-engineer
+├── Twelve-Data integration
+├── Data validation
+└── ParquetDataCatalog management
 
-**Rationale**: Can manually deploy initially, automate later as project matures.
+Day 10-12: monitoring-alerting-operator
+├── Real-time DD tracking
+├── Alert system
+└── Dashboard (optional)
+```
 
----
+### Phase 3 (Optional)
 
-## Total Impact
-
-**Ecosystem before gaps filled**:
-- **Vulnerabilities**: Security (credentials), Compliance (Apex violations), Performance (slow execution)
-- **Risk level**: **HIGH** (could lose money or account)
-
-**Ecosystem after gaps filled**:
-- **Security**: Protected (no credential leaks, compliance validated)
-- **Performance**: Optimized (OnTick <50ms, ONNX <5ms)
-- **Data**: Quality-assured (no look-ahead bias, no gaps)
-- **Monitoring**: Proactive (alerts before disaster)
-- **Deployment**: Automated (safe rollbacks)
-
-**Risk reduction**: **HIGH → LOW**
-
----
-
-## Key Insights
-
-1. **Security is #1 priority** - Money + compliance = can't fail
-2. **Performance is #2 priority** - Scalping needs <50ms OnTick
-3. **Data quality matters** - Garbage in, garbage out
-4. **Monitoring is safety net** - Alerts before disaster
-5. **DevOps is maturity** - Nice to have, not critical initially
+```
+deployment-devops-engineer (if needed)
+├── CI/CD pipeline
+├── Environment management
+└── Automated rollback
+```
 
 ---
 
-**Next**: Execute LAYER 4 (Overlap/Conflict Resolution) to create formal framework for droid coordination.
+## Appendix: Gap Droid Templates
+
+### Template: security-compliance-guardian.md
+
+```markdown
+---
+name: security-compliance-guardian
+description: |
+  Security and compliance guardian for trading systems.
+  Ensures no credential leaks, validates Apex compliance, maintains audit trail.
+  
+  PROACTIVE - Monitors and alerts automatically:
+  - Code commit → Security scan
+  - Config change → Compliance check
+  - Deployment → Full audit
+model: claude-sonnet-4-5-20250929
+tools: ["Read", "Grep", "Glob", "Execute"]
+---
+
+# SECURITY-COMPLIANCE Guardian v1.0
+
+## Mission
+Protect trading accounts through security scanning and compliance validation.
+
+## Core Responsibilities
+1. **Security Scanning** - No hardcoded secrets, secure patterns
+2. **Compliance Validation** - Apex rules enforced in code
+3. **Audit Trail** - Log sensitive operations
+4. **Access Control** - Document permissions
+
+## Commands
+- `/security-scan [file]` - Scan for vulnerabilities
+- `/compliance-audit` - Full Apex compliance check
+- `/secrets-check` - Search for exposed credentials
+
+## Security Patterns to Detect
+[List of regex patterns for API keys, passwords, tokens...]
+
+## Compliance Checklist
+[Apex rules verification checklist...]
+
+## Integration
+- Invoke before: Deployments
+- Handoff to: FORGE (fixes), SENTINEL (risk)
+```
+
+---
+
+## Decisions Needed
+
+### Immediate (CRITICAL)
+
+1. **Approve creation of security-compliance-guardian?**
+   - Risk: Credential leaks, compliance violations
+   - Effort: 2-3 days
+   - ROI: HIGH (prevents catastrophic failure)
+
+2. **Approve creation of performance-optimizer?**
+   - Risk: Slow execution, missed trades
+   - Effort: 2-3 days
+   - ROI: HIGH (performance = $$$)
+
+### High Priority
+
+3. **Approve data-pipeline-engineer creation?**
+   - Risk: Bad data, biased backtests
+   - Effort: 3-4 days
+   - ROI: MEDIUM
+
+4. **Approve monitoring-alerting-operator creation?**
+   - Risk: Account blow without warning
+   - Effort: 2-3 days
+   - ROI: MEDIUM
+
+### Low Priority
+
+5. **Approve deployment-devops-engineer creation?**
+   - Risk: Manual deployment errors
+   - Effort: 3-4 days
+   - ROI: LOW (can defer)

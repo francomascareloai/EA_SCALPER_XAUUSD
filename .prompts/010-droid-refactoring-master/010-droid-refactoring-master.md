@@ -1,734 +1,384 @@
-# 🔨 PROMPT: Master Droid Refactoring (FASE 2-4)
+# 🔨 PROMPT: Droid Refactoring Master V2.0 (SAFE)
 
 ## 📋 Objective
 
-Executar **FASE 2-4** do plano de otimização: refatorar os TOP 5 droids (NAUTILUS, ORACLE, FORGE, SENTINEL, RESEARCH-ANALYST-PRO) implementando herança hierárquica do AGENTS.md v3.4.1, criar NANO versions quando necessário, e validar todas as mudanças.
+Refatorar TOP 5 droids (NAUTILUS, ORACLE, FORGE, SENTINEL, RESEARCH) com herança do AGENTS.md v3.4.1, implementando 10 FIXES CRÍTICOS da auditoria V1.0.
 
-**Why it matters:** Eliminar 69% de duplicação (33,750 tokens), criar sistema de herança que propaga melhorias do AGENTS.md automaticamente, e liberar +16,450 tokens em Party Mode sessions.
+**Why V2.0:** V1.0 tinha 10 problemas críticos incluindo dependency mismatch, vague validation, no quality control. V2.0 é SAFE, testável, e tem rollback granular.
 
----
-
-## 📁 Context
-
-**Dependencies:**
-@.prompts/008-droid-analysis/droid-analysis.md (FASE 1 output with REDUNDANCY_MAP)
-@.prompts/009-agents-nautilus-update/agents-nautilus-update.md (AGENTS.md v3.4.1 with Nautilus focus)
-@AGENTS.md (v3.4.1 - base for inheritance)
-
-**Master Plan:**
-@.factory/specs/2025-12-07-plano-otimiza-o-completa-dos-droids-token-efficiency-consistency.md
-
-**Droids to Refactor:**
-- @.factory/droids/nautilus-trader-architect.md (53KB → 15KB target)
-- @.factory/droids/oracle-backtest-commander.md (38KB → 12KB target)
-- @.factory/droids/forge-mql5-architect.md (37KB → 12KB target)
-- @.factory/droids/sentinel-apex-guardian.md (37KB → 12KB target)
-- @.factory/droids/research-analyst-pro.md (31KB → 10KB target)
-
-**Expected Savings:**
-- Total: 196KB → 61KB (135KB removed, 69% reduction)
-- Tokens: 49,000 → 15,250 (33,750 tokens saved)
-- Party Mode: 61,700 → 45,250 tokens overhead (16,450 tokens freed)
+**Expected savings:** 196KB → ~70KB (65% reduction, mais conservador que V1.0 target de 69%)
 
 ---
 
-## 🎯 Requirements
+## 🚨 V2.0 FIXES (10 Critical Issues Resolved)
 
-### FASE 2: Refatoração dos TOP 5 Droids (2h 30min)
-
-Execute refatoração de cada droid **UM POR VEZ** com validação entre cada um.
+| # | V1.0 Problem | V2.0 Fix |
+|---|--------------|----------|
+| 1 | Dependency mismatch com 008 V2.0 | ✅ Works with 008 V2.0 outputs (REDUNDANCY_MAP_TOP5 + 4 outros) |
+| 2 | Vague validation procedure | ✅ Automated test suite with PASS/FAIL criteria |
+| 3 | Unclear execution model | ✅ Explicit: Automated prompt execution (claude-opus-4) |
+| 4 | No quality control | ✅ Checksums + semantic similarity verification |
+| 5 | Ambitious targets sem fallback | ✅ Conservative targets + acceptable tolerance ranges |
+| 6 | No usage metrics for NANO | ✅ SKIP FASE 3 (NANO creation deferred to future) |
+| 7 | Incomplete validation | ✅ Tests inheritance (strategic_intelligence application) + domain |
+| 8 | No git commit strategy | ✅ Granular commits: 1 commit PER droid refactored |
+| 9 | Unrealistic time estimates | ✅ Realistic: 5-6h total (não 4.5h) |
+| 10 | Ambiguous AGENTS.md placement | ✅ Exact placement: After `<decision_hierarchy>` section |
 
 ---
 
-#### 2.1 NAUTILUS Refactoring (53KB → 15KB) [40 min]
+## 📁 Context & Dependencies
 
-**Input:** @.factory/droids/nautilus-trader-architect.md
-**Output:** @.factory/droids/nautilus-trader-architect.md (refatorado)
-**Backup:** @.factory/droids/_archive/nautilus-trader-architect-v2.0-pre-inheritance.md
+**Required inputs (from 008 V2.0):**
+- `.prompts/008-droid-analysis/REDUNDANCY_MAP_TOP5.md` (LAYER 1 output)
+- OR manual analysis if 008 not executed yet
 
-**MANTER (Domain Knowledge):**
-1. **Strategy/Actor/Indicator Lifecycle:**
-   - `on_start()`, `on_stop()`, `on_bar()`, `on_quote_tick()`, `on_event()`
-   - Actor pattern: MessageBus pub/sub, data processing (no trading)
-   - Strategy pattern: Trading logic, order_factory, submit_order
+**AGENTS.md version required:**
+- v3.4.1 (from 009 V2.0) OR v3.4.0 (if 009 not executed)
+- Auto-detect version from AGENTS.md `<metadata><version>`
 
-2. **Migration Mappings (MQL5 → Python):**
-   ```python
-   OnInit() → Strategy.__init__() + on_start()
-   OnTick() → on_quote_tick() or on_bar()
-   OnDeinit() → on_stop()
-   OrderSend() → submit_order()
-   PositionSelect() → cache.positions()
-   ```
+**Droids to refactor:**
+1. nautilus-trader-architect.md (53KB → ~18KB target, 66% reduction)
+2. oracle-backtest-commander.md (38KB → ~13KB target, 66% reduction)
+3. forge-mql5-architect.md (37KB → ~13KB target, 65% reduction)
+4. sentinel-apex-guardian.md (37KB → ~13KB target, 65% reduction)
+5. research-analyst-pro.md (31KB → ~11KB target, 65% reduction)
 
-3. **Event-Driven Architecture:**
-   - MessageBus for signals
-   - Cache for data access
-   - No globals, no blocking calls
-   - Performance targets: <1ms on_bar, <100μs on_tick
+**Total:** 196KB → ~68KB (65% reduction, conservative)
 
-4. **Backtest Setup:**
-   - ParquetDataCatalog configuration
-   - BacktestNode setup
-   - DataConfig, VenueConfig
+---
 
-5. **3 Additional Reflection Questions:**
-   ```xml
-   <question id="18">Does this follow NautilusTrader event-driven patterns?</question>
-   <question id="19">Is Actor vs Strategy decision correct?</question>
-   <question id="20">Are async resources properly cleaned up?</question>
-   ```
+## 🎯 Pre-Execution Gates
 
-**REMOVER (Already in AGENTS.md):**
-- Workflows genéricos (use AGENTS.md `<genius_mode_templates>`)
-- "❌ NEVER" rules gerais (herdar de `<strategic_intelligence>`)
-- Protocols P0.X genéricos (herdar de `<mandatory_reflection_protocol>`)
-- ASCII art decorativo (economy mode)
-- Generic error recovery (use AGENTS.md `<error_recovery>`)
+### Gate 1: Verify _archive/ Folder Exists
 
-**New Structure:**
-```xml
-<droid_specialization>
-  <metadata>
-    <name>NAUTILUS</name>
-    <version>2.1</version>
-    <inherits_from>AGENTS.md v3.4.1</inherits_from>
-    <size>15KB</size>
-    <savings>38KB (72%)</savings>
-  </metadata>
-  
-  <inheritance>
-    <from>AGENTS.md v3.4.1</from>
-    <protocols inherit="full">
-      strategic_intelligence, mandatory_reflection_protocol,
-      proactive_problem_detection, genius_mode_templates,
-      complexity_assessment, compressed_protocols,
-      enforcement_validation, pattern_learning
-    </protocols>
-  </inheritance>
-  
-  <domain_knowledge>
-    <nautilus_patterns>
-      <lifecycle>{lifecycle docs}</lifecycle>
-      <migration>{MQL5 mappings}</migration>
-      <architecture>{event-driven patterns}</architecture>
-      <performance>{targets and budgets}</performance>
-      <backtest>{ParquetDataCatalog setup}</backtest>
-    </nautilus_patterns>
-  </domain_knowledge>
-  
-  <additional_reflection_questions>
-    <question id="18">{text}</question>
-    <question id="19">{text}</question>
-    <question id="20">{text}</question>
-  </additional_reflection_questions>
-  
-  <domain_guardrails>
-    <guardrail>NEVER block in handlers (on_bar <1ms)</guardrail>
-    <guardrail>NEVER use global state (event-driven architecture)</guardrail>
-    <guardrail>NEVER access data outside cache</guardrail>
-  </domain_guardrails>
-</droid_specialization>
+```bash
+mkdir -p .factory/droids/_archive
+ls -la .factory/droids/_archive  # Verify created
 ```
 
-**Validation:**
-- [ ] Size reduced to ~15KB (±2KB tolerance)
-- [ ] All domain knowledge preserved
-- [ ] 3 additional questions present
-- [ ] Inheritance section correct
-- [ ] No duplication with AGENTS.md
-- [ ] Backup created
+### Gate 2: Check AGENTS.md Version
 
----
+```bash
+grep "<version>" AGENTS.md
+# Expected: 3.4.1 (if 009 executed) OR 3.4.0 (if not)
+# Store version for <inherits_from> metadata
+```
 
-#### 2.2 ORACLE Refactoring (38KB → 12KB) [35 min]
+### Gate 3: Verify 008 Output (Optional)
 
-**Input:** @.factory/droids/oracle-backtest-commander.md
-**Output:** @.factory/droids/oracle-backtest-commander.md (refatorado)
-**Backup:** @.factory/droids/_archive/oracle-backtest-commander-v2.0-pre-inheritance.md
-
-**MANTER (Domain Knowledge):**
-1. **Statistical Thresholds:**
-   - WFE ≥0.6 (Walk-Forward Efficiency)
-   - DSR >0 (Deflated Sharpe Ratio)
-   - PSR ≥0.85 (Probabilistic Sharpe Ratio)
-   - MC_95th_DD <5% (Monte Carlo 95th percentile DD)
-   - SQN >2.0 (System Quality Number)
-
-2. **Walk-Forward Formulas:**
-   - IS/OOS split ratios
-   - Purged CV (cross-validation with purging)
-   - Rolling window specifications
-
-3. **Monte Carlo Specifications:**
-   - Block bootstrap methodology
-   - 5000 runs minimum
-   - Confidence intervals (95th percentile)
-
-4. **GO/NO-GO Gates (7-step checklist):**
-   ```
-   1. WFE ≥0.6?
-   2. DSR >0?
-   3. PSR ≥0.85?
-   4. MC_95th_DD <5%?
-   5. Apex compliance (trailing DD, time, consistency)?
-   6. Parameter stability <20% variation?
-   7. SQN >2.0?
-   ```
-
-5. **3 Additional Reflection Questions:**
-   ```xml
-   <question id="21">Is this backtest using look-ahead bias or real point-in-time data?</question>
-   <question id="22">What regime change would invalidate these results?</question>
-   <question id="23">Am I overfitting to recent price action?</question>
-   ```
-
-**REMOVER:**
-- Never/Always rules genéricos (herdar)
-- Output templates verbosos (usar AGENTS.md formats)
-- Proactive behavior triggers genéricos
-
-**Validation:**
-- [ ] Size reduced to ~12KB
-- [ ] All thresholds and formulas preserved
-- [ ] GO/NO-GO gates intact
-- [ ] 3 additional questions present
-- [ ] Backup created
-
----
-
-#### 2.3 FORGE Refactoring (37KB → 12KB) [35 min]
-
-**Input:** @.factory/droids/forge-mql5-architect.md
-**Output:** @.factory/droids/forge-mql5-architect.md (refatorado)
-**Backup:** @.factory/droids/_archive/forge-mql5-architect-v2.0-pre-inheritance.md
-
-**MANTER (Domain Knowledge):**
-1. **Deep Debug Protocol (Python/Nautilus specific):**
-   - Sequential-thinking for complex bugs
-   - Hypothesis → Test → Refine loop
-   - Context7 integration for Nautilus docs
-
-2. **NautilusTrader Patterns:**
-   - Type hints best practices
-   - Async/await patterns
-   - Cython optimization hints
-
-3. **Python Anti-Patterns to Avoid:**
-   - Circular imports
-   - Mutable default arguments
-   - Blocking in event handlers
-   - Global state
-
-4. **Test Scaffolding Templates:**
-   - pytest fixtures
-   - Mock setup for Actors/Strategies
-   - Backtest validation helpers
-
-5. **3 Additional Reflection Questions:**
-   ```xml
-   <question id="24">Does this code follow Python/Nautilus type safety patterns?</question>
-   <question id="25">Are there any blocking operations in event handlers?</question>
-   <question id="26">Is error handling comprehensive with proper logging?</question>
-   ```
-
-**REMOVER:**
-- P0.1-P0.8 protocols genéricos (substituir por herança)
-- Self-correction checklist (já em AGENTS.md enforcement_validation)
-- Never/Always rules gerais
-
-**Validation:**
-- [ ] Size reduced to ~12KB
-- [ ] Deep Debug protocol preserved
-- [ ] Python/Nautilus patterns intact
-- [ ] Test templates present
-- [ ] Backup created
-
----
-
-#### 2.4 SENTINEL Refactoring (37KB → 12KB) [35 min]
-
-**Input:** @.factory/droids/sentinel-apex-guardian.md
-**Output:** @.factory/droids/sentinel-apex-guardian.md (refatorado)
-**Backup:** @.factory/droids/_archive/sentinel-apex-guardian-v2.0-pre-inheritance.md
-
-**MANTER (Domain Knowledge):**
-1. **Apex Trading Rules:**
-   - 10% trailing DD from HWM (NOT 10% from starting balance)
-   - 4:59 PM ET deadline (NO overnight positions)
-   - 30% consistency rule (max daily profit)
-   - HWM includes unrealized P&L
-
-2. **Position Sizing Formulas:**
-   - Kelly criterion adaptations
-   - Time multiplier (reduces size near 4:59 PM)
-   - DD awareness (reduces size as DD increases)
-
-3. **Circuit Breaker Levels:**
-   ```
-   WARNING:  7-8% trailing DD
-   CAUTION:  8-9% trailing DD
-   DANGER:   9-9.5% trailing DD
-   BLOCKED:  9.5-10% trailing DD (no new trades)
-   ```
-
-4. **Recovery Protocols (Apex specific):**
-   - Emergency close before 4:59 PM
-   - Position size reduction strategies
-   - DD recovery pacing
-
-5. **3 Additional Reflection Questions:**
-   ```xml
-   <question id="27">What market condition makes this risk calculation WRONG?</question>
-   <question id="28">Am I measuring trailing DD from ACTUAL HWM or stale cached value?</question>
-   <question id="29">What happens if news event hits at 4:50 PM ET?</question>
-   ```
-
-**REMOVER:**
-- Generic risk management rules (herdar de AGENTS.md)
-- Never/Always rules gerais
-- Output templates verbosos
-
-**Validation:**
-- [ ] Size reduced to ~12KB
-- [ ] Apex rules and formulas preserved
-- [ ] Circuit breaker levels intact
-- [ ] Recovery protocols present
-- [ ] Backup created
-
----
-
-#### 2.5 RESEARCH-ANALYST-PRO Refactoring (31KB → 10KB) [25 min]
-
-**Input:** @.factory/droids/research-analyst-pro.md
-**Output:** @.factory/droids/research-analyst-pro.md (refatorado)
-**Backup:** @.factory/droids/_archive/research-analyst-pro-v2.0-pre-inheritance.md
-
-**MANTER (Domain Knowledge):**
-1. **Multi-Source Triangulation Methodology:**
-   - Academic (arXiv, SSRN, Google Scholar)
-   - Industry (whitepapers, blogs, docs)
-   - Empirical (backtest data, live results)
-
-2. **Source Credibility Rating System:**
-   - Tier 1: Peer-reviewed, official docs (HIGH confidence)
-   - Tier 2: Industry whitepapers, established blogs (MEDIUM confidence)
-   - Tier 3: Forum posts, unverified claims (LOW confidence)
-
-3. **Confidence Level Frameworks:**
-   - HIGH: Multiple Tier 1 sources agree
-   - MEDIUM: Mix of Tier 1/2, some disagreement
-   - LOW: Only Tier 3, or high disagreement
-
-4. **Research Log Structure:**
-   ```xml
-   <research_log>
-     <source url="" tier="">Finding</source>
-     <confidence>HIGH/MEDIUM/LOW</confidence>
-   </research_log>
-   ```
-
-5. **3 Additional Reflection Questions:**
-   ```xml
-   <question id="30">What is the CONFIDENCE LEVEL of this research finding?</question>
-   <question id="31">What biases might exist in the sources found?</question>
-   <question id="32">Have I triangulated across academic + industry + empirical?</question>
-   ```
-
-**REMOVER:**
-- Generic constraints (must/must_not - herdar)
-- Workflow phases genéricos (usar AGENTS.md templates)
-
-**Validation:**
-- [ ] Size reduced to ~10KB
-- [ ] Triangulation methodology preserved
-- [ ] Credibility rating system intact
-- [ ] Research log structure present
-- [ ] Backup created
-
----
-
-### FASE 3: Criar NANO Versions (1h)
-
-**Only if needed** - Create NANO versions for droids that Party Mode frequently invokes simultaneously.
-
-**Priority:**
-1. **ORACLE-NANO** (10KB target) - Frequently used with CRUCIBLE + SENTINEL
-2. **SENTINEL-NANO** (10KB target) - Frequently used with CRUCIBLE + ORACLE
-
-**Skip if not needed:**
-- NAUTILUS-NANO already exists (8KB) ✅
-- FORGE-NANO already exists in skills ✅
-- RESEARCH-ANALYST-PRO rarely in Party Mode
-
-**NANO Structure:**
-```xml
-<droid_specialization type="nano">
-  <inherits>AGENTS.md v3.4.1 (compressed_protocols: fast_mode)</inherits>
-  <essential_knowledge>
-    {Top 10 most critical facts only - ultra-compressed}
-  </essential_knowledge>
-  <quick_checklist>
-    {5-7 item checklist - no explanations}
-  </quick_checklist>
-</droid_specialization>
+```bash
+# If 008 was executed:
+ls .prompts/008-droid-analysis/REDUNDANCY_MAP_TOP5.md
+# If exists, use as guide for MANTER vs REMOVER
+# If not exists, proceed with manual analysis during refactoring
 ```
 
 ---
 
-### FASE 4: Validação & Documentação (30 min)
+## 🔧 FASE 2: Refactoring (ONE DROID AT A TIME)
 
-#### 4.1 Testar Droids Refatorados (15 min)
+### Universal Refactoring Template
 
-For EACH refactored droid:
+For EACH droid, follow this EXACT process:
+
 ```
-Test task: "Analyze [domain-specific simple task]"
-Expected: Droid applies AGENTS.md protocols + domain knowledge
-Verify: thinking_score calculated, reflection questions applied
+STEP 1: Backup
+├─ cp .factory/droids/{droid}.md .factory/droids/_archive/{droid}-v{old_version}-pre-inheritance-{YYYYMMDD}.md
+└─ Verify backup created
+
+STEP 2: Read original
+├─ Store original size: {SIZE_BEFORE}
+├─ Calculate checksum: md5sum {droid}.md → {CHECKSUM_BEFORE}
+└─ Extract domain knowledge sections (manual or from REDUNDANCY_MAP_TOP5)
+
+STEP 3: Create refactored version
+├─ Start with template:
+    <droid_specialization>
+      <metadata>
+        <name>{DROID_NAME}</name>
+        <version>{NEW_VERSION}</version>
+        <inherits_from>AGENTS.md v{DETECTED_VERSION}</inherits_from>
+      </metadata>
+      <inheritance>{list protocols inherited}</inheritance>
+      <domain_knowledge>{PRESERVED content}</domain_knowledge>
+      <additional_reflection_questions>{3 questions}</additional_reflection_questions>
+      <domain_guardrails>{specific rules}</domain_guardrails>
+    </droid_specialization>
+└─ Write to {droid}.md
+
+STEP 4: Quality checks
+├─ Size check: {SIZE_AFTER} < {SIZE_BEFORE} * 0.40 (≤40% of original)
+├─ Checksum: md5sum {droid}.md → {CHECKSUM_AFTER} (must differ)
+├─ Semantic check: Verify domain knowledge preserved (spot check key sections)
+└─ XML validation: If XML format, run xmllint
+
+STEP 5: Functional test
+├─ Test task (domain): "Explain {key_concept}" (e.g., "Actor vs Strategy" for NAUTILUS)
+├─ Expected: Output includes domain-specific knowledge
+├─ Test task (inheritance): "What are the 7 mandatory reflection questions?"
+├─ Expected: Output includes AGENTS.md strategic_intelligence questions
+└─ PASS criteria: Both tests return relevant answers
+
+STEP 6: Git commit
+├─ git add .factory/droids/{droid}.md
+├─ git add .factory/droids/_archive/{droid}-*-pre-inheritance-*.md
+├─ git commit -m "refactor({droid}): inheritance from AGENTS.md v{VERSION}
+
+    - Size: {SIZE_BEFORE} → {SIZE_AFTER} ({PERCENT}% reduction)
+    - Domain knowledge preserved: {list key sections}
+    - Inheritance: strategic_intelligence, genius_mode_templates, etc
+    - Tests: domain + inheritance PASS"
+└─ Verify commit successful
+
+STEP 7: Log results
+└─ Append to .prompts/010-droid-refactoring-master/REFACTORING_LOG.md:
+    ## {DROID_NAME} - {TIMESTAMP}
+    - Before: {SIZE_BEFORE}
+    - After: {SIZE_AFTER}
+    - Reduction: {PERCENT}%
+    - Tests: {PASS|FAIL}
+    - Commit: {HASH}
+
+IF ANY STEP FAILS:
+├─ STOP immediately
+├─ Restore backup: cp .factory/droids/_archive/{droid}-*-pre-inheritance-*.md .factory/droids/{droid}.md
+├─ Log failure in REFACTORING_LOG.md
+└─ Report to user before proceeding
 ```
 
-**Test cases:**
-- NAUTILUS: "Explain Actor vs Strategy pattern"
-- ORACLE: "What's the WFE threshold for GO decision?"
-- FORGE: "How to avoid blocking in on_bar handler?"
-- SENTINEL: "Calculate trailing DD with unrealized P&L"
-- RESEARCH: "What confidence level for single arXiv paper?"
+---
 
-#### 4.2 Criar Documentação (10 min)
+### Per-Droid Specifics (MANTER sections)
 
-**File:** `DOCS/04_REPORTS/20251207_DROID_OPTIMIZATION_COMPLETION_REPORT.md`
+**NAUTILUS (53KB → 18KB):**
+- Lifecycle (on_start, on_stop, on_bar, on_quote_tick)
+- MQL5 → Python mappings (OnInit, OnTick, etc)
+- Event-driven architecture (MessageBus, Cache, Actor vs Strategy)
+- Backtest setup (ParquetDataCatalog, BacktestNode)
+- 3 questions: #18 (event-driven?), #19 (Actor vs Strategy?), #20 (async cleanup?)
 
-**Structure:**
+**ORACLE (38KB → 13KB):**
+- Thresholds (WFE ≥0.6, DSR >0, PSR ≥0.85, MC_95th_DD <5%, SQN >2.0)
+- WFA formulas (IS/OOS, purged CV)
+- Monte Carlo (block bootstrap, 5000 runs)
+- GO/NO-GO gates (7-step checklist)
+- 3 questions: #21 (look-ahead bias?), #22 (regime change?), #23 (overfitting?)
+
+**FORGE (37KB → 13KB):**
+- Deep Debug protocol
+- Python/Nautilus patterns (type hints, async, Cython)
+- Anti-patterns (circular imports, mutable defaults, blocking)
+- Test templates (pytest fixtures)
+- 3 questions: #24 (type safety?), #25 (blocking?), #26 (error handling?)
+
+**SENTINEL (37KB → 13KB):**
+- Apex rules (10% trailing DD, 4:59 PM ET, 30% consistency, HWM includes unrealized P&L)
+- Position sizing (Kelly, time multiplier, DD awareness)
+- Circuit breaker levels (WARNING/CAUTION/DANGER/BLOCKED)
+- Recovery protocols (Apex-specific)
+- 3 questions: #27 (risk calc wrong?), #28 (HWM stale?), #29 (4:50 PM news?)
+
+**RESEARCH-ANALYST-PRO (31KB → 11KB):**
+- Triangulation (academic + industry + empirical)
+- Credibility rating (Tier 1/2/3)
+- Confidence levels (HIGH/MEDIUM/LOW)
+- Research log structure
+- 3 questions: #30 (confidence level?), #31 (biases?), #32 (triangulated?)
+
+---
+
+## 🧪 FASE 3: SKIPPED (NANO Creation Deferred)
+
+**Rationale:** No usage metrics available to justify NANO versions. Defer until:
+- Usage data collected (which droids used in Party Mode?)
+- Clear use case identified (specific Party Mode scenario)
+- V2.0 refactoring proven successful
+
+**Future:** Create NANO versions in separate prompt (011-droid-nano-versions) after gathering usage data.
+
+---
+
+## 📋 FASE 4: Validation & Documentation
+
+### 4.1 Aggregate Validation (15 min)
+
+**Run test suite on ALL refactored droids:**
+
+```python
+# Test suite (pseudo-code)
+for droid in [NAUTILUS, ORACLE, FORGE, SENTINEL, RESEARCH]:
+    # Domain test
+    domain_test = invoke_droid(droid, DOMAIN_TEST_TASKS[droid])
+    assert contains_domain_knowledge(domain_test.output)
+    
+    # Inheritance test
+    inheritance_test = invoke_droid(droid, "What are the 7 mandatory reflection questions?")
+    assert contains_strategic_intelligence(inheritance_test.output)
+    
+    # Size test
+    size_after = get_file_size(droid)
+    size_before = get_original_size_from_log(droid)
+    reduction = (size_before - size_after) / size_before * 100
+    assert 60 <= reduction <= 75  # Tolerance: 60-75% reduction acceptable
+
+print("All tests PASSED ✅")
+```
+
+**If any test fails:** Document failure, investigate, decide to rollback or proceed.
+
+---
+
+### 4.2 Create Completion Report (30 min)
+
+**File:** `DOCS/04_REPORTS/20251207_DROID_REFACTORING_V2_COMPLETION.md`
+
 ```markdown
-# Droid Optimization Completion Report
+# Droid Refactoring V2.0 Completion Report
 
 ## Executive Summary
 - Droids refactored: 5 (NAUTILUS, ORACLE, FORGE, SENTINEL, RESEARCH)
 - Total savings: {XX}KB ({YY}% reduction)
-- Token savings: {ZZ,ZZZ} tokens
-- Party Mode improvement: +{WW}% budget libre
+- Token savings: ~{ZZ,ZZZ} tokens
+- Tests: {N}/5 passed
+- Failures: {list if any}
 
-## Before/After Comparison
+## Per-Droid Results
 
-| Droid | Before | After | Savings | % Reduction |
-|-------|--------|-------|---------|-------------|
-| NAUTILUS | 53KB | {XX}KB | {YY}KB | {ZZ}% |
-| ORACLE | 38KB | {XX}KB | {YY}KB | {ZZ}% |
-| FORGE | 37KB | {XX}KB | {YY}KB | {ZZ}% |
-| SENTINEL | 37KB | {XX}KB | {YY}KB | {ZZ}% |
-| RESEARCH | 31KB | {XX}KB | {YY}KB | {ZZ}% |
-| **TOTAL** | **196KB** | **{XX}KB** | **{YY}KB** | **{ZZ}%** |
+| Droid | Before | After | Savings | % | Tests | Commit |
+|-------|--------|-------|---------|---|-------|--------|
+| NAUTILUS | 53KB | {XX}KB | {YY}KB | {ZZ}% | PASS/FAIL | {hash} |
+| ORACLE | 38KB | {XX}KB | {YY}KB | {ZZ}% | PASS/FAIL | {hash} |
+| FORGE | 37KB | {XX}KB | {YY}KB | {ZZ}% | PASS/FAIL | {hash} |
+| SENTINEL | 37KB | {XX}KB | {YY}KB | {ZZ}% | PASS/FAIL | {hash} |
+| RESEARCH | 31KB | {XX}KB | {YY}KB | {ZZ}% | PASS/FAIL | {hash} |
 
-## Inheritance System
+## Inheritance Verified
+All droids inherit from AGENTS.md v{VERSION}:
+- strategic_intelligence ✅
+- genius_mode_templates ✅
+- complexity_assessment ✅
+- enforcement_validation ✅
+- compressed_protocols ✅
+- pattern_learning ✅
 
-All refactored droids now inherit from AGENTS.md v3.4.1:
-- strategic_intelligence (7 mandatory questions)
-- genius_mode_templates (4 templates)
-- complexity_assessment (4 levels)
-- enforcement_validation (thinking_score)
-- compressed_protocols (fast_mode + emergency_mode)
-- pattern_learning (auto-learning from bugs)
+## Backups Created
+- `.factory/droids/_archive/*-pre-inheritance-{YYYYMMDD}.md` (5 files)
 
-Each droid maintains:
-- Domain-specific knowledge (~10-15KB)
-- 3 additional reflection questions
-- Domain-specific guardrails
-
-## NANO Versions Created
-
-{If any created}
-- oracle-nano.md (10KB) - for Party Mode efficiency
-- sentinel-nano.md (10KB) - for Party Mode efficiency
-
-## Validation Results
-
-All droids tested with simple tasks:
-- ✅ NAUTILUS: Reflection questions applied
-- ✅ ORACLE: WFE threshold correct
-- ✅ FORGE: Python patterns retained
-- ✅ SENTINEL: Apex rules correct
-- ✅ RESEARCH: Confidence system intact
-
-## Party Mode Impact
-
-**Before:**
-- AGENTS.md: 30,000 tokens
-- 3 droids (avg): 31,700 tokens
-- **Total: 61,700 tokens** (31% of budget)
-
-**After:**
-- AGENTS.md: 30,000 tokens
-- 3 droids (avg): 15,250 tokens
-- **Total: 45,250 tokens** (23% of budget)
-
-**Improvement: +16,450 tokens freed (+8% budget)**
+## Git Commits
+- 5 granular commits (1 per droid)
+- Easy rollback: `git revert {hash}`
 
 ## Next Steps
-
-- [ ] Test droids in real sessions
-- [ ] Monitor for any missing knowledge
-- [ ] Update droid documentation
-- [ ] Consider refactoring remaining 12 droids
-
-## Risks Mitigated
-
-- ✅ Backups created for all droids
-- ✅ Git commits with detailed changelogs
-- ✅ Validation tests passed
-- ✅ Knowledge preservation verified
+- [ ] Test refactored droids in real sessions
+- [ ] Monitor for missing knowledge
+- [ ] Consider refactoring remaining 12 droids (separate prompt)
+- [ ] Collect usage data for NANO version decision
 
 ## Lessons Learned
-
 {Post-execution insights}
 ```
 
-#### 4.3 Update AGENTS.md (5 min)
+---
 
-Add `<droid_inheritance>` section to AGENTS.md:
+### 4.3 Update AGENTS.md with <droid_inheritance> (10 min)
+
+**Location:** Add AFTER `<decision_hierarchy>` section
 
 ```xml
 <droid_inheritance>
   <description>
-    Specialized droids inherit protocols from AGENTS.md v3.4.1 to eliminate duplication.
+    Specialized droids inherit protocols from AGENTS.md v{VERSION} to eliminate duplication.
     Each droid maintains only domain-specific knowledge and 3 additional reflection questions.
   </description>
   
   <inherited_protocols>
-    <protocol>strategic_intelligence (7 mandatory questions)</protocol>
-    <protocol>genius_mode_templates (4 templates)</protocol>
-    <protocol>complexity_assessment (4 levels)</protocol>
-    <protocol>enforcement_validation (thinking_score)</protocol>
-    <protocol>compressed_protocols (fast_mode + emergency_mode)</protocol>
-    <protocol>pattern_learning (auto-learning)</protocol>
+    strategic_intelligence, genius_mode_templates, complexity_assessment,
+    enforcement_validation, compressed_protocols, pattern_learning
   </inherited_protocols>
   
   <specialized_droids>
-    <droid name="NAUTILUS" size="15KB" version="2.1">MQL5→Python migration, event-driven patterns</droid>
-    <droid name="ORACLE" size="12KB" version="2.1">Statistical validation, WFA, Monte Carlo</droid>
-    <droid name="FORGE" size="12KB" version="2.1">Python/Nautilus code architecture</droid>
-    <droid name="SENTINEL" size="12KB" version="2.1">Apex Trading risk management</droid>
-    <droid name="RESEARCH-ANALYST-PRO" size="10KB" version="2.1">Multi-source research triangulation</droid>
+    <droid name="NAUTILUS" size="{XX}KB" version="2.1">MQL5→Python migration, event-driven patterns</droid>
+    <droid name="ORACLE" size="{XX}KB" version="2.1">Statistical validation, WFA, Monte Carlo</droid>
+    <droid name="FORGE" size="{XX}KB" version="2.1">Python/Nautilus code architecture</droid>
+    <droid name="SENTINEL" size="{XX}KB" version="2.1">Apex Trading risk management</droid>
+    <droid name="RESEARCH-ANALYST-PRO" size="{XX}KB" version="2.1">Multi-source research</droid>
   </specialized_droids>
   
-  <nano_versions>
-    <nano name="NAUTILUS-NANO" size="8KB" use_when="Party Mode, quick tasks"/>
-    <nano name="ORACLE-NANO" size="10KB" use_when="Party Mode with CRUCIBLE + SENTINEL"/>
-    <nano name="SENTINEL-NANO" size="10KB" use_when="Party Mode with CRUCIBLE + ORACLE"/>
-  </nano_versions>
-  
   <propagation_rule>
-    When AGENTS.md protocols are updated, ALL specialized droids automatically benefit.
-    No need to update each droid individually unless domain knowledge changes.
+    When AGENTS.md protocols updated, ALL specialized droids automatically benefit.
+    No need to update droids individually unless domain knowledge changes.
   </propagation_rule>
 </droid_inheritance>
 ```
 
----
-
-## 📤 Output
-
-### Primary Output
-**File:** `.prompts/010-droid-refactoring-master/droid-refactoring-completion.md`
-
-```xml
-<droid_refactoring_completion>
-  <metadata>
-    <version>1.0</version>
-    <date>{YYYY-MM-DD}</date>
-    <phases>FASE 2 + FASE 3 + FASE 4</phases>
-    <execution_time>{XX}h {YY}min</execution_time>
-  </metadata>
-  
-  <phase_2_refactoring>
-    <droid name="NAUTILUS">
-      <before_size>53KB</before_size>
-      <after_size>{XX}KB</after_size>
-      <savings>{YY}KB ({ZZ}%)</savings>
-      <backup>.factory/droids/_archive/nautilus-trader-architect-v2.0-pre-inheritance.md</backup>
-      <validation>✅ Passed</validation>
-    </droid>
-    
-    <!-- Repeat for ORACLE, FORGE, SENTINEL, RESEARCH -->
-  </phase_2_refactoring>
-  
-  <phase_3_nano_versions>
-    <nano name="ORACLE-NANO" created="true" size="10KB"/>
-    <nano name="SENTINEL-NANO" created="true" size="10KB"/>
-  </phase_3_nano_versions>
-  
-  <phase_4_validation>
-    <tests>
-      <test droid="NAUTILUS" task="Explain Actor vs Strategy" result="✅ Passed"/>
-      <!-- Repeat for all droids -->
-    </tests>
-    <documentation>
-      <file>DOCS/04_REPORTS/20251207_DROID_OPTIMIZATION_COMPLETION_REPORT.md</file>
-      <status>Created</status>
-    </documentation>
-    <agents_md_update>
-      <section>droid_inheritance</section>
-      <status>Added</status>
-    </agents_md_update>
-  </phase_4_validation>
-  
-  <aggregate_results>
-    <total_savings_kb>{XX}KB</total_savings_kb>
-    <total_savings_tokens>{YY,YYY}</total_savings_tokens>
-    <party_mode_improvement>+{ZZ}%</party_mode_improvement>
-  </aggregate_results>
-  
-  <next_steps>
-    <step>Test refactored droids in real sessions</step>
-    <step>Monitor for missing knowledge or issues</step>
-    <step>Consider refactoring remaining 12 droids</step>
-  </next_steps>
-  
-  <confidence>HIGH</confidence>
-  <dependencies>
-    <dependency status="met">AGENTS.md v3.4.1 stable</dependency>
-    <dependency status="met">Backups created for all droids</dependency>
-    <dependency status="met">Git commits with changelogs</dependency>
-  </dependencies>
-  
-  <open_questions>
-    <question>Should remaining 12 droids be refactored next?</question>
-    <question>How to automate inheritance validation in future?</question>
-  </open_questions>
-  
-  <assumptions>
-    <assumption>Refactored droids will work correctly with Task agent invocation</assumption>
-    <assumption>Party Mode will detect and use NANO versions appropriately</assumption>
-  </assumptions>
-</droid_refactoring_completion>
-```
+**Validation:**
+- XML check: `xmllint --noout AGENTS.md`
+- Git commit: `git commit -m "docs: add droid_inheritance registry"`
 
 ---
 
-### SUMMARY.md
+## 📤 Output Files
 
-**File:** `.prompts/010-droid-refactoring-master/SUMMARY.md`
-
-```markdown
-# Droid Refactoring Completion Summary
-
-**One-liner:** Refactored TOP 5 droids with inheritance system - eliminated {XX}KB ({YY}%) duplication, freed +16,450 tokens in Party Mode
-
-## Version
-v1.0 - Complete optimization (FASE 2-4)
-
-## Key Findings
-• NAUTILUS: 53KB → {XX}KB ({savings}KB, {%}% reduction)
-• ORACLE: 38KB → {XX}KB ({savings}KB, {%}% reduction)
-• FORGE: 37KB → {XX}KB ({savings}KB, {%}% reduction)
-• SENTINEL: 37KB → {XX}KB ({savings}KB, {%}% reduction)
-• RESEARCH: 31KB → {XX}KB ({savings}KB, {%}% reduction)
-• **Total: 196KB → {XX}KB ({YY}KB savings, {ZZ}% reduction)**
-• **Party Mode: 61.7k → 45.2k tokens overhead (+16.5k tokens free, +8% budget)**
-
-## Files Created
-- `.factory/droids/_archive/*-pre-inheritance.md` (5 backups)
-- `.factory/droids/oracle-nano.md` (10KB NANO version)
-- `.factory/droids/sentinel-nano.md` (10KB NANO version)
-- `DOCS/04_REPORTS/20251207_DROID_OPTIMIZATION_COMPLETION_REPORT.md`
-
-## Files Modified
-- `.factory/droids/nautilus-trader-architect.md` (v2.0 → v2.1)
-- `.factory/droids/oracle-backtest-commander.md` (v2.0 → v2.1)
-- `.factory/droids/forge-mql5-architect.md` (v2.0 → v2.1)
-- `.factory/droids/sentinel-apex-guardian.md` (v2.0 → v2.1)
-- `.factory/droids/research-analyst-pro.md` (v2.0 → v2.1)
-- `AGENTS.md` (added `<droid_inheritance>` section)
-
-## Decisions Needed
-- Should remaining 12 droids be refactored next? (Similar savings potential)
-- Enable automatic NANO switching in Party Mode or keep manual?
-
-## Blockers
-None - all phases completed successfully
-
-## Next Step
-Test refactored droids in real sessions to validate knowledge preservation and inheritance system
-```
+1. **REFACTORING_LOG.md** (per-droid execution log)
+2. **20251207_DROID_REFACTORING_V2_COMPLETION.md** (final report)
+3. **5 refactored droids** (.factory/droids/)
+4. **5 backups** (.factory/droids/_archive/)
+5. **Updated AGENTS.md** (with <droid_inheritance>)
 
 ---
 
 ## ✅ Success Criteria
 
-**FASE 2:**
-- [ ] All 5 droids refactored (NAUTILUS, ORACLE, FORGE, SENTINEL, RESEARCH)
-- [ ] Backups created for all original droids
-- [ ] Each droid reduced to target size (±2KB tolerance)
-- [ ] Domain knowledge preserved (verified via spot checks)
-- [ ] 3 additional reflection questions per droid
-- [ ] New `<droid_specialization>` structure applied
+**Per-droid (MUST pass for each):**
+- [ ] Backup created and verified
+- [ ] Size reduced by 60-75% (tolerance range)
+- [ ] Domain knowledge preserved (spot check key sections)
+- [ ] 3 additional reflection questions present
+- [ ] Domain test PASS (outputs domain-specific knowledge)
+- [ ] Inheritance test PASS (outputs AGENTS.md protocols)
+- [ ] XML valid (if applicable)
+- [ ] Git commit successful
 
-**FASE 3:**
-- [ ] ORACLE-NANO created (10KB) if needed
-- [ ] SENTINEL-NANO created (10KB) if needed
-- [ ] NANO versions use compressed_protocols (fast_mode)
+**Aggregate (MUST pass overall):**
+- [ ] All 5 droids refactored
+- [ ] 5/5 tests passed (or documented failures with decision)
+- [ ] Total savings ≥120KB (60% reduction minimum)
+- [ ] AGENTS.md updated with <droid_inheritance>
+- [ ] Completion report created
 
-**FASE 4:**
-- [ ] All refactored droids tested with simple tasks
-- [ ] Validation tests passed (5/5 droids)
-- [ ] Completion report created in DOCS/04_REPORTS/
-- [ ] AGENTS.md updated with `<droid_inheritance>` section
-- [ ] SUMMARY.md created with substantive results
-
-**Overall:**
-- [ ] Token savings ≥60% for TOP 5 droids
-- [ ] Party Mode overhead <50k tokens
-- [ ] Git commits created with detailed changelogs
-- [ ] Confidence level HIGH (thorough validation)
+**If ANY droid fails all criteria:** STOP, investigate, rollback if needed, report to user.
 
 ---
 
-## ⚡ Intelligence Application
+## 🎯 Estimated Time (Realistic)
 
-**Use sequential-thinking (20+ thoughts for CRITICAL task):**
-1. What is REAL problem? → Massive duplication, no inheritance, wasted tokens
-2. What am I NOT seeing? → Risk of losing critical domain knowledge if delete wrong sections
-3. What breaks if remove X? → Must verify redundancy BEFORE deleting (use droid-analysis.md)
-4. What happens 5 steps ahead? → Refactored droids → inheritance works → future AGENTS.md updates propagate automatically
-5. Edge cases? → Partial overlaps (50% match AGENTS.md, 50% specialized) - KEEP specialized parts
-6. Optimization? → Can we automate inheritance validation for future droids?
-
-**Proactive problem detection:**
-- Dependencies: Refactored droids must work with Task agent invocation (test each one)
-- Performance: No impact (static reference, not dynamic loading)
-- Maintainability: MASSIVELY IMPROVED (single source of truth)
-- Technical debt: ELIMINATED (no more duplicate protocols across droids)
-
-**Genius mode amplifiers:**
-- Use pre_mortem: "Imagine refactor failed - why?" → Knowledge lost, backup missing, validation skipped
-- Use first_principles: What MUST each droid have? → Domain knowledge + additional questions, nothing else
-- Use steel_man: Best case for current approach (full protocols in each droid) → Self-contained but duplicated. Best case for inheritance → DRY, maintainable, but requires AGENTS.md stability
+- Pre-execution gates: 10 min
+- NAUTILUS refactoring + tests + commit: 50 min
+- ORACLE refactoring + tests + commit: 45 min
+- FORGE refactoring + tests + commit: 45 min
+- SENTINEL refactoring + tests + commit: 45 min
+- RESEARCH refactoring + tests + commit: 40 min
+- FASE 4 validation: 15 min
+- Completion report: 30 min
+- Update AGENTS.md: 10 min
+- **Total: 5h 10min** (realistic with safety checks)
 
 ---
 
-## 🎯 Estimated Time: 4h 30min
+## 🚨 CRITICAL SAFETY RULES
 
-**Breakdown:**
-- NAUTILUS refactoring: 40 min
-- ORACLE refactoring: 35 min
-- FORGE refactoring: 35 min
-- SENTINEL refactoring: 35 min
-- RESEARCH refactoring: 25 min
-- NANO versions: 1h (if needed)
-- Validation & docs: 30 min
-- Buffer for issues: 30 min
-
-**Total:** 4h 30min
-
----
-
-## 🚨 CRITICAL NOTES
-
-1. **Backup BEFORE editing** - Create archive for every droid before changes
-2. **One droid at a time** - Don't parallelize refactoring (high risk of mistakes)
-3. **Validate between droids** - Test each one before moving to next
-4. **Preserve domain knowledge** - When in doubt, KEEP (inheritance is for generic protocols only)
-5. **Use REDUNDANCY_MAP.md** - Don't guess what's redundant, use FASE 1 analysis
+1. **ONE DROID AT A TIME** - Never parallelize refactoring
+2. **Backup BEFORE edit** - Always create backup first
+3. **Test BEFORE commit** - Run domain + inheritance tests
+4. **Commit AFTER success** - Granular commits for rollback
+5. **STOP on failure** - Don't proceed if test fails
+6. **Conservative targets** - 60-75% reduction (not 69-72%)
+7. **Preserve domain knowledge** - When in doubt, KEEP
+8. **Verify inheritance** - Test that AGENTS.md protocols apply
+9. **XML validation** - Check syntax if XML format
+10. **Document everything** - REFACTORING_LOG.md for audit trail
 
 ---
 
-**EXECUTE THIS PROMPT WITH:** claude-opus-4 (maximum precision required for large-scale refactoring)
+**EXECUTE THIS PROMPT WITH:** claude-opus-4 (maximum precision + safety)

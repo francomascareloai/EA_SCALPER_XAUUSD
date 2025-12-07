@@ -1,211 +1,295 @@
-# Overlap & Conflict Analysis (LAYER 4)
+# LAYER 4: Overlap & Conflict Resolution Analysis
+
+**Analysis Date:** 2025-12-07
+**Analyst:** Elite Quantitative Research Analyst (deep-researcher subagent)
+**Confidence:** HIGH (systematic overlap mapping + conflict scenario analysis)
+
+---
 
 ## Executive Summary
-- **Overlaps identified**: 4 major areas (code architecture, code review, research, backtest)
-- **Conflicts possible**: Multiple scenarios where droids could disagree
-- **Resolution framework**: Authority hierarchy (7 levels) + conflict resolution protocol
-- **Recommendation**: Update AGENTS.md with expanded `<decision_hierarchy>` and `<conflict_resolution>` sections
+
+| Metric | Value |
+|--------|-------|
+| **Overlaps Identified** | 4 major areas |
+| **Conflict Scenarios** | 7 documented |
+| **Resolution Framework** | 7-level authority hierarchy |
+| **Merge Candidates** | 3 droids (research area) |
+| **Handoffs Clarified** | 12 droid-to-droid |
 
 ---
 
-## Overlap 1: Code Architecture (FORGE vs NAUTILUS) ⚙️
+## Overlap Analysis
 
-### Droids Involved
-- **FORGE** (Python code implementation, debugging, testing)
-- **NAUTILUS** (NautilusTrader architecture, migration, high-level design)
+### Overlap 1: Code Architecture (FORGE vs NAUTILUS)
 
-### Overlap Area
-Both work with NautilusTrader Python code, causing confusion: "Which droid do I invoke for Python task?"
+#### Current State
 
-### Confusion Factor
-**HIGH** - Users don't know whether to call FORGE or NAUTILUS for Python work
+| Aspect | FORGE | NAUTILUS |
+|--------|-------|----------|
+| **Purpose** | Python/Nautilus implementation | MQL5→Nautilus migration |
+| **Handles** | Day-to-day coding, debugging | Architecture decisions |
+| **Code Type** | Any Python trading code | NautilusTrader-specific |
+| **Templates** | Anti-patterns, test scaffolds | Strategy/Actor/Backtest |
 
-### Current State
-- FORGE: Low-level Python implementation, anti-patterns, debugging, testing
-- NAUTILUS: High-level architecture (Strategy vs Actor decision), MQL5 → Python migration, backtest setup
+#### Overlap Zone
 
-### Resolution
-**CLEAR SEPARATION**:
-- **NAUTILUS**: HIGH-LEVEL
-  - Strategy vs Actor vs Indicator decision tree
-  - MQL5 → Nautilus migration mappings
-  - Backtest configuration (ParquetDataCatalog, BacktestNode)
-  - Event-driven architecture patterns
+Both droids work with **NautilusTrader Python code**, causing confusion:
+
+```
+User: "I need to create a Strategy for gold scalping"
+
+FORGE thinks: "I implement Python code with tests"
+NAUTILUS thinks: "I design Strategy architecture and migration"
+
+WHO TO INVOKE?
+```
+
+#### Resolution
+
+```yaml
+clear_boundaries:
+  NAUTILUS:
+    - High-level architecture decisions (Strategy vs Actor)
+    - MQL5 → Nautilus migration mapping
+    - Backtest setup (ParquetDataCatalog, BacktestNode)
+    - Event-driven pattern guidance
+    - Performance target definition
+    
+  FORGE:
+    - Low-level implementation
+    - Debugging (Deep Debug protocol)
+    - Testing (pytest scaffolds)
+    - Code quality (anti-patterns)
+    - Context7 documentation queries
+
+workflow:
+  step_1: NAUTILUS designs architecture
+  step_2: FORGE implements code
+  step_3: NAUTILUS validates backtest setup
+  step_4: FORGE fixes issues
+
+routing_rule:
+  "design Strategy" → NAUTILUS
+  "implement Strategy" → FORGE
+  "migrate from MQL5" → NAUTILUS
+  "fix bug in Strategy" → FORGE
+  "setup backtest" → NAUTILUS
+```
+
+#### Documentation Update
+
+Add to AGENTS.md `<handoffs>`:
+
+```xml
+<handoff from="NAUTILUS" to="FORGE" trigger="implement">
+  NAUTILUS designs architecture → FORGE implements
+  Pass: Architecture spec, file locations, patterns to follow
+</handoff>
+
+<handoff from="FORGE" to="NAUTILUS" trigger="validate">
+  FORGE implements → NAUTILUS validates backtest
+  Pass: Code files, test results, backtest config
+</handoff>
+```
+
+---
+
+### Overlap 2: Code Review (FORGE vs code-architect-reviewer vs senior-code-reviewer)
+
+#### Current State
+
+| Droid | Focus | Depth |
+|-------|-------|-------|
+| FORGE | Python/Nautilus patterns | Day-to-day |
+| code-architect-reviewer | Systemic review, consequences | Pre-commit |
+| senior-code-reviewer | Generic best practices | N/A (archived?) |
+
+**Note:** senior-code-reviewer doesn't exist in current inventory - may be outdated reference.
+
+#### Overlap Zone
+
+Both FORGE and code-architect-reviewer do code review:
+
+- FORGE: `/review` command with 20-item checklist
+- code-architect-reviewer: 5-layer review with consequence analysis
+
+#### Resolution
+
+```yaml
+clear_boundaries:
+  FORGE_review:
+    - Day-to-day code quality
+    - Python/Nautilus patterns
+    - Anti-pattern detection
+    - Quick 20-item checklist
+    - Trigger: During development
+    
+  code-architect-reviewer:
+    - Pre-commit comprehensive audit
+    - Dependency mapping (upstream/downstream)
+    - nth-order consequence analysis
+    - Quality scoring (0-100)
+    - Multi-solution ranking
+    - Trigger: Before commit/deploy
+
+workflow:
+  during_development:
+    - FORGE reviews incrementally
+    - Catches immediate issues
+    
+  before_commit:
+    - code-architect-reviewer runs full audit
+    - Maps dependencies, consequences
+    - Scores and approves/rejects
+
+routing_rule:
+  "review this code" → FORGE (during dev)
+  "audit before commit" → code-architect-reviewer
+  "pre-deploy review" → code-architect-reviewer
+  "check my changes" → FORGE
+```
+
+---
+
+### Overlap 3: Research (ARGUS vs research-analyst-pro vs deep-researcher)
+
+#### Current State
+
+| Droid | Focus | Size |
+|-------|-------|------|
+| argus-quant-researcher | Trading/quant research | 15KB |
+| research-analyst-pro | Generic multi-source research | 31KB |
+| deep-researcher | Deep research with critical thinking | 12KB |
+
+**Total:** 58KB for essentially the same function
+
+#### Overlap Zone
+
+All three droids:
+- Use multi-source triangulation
+- Rate confidence levels (HIGH/MEDIUM/LOW)
+- Search academic + practical + empirical sources
+- Produce research reports
+
+#### Resolution
+
+**MERGE INTO SINGLE DROID: ARGUS v3.0**
+
+```yaml
+merged_droid:
+  name: argus-quant-researcher
+  version: 3.0
   
-- **FORGE**: LOW-LEVEL
-  - Python implementation details
-  - Debugging (Deep Debug protocol)
-  - Testing (pytest fixtures)
-  - Code quality (type hints, anti-patterns)
+  from_argus:
+    - Trading-specific keywords and priority areas
+    - RAG database queries (mql5-books, mql5-docs)
+    - Automatic alerts for suspicious claims
+    
+  from_research_analyst_pro:
+    - Quality assurance checklist (condensed)
+    - Report structure template
+    
+  from_deep_researcher:
+    - Scientific critical thinking checklist
+    - Multi-layer research phases
+    
+  inherits_from_agents_md:
+    - Generic workflow templates
+    - Output format templates
+    - Constraints/guardrails
 
-**HANDOFF PROTOCOL**:
-```
-User: "I need Actor for divergence detection"
-  ↓
-NAUTILUS: Designs Actor (what it does, pub/sub pattern)
-  ↓
-FORGE: Implements Actor (Python code, tests, anti-pattern checks)
-  ↓
-NAUTILUS: Validates backtest with new Actor
-  ↓
-ORACLE: Validates statistical performance
+routing_rule:
+  ANY research request → ARGUS (single point)
 ```
 
-### Document In
-`<handoffs>` section of AGENTS.md (or ORCHESTRATOR.md)
+#### Actions
+
+1. Merge into argus-quant-researcher.md (15KB target)
+2. Archive research-analyst-pro.md
+3. Archive deep-researcher.md
+4. Update all references
 
 ---
 
-## Overlap 2: Code Review (FORGE vs code-architect-reviewer vs senior-code-reviewer) 👀
+### Overlap 4: Backtest Validation (ORACLE vs CRUCIBLE)
 
-### Droids Involved
-- **FORGE** (/review trigger for Python/Nautilus code)
-- **code-architect-reviewer** (architecture/design review)
-- **senior-code-reviewer** (personal droid, general best practices)
+#### Current State
 
-### Overlap Area
-**ALL THREE do code review** - causing confusion: "Which reviewer do I invoke?"
+| Droid | Focus |
+|-------|-------|
+| ORACLE | Statistical validity (WFA, Monte Carlo, DSR) |
+| CRUCIBLE | Execution realism (slippage, spread, fills) |
 
-### Confusion Factor
-**HIGH** - Three different code review droids with unclear specialization
+#### Overlap Zone
 
-### Current State
-- FORGE: Python/Nautilus-specific patterns, anti-patterns (AP-01 through AP-12)
-- code-architect-reviewer: High-level architecture, system design patterns
-- senior-code-reviewer: General best practices, security, performance (generic)
+Both validate backtests, but with different focus:
 
-### Resolution
-**MERGE + SPECIALIZE**:
+```
+ORACLE asks: "Are these results statistically robust?"
+CRUCIBLE asks: "Does this backtest model real execution?"
+```
 
-1. **MERGE**: code-architect-reviewer + senior-code-reviewer → **generic-code-reviewer**
-   - Rationale: Both do general code review, high overlap
-   - New droid handles: Architecture, design, general best practices, security
+#### Resolution
 
-2. **KEEP**: FORGE (Nautilus-specific)
-   - Domain-specific patterns (NautilusTrader event-driven architecture)
-   - Python/Nautilus anti-patterns
-   - Integration with NAUTILUS for architecture validation
+**These are COMPLEMENTARY, not duplicative**
 
-**DECISION MATRIX**:
+```yaml
+clear_workflow:
+  step_1:
+    droid: CRUCIBLE
+    action: "Validate execution realism"
+    check: "25 Realism Gates ≥90%"
+    
+  step_2:
+    droid: ORACLE
+    action: "Validate statistical robustness"
+    check: "WFE≥0.6, DSR>0, PSR≥0.85"
+    
+  decision:
+    both_pass: "GO for live"
+    one_fails: "NO-GO, address issues"
 
-| Code Type | Use Droid | Rationale |
-|-----------|-----------|-----------|
-| Python trading code (Nautilus) | **FORGE** | Domain-specific (event-driven, Actor/Strategy patterns) |
-| TypeScript backend | **generic-code-reviewer** | General best practices |
-| React frontend | **generic-code-reviewer** + ui-engineer | UI-specific + general |
-| High-level architecture | **generic-code-reviewer** | System design focus |
-| Performance-critical code | **FORGE** + **performance-optimizer** | Domain + optimization |
+handoff:
+  CRUCIBLE → ORACLE:
+    trigger: "Realism validated, check statistics"
+    pass: Backtest config, realism score
+    
+  ORACLE → CRUCIBLE:
+    trigger: "Stats look suspicious, verify realism"
+    pass: Statistical concerns to investigate
+```
 
-### Document In
-Decision matrix in AGENTS.md or ORCHESTRATOR routing table
+#### Documentation Update
+
+Add to AGENTS.md:
+
+```xml
+<complementary_roles>
+  <pair>
+    <droid_a>CRUCIBLE</droid_a>
+    <droid_b>ORACLE</droid_b>
+    <relationship>Complementary validators</relationship>
+    <workflow>CRUCIBLE validates realism → ORACLE validates statistics</workflow>
+    <both_required>Yes - both must PASS for GO decision</both_required>
+  </pair>
+</complementary_roles>
+```
 
 ---
 
-## Overlap 3: Research (ARGUS vs research-analyst-pro vs deep-researcher) 🔬
+## Decision Matrix for Overlaps
 
-### Droids Involved
-- **ARGUS** (quant/trading-specific research, arXiv/SSRN papers)
-- **research-analyst-pro** (general multi-source research, triangulation)
-- **deep-researcher** (comprehensive multi-layer research, deep dive)
-
-### Overlap Area
-**ALL THREE do multi-source research with triangulation** - high overlap
-
-### Confusion Factor
-**MEDIUM** - Similar methodology but different scope/depth
-
-### Current State
-- ARGUS: Trading/quant-specific, financial papers, backtest validation
-- research-analyst-pro: General multi-source, confidence levels, source credibility
-- deep-researcher: Most comprehensive, academic + industry + empirical triangulation
-
-### Resolution Options
-
-**Option A: KEEP ALL THREE** (status quo)
-- ARGUS: Trading/quant-specific only
-- research-analyst-pro: General non-trading research
-- deep-researcher: Complex topics requiring deep analysis
-- **Decision rule**: Topic determines which to invoke
-
-**Option B: MERGE INTO ONE** (recommended)
-- Single research droid with **domain parameter**:
-  ```
-  research-master.md
-    ├─ domain=trading → Use ARGUS methodology
-    ├─ domain=general → Use research-analyst-pro methodology
-    └─ depth=deep → Use deep-researcher methodology
-  ```
-- **Pros**: Single source of truth, no confusion
-- **Cons**: Larger droid (but can use inheritance to reduce size)
-
-**Option C: KEEP ARGUS, MERGE OTHER TWO**
-- ARGUS: Trading-specific (keep separate)
-- research-analyst-pro + deep-researcher → research-general.md
-- **Pros**: Clear trading vs general separation
-- **Cons**: Still have two research droids
-
-### Recommendation
-**Option C** (pragmatic):
-- ARGUS: Keep separate (trading-specific is valuable specialization)
-- Merge research-analyst-pro + deep-researcher → research-general.md
-
-### Document In
-Routing rules in ORCHESTRATOR (when to invoke which research droid)
-
----
-
-## Overlap 4: Backtest (ORACLE vs CRUCIBLE vs NAUTILUS) 📊
-
-### Droids Involved
-- **ORACLE** (statistical validation: WFA, Monte Carlo, GO/NO-GO)
-- **CRUCIBLE** (backtest realism: slippage, spread, fills, Apex constraints)
-- **NAUTILUS** (backtest setup: ParquetDataCatalog, BacktestNode, configs)
-
-### Overlap Area
-**All three touch backtesting** - but at different stages
-
-### Confusion Factor
-**MEDIUM** - Overlap exists but roles are distinct (less confusing than other overlaps)
-
-### Current State
-- NAUTILUS: Backtest SETUP (configuration, data loading, engine setup)
-- CRUCIBLE: Backtest REALISM (25 realism gates, execution modeling)
-- ORACLE: Backtest VALIDATION (statistical significance, WFA, Monte Carlo)
-
-### Resolution
-**CLEAR PIPELINE** (no merge needed, just document handoffs):
-
-```
-User: "Backtest new strategy"
-  ↓
-NAUTILUS: Sets up backtest
-  - Loads Parquet data
-  - Configures BacktestNode (VenueConfig, DataConfig)
-  - Configures FillModel, LatencyModel
-  - Runs backtest → produces results.json
-  ↓
-CRUCIBLE: Validates realism
-  - Checks 25 realism gates (slippage, spread, fills realistic?)
-  - Verifies Apex constraints enforced (no overnight, DD tracking)
-  - If unrealistic → BLOCK, request fixes
-  ↓
-ORACLE: Validates statistics
-  - WFA (WFE ≥ 0.6?)
-  - Monte Carlo (95th percentile DD < 5%?)
-  - GO/NO-GO decision
-  ↓
-If NO-GO:
-  FORGE: Implements fixes based on ORACLE/CRUCIBLE feedback
-  → Loop back to NAUTILUS for re-test
-```
-
-**AUTHORITY**:
-- **CRUCIBLE** can BLOCK if backtest is unrealistic (realism authority)
-- **ORACLE** has final GO/NO-GO authority (validation authority)
-- **NAUTILUS** executes setup but doesn't make GO/NO-GO decisions
-
-### Document In
-`<dependency_graph>` in AGENTS.md (backtest workflow)
+| Scenario | Droid A | Droid B | Decision Rule |
+|----------|---------|---------|---------------|
+| "Review Python trading code" | FORGE | code-architect-reviewer | FORGE (day-to-day) |
+| "Pre-commit audit" | FORGE | code-architect-reviewer | code-architect-reviewer |
+| "Design Strategy architecture" | NAUTILUS | FORGE | NAUTILUS first, FORGE implements |
+| "Research ML algo for trading" | ARGUS | (merged) | ARGUS (only option) |
+| "Validate backtest results" | ORACLE | CRUCIBLE | Both sequentially |
+| "Check backtest realism" | CRUCIBLE | ORACLE | CRUCIBLE |
+| "Check statistical validity" | ORACLE | CRUCIBLE | ORACLE |
+| "Migrate MQL5 to Python" | NAUTILUS | FORGE | NAUTILUS |
+| "Fix bug in Strategy" | FORGE | NAUTILUS | FORGE |
 
 ---
 
@@ -213,190 +297,402 @@ If NO-GO:
 
 ### Authority Hierarchy (7 Levels)
 
-**Expand AGENTS.md `<decision_hierarchy>` from 3 levels → 7 levels**:
-
 ```xml
 <decision_hierarchy>
   <description>
-    When droids disagree, this hierarchy determines who has final authority.
-    Lower priority number = higher authority (priority 1 beats priority 2).
+    When droids disagree, this hierarchy determines final authority.
+    Lower priority number = higher authority (priority 1 beats priority 7).
   </description>
   
   <level priority="1" domain="risk_management">
     <droid>SENTINEL</droid>
-    <authority>VETO on any trade if DD >9%, time <30min to 4:59 PM, or consistency >30%</authority>
-    <cannot_override>No other droid can override SENTINEL veto</cannot_override>
-    <example>CRUCIBLE says "trade this setup (9/10)" → SENTINEL blocks (DD 8.9%) → SENTINEL WINS</example>
+    <authority>VETO on any trade/action if risk limits breached</authority>
+    <veto_conditions>
+      - Trailing DD >9%
+      - Time <30min to 4:59 PM ET
+      - Consistency rule >30%
+      - Position size >1% risk
+    </veto_conditions>
+    <cannot_override>No droid can override SENTINEL veto</cannot_override>
   </level>
   
   <level priority="2" domain="validation">
     <droid>ORACLE</droid>
-    <authority>GO/NO-GO decision on backtests (NO-GO if WFE <0.6 or DSR ≤0)</authority>
-    <cannot_override>SENTINEL can veto (priority 1) but no one else</cannot_override>
-    <example>CRUCIBLE says "backtest looks good" → ORACLE says NO-GO (WFE 0.52) → ORACLE WINS</example>
+    <authority>GO/NO-GO decision on backtests and strategies</authority>
+    <veto_conditions>
+      - WFE <0.6
+      - DSR ≤0
+      - PSR <0.85
+      - Monte Carlo 95th DD >10%
+    </veto_conditions>
+    <can_be_overridden_by>SENTINEL only (risk trumps validation)</can_be_overridden_by>
   </level>
   
   <level priority="3" domain="realism">
     <droid>CRUCIBLE</droid>
-    <authority>Backtest realism validation (25 gates, can BLOCK if unrealistic)</authority>
-    <can_be_overridden_by>SENTINEL (risk), ORACLE (statistical validation)</can_be_overridden_by>
-    <example>NAUTILUS runs backtest → CRUCIBLE blocks (unrealistic slippage) → BLOCK WINS</example>
+    <authority>Backtest realism validation</authority>
+    <veto_conditions>
+      - Realism Score <90%
+      - Instant fills detected
+      - No slippage model
+    </veto_conditions>
+    <can_be_overridden_by>SENTINEL, ORACLE</can_be_overridden_by>
   </level>
   
-  <level priority="4" domain="architecture">
+  <level priority="4" domain="strategy_design">
+    <droid>CRUCIBLE (setup analysis)</droid>
+    <authority>Setup quality recommendation</authority>
+    <provides>
+      - Confluence score
+      - Setup tier (A/B/C)
+      - Entry/exit levels
+    </provides>
+    <can_be_overridden_by>SENTINEL (risk), ORACLE (validation), CRUCIBLE (realism)</can_be_overridden_by>
+  </level>
+  
+  <level priority="5" domain="architecture">
     <droid>NAUTILUS</droid>
-    <authority>High-level architecture decisions (Strategy vs Actor, event-driven patterns)</authority>
-    <can_be_overridden_by>FORGE (if implementation concerns), SENTINEL (if performance risk)</can_be_overridden_by>
-    <example>NAUTILUS chooses Actor pattern → FORGE implements Actor → NO CONFLICT</example>
+    <authority>High-level architecture decisions</authority>
+    <decides>
+      - Strategy vs Actor pattern
+      - Event-driven design
+      - Migration approach
+      - Performance targets
+    </decides>
+    <can_be_overridden_by>FORGE (implementation concerns), higher priorities</can_be_overridden_by>
   </level>
   
-  <level priority="5" domain="implementation">
+  <level priority="6" domain="implementation">
     <droid>FORGE</droid>
-    <authority>Low-level implementation, code quality, testing, anti-patterns</authority>
-    <can_be_overridden_by>NAUTILUS (if architecture conflict), SENTINEL (if performance risk)</can_be_overridden_by>
-    <example>FORGE suggests inline code for speed → NAUTILUS overrides (architecture) → NAUTILUS WINS</example>
-  </level>
-  
-  <level priority="6" domain="research">
-    <droid>ARGUS</droid>
-    <authority>Research findings, source credibility, academic validation</authority>
-    <can_be_overridden_by>ORACLE (if contradicts backtest), SENTINEL (if risk concern)</can_be_overridden_by>
-    <example>ARGUS research says "RSI divergence 70% accurate" → ORACLE backtests 52% → ORACLE WINS</example>
+    <authority>Low-level implementation decisions</authority>
+    <decides>
+      - Code patterns
+      - Test approach
+      - Bug fixes
+      - Performance optimization
+    </decides>
+    <can_be_overridden_by>NAUTILUS (architecture), higher priorities</can_be_overridden_by>
   </level>
   
   <level priority="7" domain="orchestration">
     <droid>ORCHESTRATOR</droid>
-    <authority>Workflow coordination, droid invocation order, routing</authority>
+    <authority>Workflow coordination</authority>
+    <role>
+      - Invoke droids in correct order
+      - Route requests to appropriate specialist
+      - Track progress across sessions
+    </role>
     <note>Coordinates but doesn't override domain authorities</note>
-    <example>ORCHESTRATOR routes "review code" to FORGE (not generic-reviewer) → ROUTING DECISION ONLY</example>
   </level>
 </decision_hierarchy>
 ```
 
 ### Conflict Resolution Protocol
 
-**Add to AGENTS.md `<conflict_resolution>` section**:
-
 ```xml
 <conflict_resolution>
-  <protocol name="Droid Disagreement">
+  <protocol name="Droid Disagreement Resolution">
     <trigger>Two or more droids provide contradictory recommendations</trigger>
     
     <steps>
-      <step number="1">Identify which domain the conflict is in (risk, validation, realism, architecture, implementation, research, orchestration)</step>
-      <step number="2">Check decision_hierarchy for domain authority</step>
-      <step number="3">Domain authority droid has final say</step>
-      <step number="4">If still unclear (cross-domain conflict), escalate to ORCHESTRATOR for mediation</step>
-      <step number="5">If ORCHESTRATOR can't resolve, escalate to USER with steel-man analysis of both options</step>
+      <step number="1">
+        <action>Identify conflict domain</action>
+        <domains>risk, validation, realism, strategy, architecture, implementation</domains>
+      </step>
+      
+      <step number="2">
+        <action>Check decision_hierarchy for domain authority</action>
+        <lookup>Which droid has authority for this domain?</lookup>
+      </step>
+      
+      <step number="3">
+        <action>Domain authority droid has final say</action>
+        <exception>Unless higher-priority droid has valid concern</exception>
+      </step>
+      
+      <step number="4">
+        <action>If still unclear, escalate to ORCHESTRATOR</action>
+        <orchestrator_role>Mediate by gathering more context</orchestrator_role>
+      </step>
+      
+      <step number="5">
+        <action>If ORCHESTRATOR can't resolve, escalate to USER</action>
+        <format>Present both sides with evidence and recommendation</format>
+      </step>
     </steps>
-    
-    <examples>
-      <example name="Risk vs Strategy">
-        <scenario>CRUCIBLE recommends trade (confluence 9/10) but SENTINEL blocks (DD 8.9%)</scenario>
-        <step1>Domain = risk_management</step1>
-        <step2>SENTINEL has priority 1 (highest authority)</step2>
-        <step3>SENTINEL veto WINS</step3>
-        <outcome>Trade blocked, no escalation needed</outcome>
-      </example>
-      
-      <example name="Validation vs Realism">
-        <scenario>ORACLE says GO (WFE 0.72) but CRUCIBLE blocks (unrealistic slippage)</scenario>
-        <step1>Domain conflict: validation (priority 2) vs realism (priority 3)</step1>
-        <step2>ORACLE higher authority BUT CRUCIBLE realism block is pre-validation gate</step2>
-        <step3>CRUCIBLE must pass BEFORE ORACLE validation</step3>
-        <outcome>Fix realism issues first, then re-validate with ORACLE</outcome>
-        <note>Sequential gates: CRUCIBLE → ORACLE, not parallel</note>
-      </example>
-      
-      <example name="Architecture vs Implementation">
-        <scenario>NAUTILUS chooses Actor pattern, FORGE suggests inline for performance</scenario>
-        <step1>Domain = architecture (priority 4) vs implementation (priority 5)</step1>
-        <step2>NAUTILUS higher authority</step2>
-        <step3>NAUTILUS decision WINS (Actor pattern)</step3>
-        <outcome>FORGE implements Actor pattern (follows NAUTILUS architecture)</outcome>
-      </example>
-      
-      <example name="Cross-Domain Conflict">
-        <scenario>ARGUS research says "use LSTM" but performance-optimizer says "too slow (>50ms)"</scenario>
-        <step1>Domain conflict: research (priority 6) vs performance constraint (hard limit)</step1>
-        <step2>Not in decision_hierarchy → cross-domain issue</step2>
-        <step3>Escalate to ORCHESTRATOR</step3>
-        <step4>ORCHESTRATOR mediates: "Use xLSTM (faster variant) or simplify architecture"</step4>
-        <outcome>Compromise solution that satisfies both constraints</outcome>
-      </example>
-    </examples>
-    
-    <special_cases>
-      <case name="Sequential Gates">
-        <description>Some droids are gates that must pass BEFORE others can evaluate</description>
-        <example>CRUCIBLE (realism) → ORACLE (validation) → SENTINEL (risk) → DEPLOY</example>
-        <rule>Gate failures BLOCK pipeline, not conflict with downstream droids</rule>
-      </case>
-      
-      <case name="Performance Constraints">
-        <description>Hard performance limits (OnTick <50ms) override design preferences</description>
-        <rule>If performance-optimizer says "too slow", ANY droid must adapt</rule>
-      </case>
-      
-      <case name="Security/Compliance">
-        <description>Security-compliance droid has implicit veto on unsafe/non-compliant code</description>
-        <rule>Security issues BLOCK deployment, similar authority to SENTINEL for risk</rule>
-      </case>
-    </special_cases>
   </protocol>
 </conflict_resolution>
 ```
 
 ---
 
-## Decision Matrix
+## Conflict Scenarios & Resolutions
 
-| Conflict Scenario | Droid A (Recommendation) | Droid B (Recommendation) | Winner | Reason |
-|-------------------|--------------------------|--------------------------|--------|--------|
-| Trade decision | CRUCIBLE (GO - 9/10 setup) | SENTINEL (BLOCK - DD 8.9%) | **SENTINEL** | Priority 1 > Priority 3 |
-| Backtest validation | ORACLE (NO-GO - WFE 0.52) | CRUCIBLE (LOOKS GOOD - realism OK) | **ORACLE** | Priority 2 (GO/NO-GO authority) |
-| Backtest realism | CRUCIBLE (BLOCK - unrealistic) | NAUTILUS (SETUP DONE) | **CRUCIBLE** | Realism gate must pass first |
-| Architecture | NAUTILUS (Actor pattern) | FORGE (inline for speed) | **NAUTILUS** | Priority 4 > Priority 5 |
-| Research vs backtest | ARGUS (70% accuracy) | ORACLE (52% in backtest) | **ORACLE** | Priority 2 > Priority 6 (empirical > research) |
-| Code review | FORGE (Nautilus-specific) | generic-code-reviewer (general) | **FORGE** | Domain-specific beats generic |
-| Performance constraint | ARGUS (use LSTM) | performance-optimizer (too slow) | **COMPROMISE** | Hard constraint (escalate to ORCHESTRATOR) |
+### Scenario 1: CRUCIBLE GO vs SENTINEL BLOCK
+
+```yaml
+situation:
+  CRUCIBLE: "Excellent setup! Confluence 9/10, Tier A. GO."
+  SENTINEL: "Trailing DD at 8.9%. BLOCK - too close to limit."
+
+resolution:
+  step_1: Domain is RISK (DD concern)
+  step_2: SENTINEL has priority 1 authority for risk
+  step_3: SENTINEL veto WINS
+  
+  outcome: "Trade blocked despite excellent setup"
+  rationale: "Account survival > great setup"
+```
+
+### Scenario 2: ORACLE NO-GO vs CRUCIBLE LOOKS GOOD
+
+```yaml
+situation:
+  CRUCIBLE: "Setup looks great in backtest, 2.5 profit factor"
+  ORACLE: "NO-GO. WFE 0.42 - below threshold. Overfitting suspected."
+
+resolution:
+  step_1: Domain is VALIDATION (statistical concern)
+  step_2: ORACLE has priority 2 authority for validation
+  step_3: ORACLE NO-GO WINS
+  
+  outcome: "Strategy rejected despite good-looking metrics"
+  rationale: "Statistical validity > surface-level performance"
+```
+
+### Scenario 3: NAUTILUS Actor vs FORGE Inline
+
+```yaml
+situation:
+  NAUTILUS: "Use Actor pattern for divergence detection - decoupled, reusable"
+  FORGE: "Inline in Strategy for 2ms performance gain"
+
+resolution:
+  step_1: Domain is ARCHITECTURE (pattern decision)
+  step_2: NAUTILUS has priority 5 authority for architecture
+  step_3: NAUTILUS suggestion WINS
+  
+  outcome: "Actor pattern used"
+  rationale: "Long-term maintainability > 2ms gain"
+  
+  exception:
+    if: "Performance budget critically tight (<5ms slack)"
+    then: "FORGE concern elevated, discuss tradeoff"
+```
+
+### Scenario 4: FORGE Bug Fix vs ORACLE Re-validation
+
+```yaml
+situation:
+  FORGE: "Fixed the bug, ready to deploy"
+  ORACLE: "Code changed. Previous validation INVALID. Re-run WFA."
+
+resolution:
+  step_1: Domain is VALIDATION (code change impact)
+  step_2: ORACLE has authority on validation requirements
+  step_3: ORACLE wins - re-validation REQUIRED
+  
+  outcome: "Deployment blocked until WFA re-run"
+  rationale: "Bug fix could affect strategy behavior"
+```
+
+### Scenario 5: CRUCIBLE Realism vs ORACLE Statistics
+
+```yaml
+situation:
+  CRUCIBLE: "Realism Score 92%, backtest is realistic"
+  ORACLE: "Sharpe 4.2 is suspicious. Check for overfitting."
+
+resolution:
+  step_1: Both have valid concerns (realism vs statistics)
+  step_2: Complementary validators - both must pass
+  step_3: ORACLE concern wins - investigate overfitting
+  
+  outcome: "Further investigation required"
+  workflow: "Even realistic backtest can be overfit"
+```
+
+### Scenario 6: ARGUS Research vs FORGE Implementation
+
+```yaml
+situation:
+  ARGUS: "Research shows Shannon entropy effective for regime detection"
+  FORGE: "But implementation would exceed OnTick budget by 10ms"
+
+resolution:
+  step_1: Domain crosses RESEARCH and IMPLEMENTATION
+  step_2: FORGE has implementation authority
+  step_3: Negotiate: Can ARGUS find faster approach?
+  
+  outcome: "Research finding adapted to implementation constraint"
+  workflow: "ARGUS → find alternative OR FORGE → optimize implementation"
+```
+
+### Scenario 7: ORCHESTRATOR Routing Conflict
+
+```yaml
+situation:
+  User: "I need help with my Strategy"
+  ORCHESTRATOR: Routes to NAUTILUS (architecture)
+  User intent: Actually wanted FORGE (debug issue)
+
+resolution:
+  step_1: ORCHESTRATOR should clarify ambiguous requests
+  step_2: Ask: "Do you need architecture guidance or debugging help?"
+  step_3: Route based on clarification
+  
+  prevention: "ORCHESTRATOR always clarifies before routing ambiguous requests"
+```
+
+---
+
+## Handoffs Clarification
+
+### Complete Handoff Map
+
+| From | To | Trigger | Context to Pass |
+|------|-----|---------|-----------------|
+| ORCHESTRATOR | any | Route request | User intent, priority |
+| CRUCIBLE | SENTINEL | Setup ready | SL, direction, tier, confluence |
+| SENTINEL | ORACLE | Risk approved | Position size, DD state |
+| ORACLE | FORGE | NO-GO (needs fix) | Failed metrics, areas to fix |
+| ORACLE | CRUCIBLE | Check realism | Suspicious metrics |
+| FORGE | ORACLE | Code complete | Changed files, test results |
+| FORGE | NAUTILUS | Architecture question | Code context, design concern |
+| NAUTILUS | FORGE | Design complete | Architecture spec, patterns |
+| NAUTILUS | ORACLE | Backtest complete | Strategy config, results |
+| ARGUS | FORGE | Research to implement | Findings, code patterns |
+| ARGUS | CRUCIBLE | Research to strategy | Trading concepts to apply |
+| code-architect-reviewer | FORGE | Issues found | Code locations, fixes needed |
+
+### Handoff Protocol Template
+
+```xml
+<handoff_format>
+  <header>
+    <from_droid>[DROID NAME]</from_droid>
+    <to_droid>[TARGET DROID]</to_droid>
+    <trigger>[What triggered this handoff]</trigger>
+  </header>
+  
+  <context>
+    <summary>[1-2 sentence summary]</summary>
+    <files>[Relevant files with paths]</files>
+    <state>[Current state: complete/incomplete/blocked]</state>
+  </context>
+  
+  <request>
+    <action>[What the target droid should do]</action>
+    <constraints>[Any constraints to respect]</constraints>
+    <priority>[HIGH/MEDIUM/LOW]</priority>
+  </request>
+  
+  <data>
+    [Relevant data, metrics, or parameters]
+  </data>
+</handoff_format>
+```
 
 ---
 
 ## Recommendations
 
-### 1. Update AGENTS.md
-- Expand `<decision_hierarchy>` to 7 levels (add CRUCIBLE, NAUTILUS, FORGE, ARGUS, ORCHESTRATOR)
-- Add comprehensive `<conflict_resolution>` protocol with examples
-- Add special cases (sequential gates, performance constraints, security vetos)
+### Immediate Actions
 
-### 2. Document Handoffs
-- **NAUTILUS → FORGE**: Design → Implement
-- **NAUTILUS → ORACLE**: Backtest setup → Validation
-- **CRUCIBLE → ORACLE**: Realism check → Statistical validation
-- **ORACLE → FORGE**: Validation feedback → Fixes
-- **ARGUS → onnx-model-builder**: Research → ML implementation
+1. **Update AGENTS.md with expanded `<decision_hierarchy>`**
+   - Add all 7 priority levels
+   - Document veto conditions
+   - Add `<conflict_resolution>` protocol
 
-### 3. Merge Overlapping Droids
-- **code-architect-reviewer** + **senior-code-reviewer** → **generic-code-reviewer**
-- **research-analyst-pro** + **deep-researcher** → **research-general**
-- Keep **FORGE** (Nautilus-specific), **ARGUS** (trading-specific) as specialists
+2. **Document handoffs in AGENTS.md**
+   - Add `<handoffs>` section
+   - Include all 12 droid-to-droid handoffs
+   - Specify context to pass
 
-### 4. Add Decision Matrix to ORCHESTRATOR
-- When routing user request, check for potential conflicts
-- Apply decision matrix proactively
-- "Review Python trading code" → FORGE (not generic-code-reviewer)
+3. **Merge overlapping research droids**
+   - Combine argus + research-analyst-pro + deep-researcher
+   - Keep ARGUS as the single research droid
+   - Archive others
+
+4. **Clarify FORGE vs code-architect-reviewer**
+   - FORGE: Day-to-day development
+   - code-architect-reviewer: Pre-commit audits
+   - Add routing rules to ORCHESTRATOR
+
+### Documentation Updates
+
+Add to AGENTS.md:
+
+```xml
+<!-- Add after <agent_intelligence_gates> -->
+
+<overlap_resolution>
+  <overlap area="code_architecture">
+    <droids>NAUTILUS, FORGE</droids>
+    <rule>NAUTILUS designs → FORGE implements</rule>
+  </overlap>
+  
+  <overlap area="code_review">
+    <droids>FORGE, code-architect-reviewer</droids>
+    <rule>FORGE (during dev) vs code-architect-reviewer (pre-commit)</rule>
+  </overlap>
+  
+  <overlap area="research">
+    <droids>ARGUS</droids>
+    <note>Merged from argus + research-analyst-pro + deep-researcher</note>
+  </overlap>
+  
+  <overlap area="backtest_validation">
+    <droids>CRUCIBLE, ORACLE</droids>
+    <rule>Complementary: CRUCIBLE (realism) → ORACLE (statistics)</rule>
+  </overlap>
+</overlap_resolution>
+
+<routing_rules>
+  <rule pattern="design Strategy|architecture" route_to="NAUTILUS"/>
+  <rule pattern="implement|code|debug" route_to="FORGE"/>
+  <rule pattern="review code|check changes" route_to="FORGE"/>
+  <rule pattern="audit|pre-commit|pre-deploy" route_to="code-architect-reviewer"/>
+  <rule pattern="research|investigate|find" route_to="ARGUS"/>
+  <rule pattern="backtest realism|slippage|spread" route_to="CRUCIBLE"/>
+  <rule pattern="validate|WFA|Monte Carlo|GO/NO-GO" route_to="ORACLE"/>
+  <rule pattern="lot|risk|DD|position size" route_to="SENTINEL"/>
+  <rule pattern="ML|ONNX|model|training" route_to="ONNX-MODEL-BUILDER"/>
+</routing_rules>
+```
 
 ---
 
-## Key Insights
+## Appendix: Conflict Resolution Examples (Detailed)
 
-1. **Overlaps are common** - 4 major areas identified (code architecture, code review, research, backtest)
-2. **Authority hierarchy resolves most conflicts** - Clear priority levels prevent circular disagreements
-3. **Sequential gates exist** - Some droids are validation gates (CRUCIBLE → ORACLE → SENTINEL)
-4. **Specialization matters** - Domain-specific droids (FORGE, ARGUS) beat generic ones
-5. **ORCHESTRATOR needs upgrade** - Must understand conflicts and mediate
+### Example Output for Scenario 1
 
----
-
-**Next**: Execute LAYER 5 (Ecosystem Health Framework) to establish versioning, quality gates, observability, and dependency graph.
+```markdown
+┌─────────────────────────────────────────────────────────────┐
+│ ⚔️ CONFLICT DETECTED                                        │
+├─────────────────────────────────────────────────────────────┤
+│ DROID A: CRUCIBLE                                          │
+│ Recommendation: GO - Excellent setup, confluence 9/10      │
+│                                                             │
+│ DROID B: SENTINEL                                          │
+│ Recommendation: BLOCK - DD 8.9%, too close to 10% limit    │
+├─────────────────────────────────────────────────────────────┤
+│ CONFLICT DOMAIN: RISK                                      │
+│ AUTHORITY: SENTINEL (Priority 1)                           │
+├─────────────────────────────────────────────────────────────┤
+│ RESOLUTION: SENTINEL VETO WINS                             │
+│                                                             │
+│ Rationale:                                                  │
+│ - Risk management has absolute priority                     │
+│ - Account survival > great setup                            │
+│ - 8.9% DD leaves only 1.1% buffer                          │
+│ - One bad trade could breach 10% and terminate account     │
+├─────────────────────────────────────────────────────────────┤
+│ OUTCOME: Trade BLOCKED                                      │
+│                                                             │
+│ Next Steps:                                                │
+│ - Wait for DD to recover below 7%                          │
+│ - Or wait for HWM to increase (new peak equity)            │
+│ - Setup may still be valid later                           │
+└─────────────────────────────────────────────────────────────┘
+```

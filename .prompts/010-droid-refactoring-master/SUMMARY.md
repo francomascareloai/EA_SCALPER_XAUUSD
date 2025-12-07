@@ -6,23 +6,37 @@
 v1.0 - Full optimization (FASE 2 + FASE 3 + FASE 4)
 
 ## Objective
-Execute FASE 2-4 of optimization plan: refactor NAUTILUS, ORACLE, FORGE, SENTINEL, RESEARCH-ANALYST-PRO with inheritance from AGENTS.md v3.4.1, create NANO versions, and validate all changes.
+Execute SAFE refactoring (FASE 2 + 4): refactor TOP 5 droids with inheritance from AGENTS.md, implement 10 critical safety fixes, validate with automated tests, and provide granular rollback capability.
 
-## Expected Results
-• NAUTILUS: 53KB → 15KB (38KB savings, 72% reduction)
-• ORACLE: 38KB → 12KB (26KB savings, 68% reduction)
-• FORGE: 37KB → 12KB (25KB savings, 68% reduction)
-• SENTINEL: 37KB → 12KB (25KB savings, 68% reduction)
-• RESEARCH: 31KB → 10KB (21KB savings, 68% reduction)
-• **Total: 196KB → 61KB (135KB savings, 69% reduction)**
-• **Party Mode: 61.7k → 45.2k tokens overhead (+16.5k freed, +8% budget)**
+## V2.0 Improvements (vs V1.0)
+✅ Works with 008 V2.0 outputs (REDUNDANCY_MAP_TOP5)
+✅ Automated test suite (domain + inheritance validation)
+✅ Quality control (checksums + semantic verification)
+✅ Conservative targets (60-75% reduction with tolerance)
+✅ NANO creation skipped (no usage data, deferred to future)
+✅ Complete validation (tests inheritance, not just domain)
+✅ Granular git commits (1 per droid, easy rollback)
+✅ Realistic time (5h vs V1.0's 4.5h)
+✅ Exact AGENTS.md placement (after <decision_hierarchy>)
+✅ Safety rules (10 critical rules for execution)
+
+## Expected Results (Conservative)
+• NAUTILUS: 53KB → ~18KB (66% reduction)
+• ORACLE: 38KB → ~13KB (66% reduction)
+• FORGE: 37KB → ~13KB (65% reduction)
+• SENTINEL: 37KB → ~13KB (65% reduction)
+• RESEARCH: 31KB → ~11KB (65% reduction)
+• **Total: 196KB → ~68KB (128KB savings, 65% reduction)**
+• **Tolerance: 60-75% reduction acceptable**
+• **Party Mode: 61.7k → ~47k tokens overhead (+14.7k freed, +7% budget)**
 
 ## Deliverables
 - 5 refactored droids with `<droid_specialization>` structure
-- 5 backups in `.factory/droids/_archive/` (pre-inheritance versions)
-- 2 NANO versions: oracle-nano.md, sentinel-nano.md (if needed)
-- Completion report: `DOCS/04_REPORTS/20251207_DROID_OPTIMIZATION_COMPLETION_REPORT.md`
+- 5 backups in `.factory/droids/_archive/`
+- REFACTORING_LOG.md (per-droid execution audit trail)
+- Completion report: `DOCS/04_REPORTS/20251207_DROID_REFACTORING_V2_COMPLETION.md`
 - Updated `AGENTS.md` with `<droid_inheritance>` section
+- 5 granular git commits (1 per droid for easy rollback)
 
 ## Decisions Needed
 • Should remaining 12 droids be refactored next? (Similar savings potential)
@@ -35,7 +49,7 @@ None - all prerequisites completed (FASE 1 analysis + AGENTS.md update)
 Test refactored droids in real sessions to validate knowledge preservation and inheritance system
 
 ## Estimated Time
-4h 30min (FASE 2: 2h 30min + FASE 3: 1h + FASE 4: 30min + buffer: 30min)
+5h 10min (realistic with safety checks, quality control, and granular commits)
 
 ## Critical Notes
 1. **Backup BEFORE editing** - Create archive for every droid before changes

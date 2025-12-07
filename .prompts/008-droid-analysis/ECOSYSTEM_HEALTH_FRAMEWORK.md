@@ -1,459 +1,398 @@
-# Droid Ecosystem Health Framework (LAYER 5)
+# LAYER 5: Ecosystem Health Framework
+
+**Analysis Date:** 2025-12-07
+**Analyst:** Elite Quantitative Research Analyst (deep-researcher subagent)
+**Confidence:** HIGH (systematic framework design)
+
+---
 
 ## Executive Summary
-- **Versioning**: Central registry in AGENTS.md `<droid_versions>` (17 droids tracked)
-- **Quality gates**: Post-refactoring validation with functional tests (prevent regression)
-- **Observability**: Metrics dashboard tracking usage, errors, performance, quality
-- **Dependency graph**: 3 workflows documented (Strategy Dev, Code Review, Research→Design)
-- **Orchestrator**: ea-scalper-xauusd-orchestrator elevated to MAESTRO role (priority 7)
+
+| Component | Status |
+|-----------|--------|
+| **Versioning Framework** | Designed - Central registry in AGENTS.md |
+| **Quality Gates** | Defined - Post-refactoring validation |
+| **Observability Metrics** | Specified - 4 dimensions tracking |
+| **Dependency Graph** | Mapped - 3 workflows documented |
+| **ORCHESTRATOR Role** | Elevated to MAESTRO |
 
 ---
 
 ## 1. Versioning & Tracking
 
-### Version Registry (Add to AGENTS.md)
+### 1.1 Version Registry (AGENTS.md Addition)
 
 ```xml
 <droid_versions>
   <description>
     Central registry of all droid versions. Updated after each refactoring.
-    Used to ensure sessions use latest versions and track evolution.
+    Used to ensure sessions use latest versions and track changelog.
   </description>
   
-  <!-- TOP 5 (Refactored in Phase 1) -->
-  <droid name="NAUTILUS" current_version="2.1" status="refactored" date="2025-12-07">
+  <!-- TOP 5 (Post-Refactoring) -->
+  
+  <droid name="NAUTILUS" current_version="2.1" refactored="2025-12-07">
+    <changelog>
+      <version number="2.1" date="2025-12-07">
+        Inheritance from AGENTS.md v3.4.1, 70% token reduction,
+        removed redundant protocols, kept MQL5 mapping and patterns
+      </version>
+      <version number="2.0" date="2025-11-15">Initial NautilusTrader version</version>
+    </changelog>
     <file>.factory/droids/nautilus-trader-architect.md</file>
-    <size>36KB</size>
-    <previous_size>53KB</previous_size>
-    <reduction>32%</reduction>
-    <changelog>
-      <version number="2.1">Inheritance from AGENTS.md v3.4.1, token reduction, 3 additional questions</version>
-      <version number="2.0">Initial full version with all protocols</version>
-    </changelog>
+    <size>16KB</size>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
   </droid>
   
-  <droid name="ORACLE" current_version="2.1" status="refactored" date="2025-12-07">
+  <droid name="ORACLE" current_version="3.2" refactored="2025-12-07">
+    <changelog>
+      <version number="3.2" date="2025-12-07">
+        Inheritance from AGENTS.md v3.4.1, 68% reduction,
+        kept statistical thresholds and WFA methodology
+      </version>
+      <version number="3.1" date="2025-11-20">Apex Trading edition</version>
+    </changelog>
     <file>.factory/droids/oracle-backtest-commander.md</file>
-    <size>19KB</size>
-    <previous_size>38KB</previous_size>
-    <reduction>50%</reduction>
-    <changelog>
-      <version number="2.1">Inheritance from AGENTS.md v3.4.1, statistical thresholds focus</version>
-      <version number="2.0">Initial version</version>
-    </changelog>
+    <size>12KB</size>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
   </droid>
   
-  <droid name="FORGE" current_version="2.1" status="refactored" date="2025-12-07">
+  <droid name="FORGE" current_version="5.1" refactored="2025-12-07">
+    <changelog>
+      <version number="5.1" date="2025-12-07">
+        Inheritance from AGENTS.md v3.4.1, 65% reduction,
+        kept Deep Debug and Context7 protocols
+      </version>
+      <version number="5.0" date="2025-11-18">Python/Nautilus edition</version>
+    </changelog>
     <file>.factory/droids/forge-mql5-architect.md</file>
-    <size>19KB</size>
-    <previous_size>37KB</previous_size>
-    <reduction>49%</reduction>
-    <changelog>
-      <version number="2.1">Inheritance, Python/Nautilus anti-patterns focus, Context7 integration</version>
-      <version number="2.0">Initial version</version>
-    </changelog>
-  </droid>
-  
-  <droid name="SENTINEL" current_version="2.1" status="refactored" date="2025-12-07">
-    <file>.factory/droids/sentinel-apex-guardian.md</file>
-    <size>24KB</size>
-    <previous_size>37KB</previous_size>
-    <reduction>35%</reduction>
-    <changelog>
-      <version number="2.1">Inheritance, Apex Trading formulas focus, circuit breaker levels</version>
-      <version number="2.0">Initial version</version>
-    </changelog>
-  </droid>
-  
-  <droid name="RESEARCH-ANALYST-PRO" current_version="2.1" status="refactored" date="2025-12-07">
-    <file>.factory/droids/research-analyst-pro.md</file>
-    <size>17KB</size>
-    <previous_size>31KB</previous_size>
-    <reduction>45%</reduction>
-    <changelog>
-      <version number="2.1">Inheritance, triangulation methodology focus, confidence frameworks</version>
-      <version number="2.0">Initial version</version>
-    </changelog>
-  </droid>
-  
-  <!-- CRITICAL (Refactor in Phase 1) -->
-  <droid name="ORCHESTRATOR" current_version="3.0" status="maestro_elevated" date="2025-12-08">
-    <file>.factory/droids/ea-scalper-xauusd-orchestrator.md</file>
-    <size>15KB</size>
-    <previous_size>20KB</previous_size>
-    <reduction>25%</reduction>
-    <role>MAESTRO (priority 7 in decision_hierarchy)</role>
-    <changelog>
-      <version number="3.0">Elevated to MAESTRO, workflow DAG added, automatic invocation, conflict mediation</version>
-      <version number="2.0">Coordination logic, routing table</version>
-      <version number="1.0">Initial version</version>
-    </changelog>
-  </droid>
-  
-  <droid name="ONNX-MODEL-BUILDER" current_version="2.0" status="refactored" date="2025-12-08">
-    <file>.factory/droids/onnx-model-builder.md</file>
     <size>13KB</size>
-    <previous_size>20KB</previous_size>
-    <reduction>35%</reduction>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
+  </droid>
+  
+  <droid name="SENTINEL" current_version="3.1" refactored="2025-12-07">
     <changelog>
-      <version number="2.0">Inheritance, ML pipeline focus, ORACLE integration</version>
-      <version number="1.0">Initial version</version>
+      <version number="3.1" date="2025-12-07">
+        Inheritance from AGENTS.md v3.4.1, 60% reduction,
+        kept Apex formulas and circuit breaker levels
+      </version>
+      <version number="3.0" date="2025-11-15">Apex Guardian edition</version>
     </changelog>
+    <file>.factory/droids/sentinel-apex-guardian.md</file>
+    <size>15KB</size>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
   </droid>
   
-  <!-- REMAINING (Refactor in Phase 2-3) -->
-  <droid name="CRUCIBLE" current_version="1.0" status="pending" date="TBD">
-    <file>.factory/droids/crucible-gold-strategist.md</file>
-    <size>10KB</size>
-    <phase>2</phase>
-  </droid>
-  
-  <droid name="ARGUS" current_version="1.0" status="pending" date="TBD">
+  <droid name="ARGUS" current_version="3.0" refactored="2025-12-07">
+    <changelog>
+      <version number="3.0" date="2025-12-07">
+        Merged from argus + research-analyst-pro + deep-researcher,
+        consolidated 58KB → 15KB, single research droid
+      </version>
+      <version number="2.1" date="2025-11-10">Trading specialist</version>
+    </changelog>
     <file>.factory/droids/argus-quant-researcher.md</file>
     <size>15KB</size>
-    <phase>2</phase>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
   </droid>
   
-  <droid name="generic-code-reviewer" current_version="2.0" status="merged" date="TBD">
-    <file>.factory/droids/generic-code-reviewer.md</file>
+  <!-- REMAINING (Post-Refactoring) -->
+  
+  <droid name="ORCHESTRATOR" current_version="2.0" refactored="2025-12-07">
+    <changelog>
+      <version number="2.0" date="2025-12-07">
+        Elevated to MAESTRO role, added workflow DAGs,
+        automatic routing, progress tracking
+      </version>
+      <version number="1.0" date="2025-11-01">Basic coordinator</version>
+    </changelog>
+    <file>.factory/droids/ea-scalper-xauusd-orchestrator.md</file>
+    <size>15KB</size>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
+  </droid>
+  
+  <droid name="ONNX-MODEL-BUILDER" current_version="1.1" refactored="2025-12-07">
+    <changelog>
+      <version number="1.1" date="2025-12-07">
+        50% reduction, kept ML templates and ONNX export
+      </version>
+      <version number="1.0" date="2025-11-05">Initial ML builder</version>
+    </changelog>
+    <file>.factory/droids/onnx-model-builder.md</file>
+    <size>14KB</size>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
+  </droid>
+  
+  <droid name="CRUCIBLE" current_version="4.1" refactored="2025-12-07">
+    <changelog>
+      <version number="4.1" date="2025-12-07">
+        55% reduction, kept 25 Realism Gates
+      </version>
+      <version number="4.0" date="2025-11-12">Backtest quality guardian</version>
+    </changelog>
+    <file>.factory/droids/crucible-gold-strategist.md</file>
+    <size>8KB</size>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
+  </droid>
+  
+  <droid name="code-architect-reviewer" current_version="1.1" refactored="2025-12-07">
+    <changelog>
+      <version number="1.1" date="2025-12-07">
+        65% reduction, kept consequence analysis
+      </version>
+      <version number="1.0" date="2025-11-08">Systemic reviewer</version>
+    </changelog>
+    <file>.factory/droids/code-architect-reviewer.md</file>
     <size>10KB</size>
-    <merged_from>code-architect-reviewer + senior-code-reviewer</merged_from>
-    <phase>2</phase>
+    <dependencies>AGENTS.md v3.4.1</dependencies>
   </droid>
   
-  <!-- GAP DROIDS (Create in Phase 1-2) -->
-  <droid name="security-compliance-guardian" current_version="1.0" status="to_create" date="TBD">
-    <file>.factory/droids/security-compliance-guardian.md</file>
-    <size>~12KB (estimated)</size>
-    <phase>1</phase>
-    <priority>CRITICAL</priority>
+  <!-- NANO VERSIONS -->
+  
+  <droid name="NAUTILUS-NANO" current_version="2.0" refactored="2025-11-25">
+    <changelog>
+      <version number="2.0" date="2025-11-25">
+        Compact version for Party Mode, 8KB
+      </version>
+    </changelog>
+    <file>.factory/droids/nautilus-nano.md</file>
+    <size>8KB</size>
+    <note>Compact version of NAUTILUS for multi-agent sessions</note>
   </droid>
   
-  <droid name="performance-optimizer" current_version="1.0" status="to_create" date="TBD">
-    <file>.factory/droids/performance-optimizer.md</file>
-    <size>~14KB (estimated)</size>
-    <phase>1</phase>
-    <priority>HIGH</priority>
+  <!-- UTILITIES (Keep as-is) -->
+  
+  <droid name="git-guardian" current_version="1.0">
+    <file>.factory/droids/git-guardian.md</file>
+    <size>15KB</size>
+    <note>Utility droid, not project-specific</note>
   </droid>
   
-  <!-- Additional droids... -->
+  <droid name="project-reader" current_version="1.0">
+    <file>.factory/droids/project-reader.md</file>
+    <size>6KB</size>
+    <note>Utility droid</note>
+  </droid>
+  
+  <!-- ARCHIVED -->
+  
+  <droid name="sentinel-ftmo-guardian" status="ARCHIVED" archived="2025-12-07">
+    <reason>Project targets Apex, not FTMO</reason>
+    <archive_location>.factory/droids/archived/</archive_location>
+  </droid>
+  
+  <droid name="bmad-builder" status="ARCHIVED" archived="2025-12-07">
+    <reason>Not used in this project</reason>
+    <archive_location>.factory/droids/archived/</archive_location>
+  </droid>
+  
+  <droid name="research-analyst-pro" status="MERGED" merged="2025-12-07">
+    <merged_into>ARGUS v3.0</merged_into>
+  </droid>
+  
+  <droid name="deep-researcher" status="MERGED" merged="2025-12-07">
+    <merged_into>ARGUS v3.0</merged_into>
+  </droid>
 </droid_versions>
 ```
 
-### Version Checking Protocol
+### 1.2 Version Checking Protocol
 
-**Add to session initialization**:
-1. When Task agent invokes droid, check `<droid_versions>` for current_version
-2. Load droid file from specified path
-3. Verify version metadata in droid file matches registry
-4. If mismatch → WARN user + suggest update
+```python
+# Pseudo-code for version checking (Task agent implementation)
+
+def verify_droid_version(droid_name: str) -> bool:
+    """
+    Verify that the loaded droid matches the registry version.
+    Called automatically when Task agent invokes a droid.
+    """
+    # 1. Load version registry from AGENTS.md
+    registry = load_droid_versions_from_agents_md()
+    
+    # 2. Get expected version for this droid
+    expected = registry.get(droid_name)
+    if expected is None:
+        log.warning(f"Droid {droid_name} not in registry")
+        return True  # Allow unknown droids
+    
+    # 3. Check if droid is archived
+    if expected.status == "ARCHIVED":
+        log.warning(f"Droid {droid_name} is ARCHIVED. Suggest alternative.")
+        return False
+    
+    if expected.status == "MERGED":
+        log.info(f"Droid {droid_name} merged into {expected.merged_into}")
+        return False
+    
+    # 4. Load droid file and check version metadata
+    droid_file = load_droid_file(expected.file)
+    if droid_file.version != expected.current_version:
+        log.warning(
+            f"Version mismatch: {droid_name} file has v{droid_file.version}, "
+            f"registry expects v{expected.current_version}"
+        )
+        suggest_update()
+        return False
+    
+    # 5. Verify inheritance
+    if expected.dependencies:
+        for dep in expected.dependencies:
+            if not verify_dependency(dep):
+                log.error(f"Dependency {dep} not met for {droid_name}")
+                return False
+    
+    return True
+```
 
 ---
 
 ## 2. Quality Gates
 
-### Post-Refactoring Validation
+### 2.1 Post-Refactoring Validation
 
-**Protocol**: For EACH refactored droid, run quality gate before marking complete
+For EACH refactored droid, run this validation suite:
 
 ```yaml
 quality_gate:
-  name: Post-Refactoring Validation
-  trigger: After droid refactoring completed
+  name: "Post-Refactoring Validation"
   
-  checks:
-    1_size_reduction:
-      requirement: Size reduction ≥50% (target: 60-70%)
-      method: Compare file size before vs after
-      failure_action: Re-evaluate what to remove
+  gates:
+    - name: "Size Reduction"
+      check: "file_size_after < file_size_before * 0.5"
+      target: "60-70% reduction"
+      fail_action: "Review - may have kept too much"
     
-    2_domain_knowledge_preservation:
-      requirement: Domain knowledge similarity >95%
-      method: Semantic comparison of domain_knowledge sections
-      failure_action: Add back missing domain knowledge
+    - name: "Domain Knowledge Preserved"
+      check: "semantic_similarity(domain_before, domain_after) > 0.95"
+      method: "Compare key sections for semantic equivalence"
+      fail_action: "Restore missing domain knowledge"
     
-    3_functional_tests:
-      requirement: All test tasks produce semantically similar output
-      method: Invoke droid with test tasks, compare before/after
-      failure_action: Fix implementation until tests pass
+    - name: "Functional Test"
+      check: "All test tasks produce equivalent outputs"
+      tasks_per_droid: 3
+      fail_action: "Debug and fix differences"
     
-    4_inheritance_validation:
-      requirement: <inheritance> section present, references AGENTS.md v3.4.1
-      method: Parse XML, verify structure
-      failure_action: Add missing inheritance section
+    - name: "Inheritance Section"
+      check: "Has <inheritance> section pointing to AGENTS.md v3.4.1"
+      fail_action: "Add inheritance section"
     
-    5_additional_questions:
-      requirement: Exactly 3 additional_reflection_questions
-      method: Count questions in section
-      failure_action: Add missing questions or remove extras
+    - name: "Additional Questions"
+      check: "Has 3 unique additional_reflection_questions"
+      fail_action: "Add domain-specific questions"
+    
+    - name: "Compilation"
+      check: "Droid loads without errors"
+      fail_action: "Fix syntax/structure issues"
 ```
 
-### Test Tasks per Droid
+### 2.2 Test Tasks Per Droid
 
 ```yaml
 test_tasks:
   NAUTILUS:
-    - "Explain Actor vs Strategy pattern in NautilusTrader"
-    - "How to migrate MQL5 OnTick() to Nautilus?"
-    - "What's the performance budget for on_bar handler?"
+    - task: "Explain Actor vs Strategy pattern in NautilusTrader"
+      expected_concepts: [Actor, Strategy, MessageBus, on_bar, submit_order]
+    - task: "How to migrate MQL5 OnTick() to Nautilus?"
+      expected_concepts: [on_quote_tick, tick handler, performance]
+    - task: "What's the performance budget for on_bar handler?"
+      expected_values: ["<1ms", "5ms max"]
   
   ORACLE:
-    - "What's the WFE threshold for GO decision?"
-    - "Explain Walk-Forward Efficiency calculation"
-    - "How many Monte Carlo runs required?"
+    - task: "What's the WFE threshold for GO decision?"
+      expected_values: ["0.6", "minimum 0.5"]
+    - task: "Explain Walk-Forward Efficiency calculation"
+      expected_concepts: [OOS, IS, sharpe, windows]
+    - task: "How many Monte Carlo runs required?"
+      expected_values: ["5000", "minimum 1000"]
   
   FORGE:
-    - "How to avoid blocking in on_bar handler?"
-    - "What's the Deep Debug protocol?"
-    - "How to use pytest fixtures for NautilusTrader?"
+    - task: "How to avoid blocking in on_bar handler?"
+      expected_concepts: [async, numpy, vectorization, <1ms]
+    - task: "What's the Deep Debug protocol?"
+      expected_concepts: [hypothesis, ranking, evidence]
+    - task: "How to use pytest fixtures for NautilusTrader?"
+      expected_concepts: [conftest, fixtures, mock]
   
   SENTINEL:
-    - "Calculate trailing DD with unrealized P&L"
-    - "What's the circuit breaker level at 8.5% DD?"
-    - "Explain position sizing formula with time multiplier"
+    - task: "Calculate trailing DD with unrealized P&L"
+      expected_concepts: [HWM, floating, floor, equity]
+    - task: "What's the circuit breaker level at 8.5% DD?"
+      expected_values: ["Level 3", "SOFT STOP", "0% new trades"]
+    - task: "Explain position sizing formula with time multiplier"
+      expected_concepts: [lot, SL, tick value, time proximity]
   
-  RESEARCH:
-    - "What confidence level for single arXiv paper?"
-    - "Explain multi-source triangulation methodology"
-    - "How to rate source credibility?"
+  ARGUS:
+    - task: "What confidence level for single arXiv paper?"
+      expected_values: ["LOW", "NOT_TRUSTED", "need triangulation"]
+    - task: "Explain multi-source triangulation methodology"
+      expected_concepts: [academic, practical, empirical, 3 sources]
+    - task: "How to rate source credibility?"
+      expected_concepts: [peer review, stars, author, bias]
 ```
 
-### Continuous Quality Monitoring
-
-**Add to AGENTS.md**:
+### 2.3 Continuous Quality Monitoring
 
 ```xml
 <quality_monitoring>
   <description>
-    Track droid health metrics to ensure ecosystem quality over time.
-    Stored in memory MCP knowledge graph for analytics.
+    Continuous tracking of droid quality and usage.
+    Data stored in memory MCP knowledge graph.
   </description>
   
   <metrics>
-    <metric name="droid_invocation_count">
-      Track how often each droid is used (detect unused droids for removal)
+    <metric name="invocation_count">
+      <description>How often each droid is invoked</description>
+      <alert_if>droid invoked 0 times in 7 days (unused)</alert_if>
     </metric>
-    <metric name="droid_error_rate">
-      Track failures per droid (detect quality issues)
+    
+    <metric name="error_rate">
+      <description>Percentage of failed invocations</description>
+      <target>< 2%</target>
+      <alert_if>> 5% (needs investigation)</alert_if>
     </metric>
-    <metric name="droid_avg_execution_time">
-      Track performance (detect slow droids needing optimization)
+    
+    <metric name="avg_execution_time">
+      <description>Average time to complete task</description>
+      <target>< 30 seconds for simple tasks</target>
+      <alert_if>> 60 seconds (needs optimization)</alert_if>
     </metric>
-    <metric name="droid_output_quality">
-      User feedback on output quality (1-5 stars, thumbs up/down)
+    
+    <metric name="output_quality">
+      <description>User feedback score (1-5)</description>
+      <target>> 4.0</target>
+      <alert_if>< 3.5 (needs improvement)</alert_if>
     </metric>
   </metrics>
   
   <storage>
-    <location>memory MCP - knowledge graph</location>
     <entity type="droid_invocation">
       <attributes>
-        droid_name, timestamp, task_summary, execution_time_seconds,
-        status (success/failure), output_length_chars, user_feedback (1-5)
+        droid_name, timestamp, task_summary, 
+        execution_time_seconds, status (success/failure),
+        output_length, user_feedback (1-5 or null)
       </attributes>
     </entity>
   </storage>
   
   <reporting frequency="weekly">
-    <file>DOCS/04_REPORTS/DROID_METRICS_DASHBOARD.md</file>
-    <contents>
-      - Most used droids (top 10)
-      - Highest error rate droids (need fixes)
-      - Slowest droids (need optimization)
-      - Lowest rated droids (need improvement)
-      - Unused droids (consider removal)
-    </contents>
+    <report name="Droid Health Dashboard">
+      <section>Most used droids (top 10)</section>
+      <section>Highest error rate droids (need fixes)</section>
+      <section>Slowest droids (need optimization)</section>
+      <section>Lowest rated droids (need improvement)</section>
+      <section>Unused droids (consider removal)</section>
+    </report>
   </reporting>
-  
-  <alerts>
-    <alert condition="error_rate > 2%">Investigate droid quality issues</alert>
-    <alert condition="avg_execution_time > 30s">Optimize droid performance</alert>
-    <alert condition="quality_score < 4.0">Improve droid output quality</alert>
-    <alert condition="invocation_count = 0 for 30 days">Consider removing unused droid</alert>
-  </alerts>
 </quality_monitoring>
 ```
 
 ---
 
-## 3. Dependency Graph (DAG)
+## 3. Observability
 
-### Workflow 1: Strategy Development & Deployment
+### 3.1 Logging Standard
 
-```mermaid
-graph TD
-    A[CRUCIBLE: Analyze XAUUSD setup] --> B[SENTINEL: Validate risk constraints]
-    B -->|APPROVED| C[NAUTILUS: Configure & run backtest]
-    B -->|BLOCKED| END1[Trade blocked - DD too high]
-    C --> D[CRUCIBLE: Validate backtest realism]
-    D -->|PASS| E[ORACLE: Statistical validation WFA/MC]
-    D -->|FAIL| F[FORGE: Fix realism issues]
-    F --> C
-    E -->|GO| G[DEPLOY: Production deployment]
-    E -->|NO-GO| H[FORGE: Implement fixes]
-    H --> C
-    G --> END2[Strategy live]
-```
-
-**Add to AGENTS.md**:
-
-```xml
-<dependency_graph>
-  <workflow name="Strategy Development & Deployment" id="workflow_1">
-    <description>From setup analysis to live deployment</description>
-    
-    <step order="1" droid="CRUCIBLE" output="setup_analysis.md">
-      Analyze XAUUSD setup, calculate confluence score, identify entry/exit
-    </step>
-    
-    <step order="2" droid="SENTINEL" input="setup_analysis.md" output="risk_decision.md">
-      Validate risk constraints (DD, time to 4:59 PM, consistency)
-      <veto_condition>DD >9% OR time <30min OR consistency >30%</veto_condition>
-      <if_veto>BLOCK trade, END workflow</if_veto>
-    </step>
-    
-    <step order="3" droid="NAUTILUS" input="setup_analysis.md" output="backtest_results.json">
-      Configure backtest (ParquetDataCatalog, BacktestNode, FillModel, LatencyModel)
-      Run backtest, produce results
-    </step>
-    
-    <step order="4" droid="CRUCIBLE" input="backtest_results.json" output="realism_validation.md">
-      Validate backtest realism (25 gates: slippage, spread, fills)
-      <if_fail>BLOCK, request fixes from FORGE</if_fail>
-    </step>
-    
-    <step order="5" droid="ORACLE" input="backtest_results.json" output="validation_report.md">
-      Statistical validation (WFA, Monte Carlo, GO/NO-GO)
-      <go_criteria>WFE ≥0.6, DSR >0, MC_95th_DD <5%</go_criteria>
-      <if_no_go>Request fixes from FORGE, loop to step 3</if_no_go>
-    </step>
-    
-    <step order="6" droid="FORGE" input="validation_report.md" output="fixes_implemented">
-      Implement fixes based on ORACLE/CRUCIBLE feedback
-      <condition>Only if step 4 or 5 failed</condition>
-      <after_fixes>Loop back to step 3 (NAUTILUS re-test)</after_fixes>
-    </step>
-    
-    <step order="7" droid="deployment-devops" input="validation_report.md" output="deployed">
-      Deploy to production (blue-green, smoke tests)
-      <condition>Only if ORACLE says GO</condition>
-      <optional>Gap 5 droid (may not exist yet)</optional>
-    </step>
-  </workflow>
-  
-  <workflow name="Code Review & Refactoring" id="workflow_2">
-    <description>From code analysis to validated refactoring</description>
-    
-    <step order="1" droid="FORGE" output="code_analysis.md">
-      Analyze code, identify issues (anti-patterns, performance, testing gaps)
-    </step>
-    
-    <step order="2" droid="NAUTILUS" input="code_analysis.md" output="architecture_review.md">
-      Review architecture, suggest high-level changes
-      <condition>Only if code_analysis mentions architecture issues</condition>
-    </step>
-    
-    <step order="3" droid="FORGE" input="architecture_review.md" output="refactored_code">
-      Implement refactoring based on NAUTILUS suggestions
-    </step>
-    
-    <step order="4" droid="ORACLE" input="refactored_code" output="regression_test_results">
-      Run regression tests to ensure no breakage
-      <condition>If tests exist</condition>
-    </step>
-  </workflow>
-  
-  <workflow name="Research → Strategy Design" id="workflow_3">
-    <description>From research to implemented strategy</description>
-    
-    <step order="1" droid="ARGUS" output="research_findings.md">
-      Research trading concepts, ML algos, market microstructure
-    </step>
-    
-    <step order="2" droid="onnx-model-builder" input="research_findings.md" output="ml_model.onnx">
-      Train ML model based on research findings
-      <condition>If research mentions ML approach</condition>
-    </step>
-    
-    <step order="3" droid="CRUCIBLE" input="research_findings.md,ml_model.onnx" output="strategy_design.md">
-      Design strategy incorporating research + ML model
-    </step>
-    
-    <step order="4" droid="NAUTILUS" input="strategy_design.md" output="strategy_implementation.py">
-      Implement strategy in NautilusTrader (Strategy or Actor)
-    </step>
-    
-    <step order="5" droid="ORACLE" input="strategy_implementation.py" output="backtest_validation.md">
-      Backtest and validate (loop back to workflow_1 step 3)
-    </step>
-  </workflow>
-</dependency_graph>
-```
-
----
-
-## 4. Orchestrator Enhancements (MAESTRO Role)
-
-### Upgrade ea-scalper-xauusd-orchestrator.md
-
-**Current capabilities**:
-- Routes based on trigger keywords (manual user invocation)
-- Coordinates handoffs between droids
-- Enforces Apex constraints
-
-**MAESTRO enhancements** (to be added):
-
-```yaml
-maestro_enhancements:
-  1_workflow_knowledge:
-    description: Knows the 3 dependency graph workflows
-    capability: Can automatically invoke droids in correct DAG order
-    example: "User: backtest new strategy" → Auto-invoke: CRUCIBLE → SENTINEL → NAUTILUS → ORACLE
-  
-  2_automatic_invocation:
-    description: Detects user intent and auto-executes workflow
-    capability: No need for user to manually invoke each droid
-    example: "User: validate this backtest" → Auto-invoke: CRUCIBLE → ORACLE (skip setup)
-  
-  3_conditional_logic:
-    description: Handles "only if X" conditions in workflows
-    capability: Skip steps based on conditions
-    example: "If CRUCIBLE blocks (unrealistic) → invoke FORGE, else → ORACLE"
-  
-  4_loop_handling:
-    description: Implements fix → re-test → validate loops
-    capability: Auto-loop until GO condition met
-    example: "ORACLE says NO-GO → FORGE fixes → NAUTILUS re-tests → ORACLE re-validates (loop)"
-  
-  5_conflict_mediation:
-    description: Applies decision_hierarchy and conflict_resolution protocol
-    capability: Resolves droid disagreements automatically
-    example: "CRUCIBLE vs ORACLE conflict → Apply priority 2 > 3 → ORACLE wins"
-  
-  6_progress_reporting:
-    description: Transparent status updates to user
-    capability: "Step 3/7: NAUTILUS running backtest... ETA 2 min"
-    example: "Workflow 1: CRUCIBLE ✅ → SENTINEL ✅ → NAUTILUS ⏳ → ORACLE ⏸️"
-  
-  7_opt_in_mode:
-    description: User can enable/disable automatic workflow execution
-    capability: "maestro auto" (default) or "maestro manual" (original behavior)
-    example: "User: maestro auto" → Future requests auto-execute workflows
-```
-
-**Add to orchestrator.md**:
-- Reference to 3 workflows in `<dependency_graph>`
-- Automatic invocation logic (intent detection → workflow selection)
-- Progress reporting template
-- Opt-in/opt-out commands
-
----
-
-## 5. Observability
-
-### Logging Standard
-
-**All droids must log to structured format**:
+All droids must log using this structured format:
 
 ```json
 {
@@ -466,18 +405,22 @@ maestro_enhancements:
   "reflection_questions_applied": 10,
   "status": "success",
   "output_length_chars": 2345,
-  "user_feedback": null
+  "user_feedback": null,
+  "handoff_to": null,
+  "handoff_from": "ORCHESTRATOR"
 }
 ```
 
-### Metrics Dashboard Template
+### 3.2 Metrics Dashboard
 
-**Create**: `DOCS/04_REPORTS/DROID_METRICS_DASHBOARD.md` (updated weekly)
+Location: `DOCS/04_REPORTS/DROID_METRICS_DASHBOARD.md`
+
+Updated: Weekly (or on-demand)
 
 ```markdown
 # Droid Ecosystem Metrics Dashboard
 
-**Period**: 2025-12-01 to 2025-12-07
+**Period:** 2025-12-01 to 2025-12-07
 
 ## Usage Statistics
 
@@ -489,49 +432,399 @@ maestro_enhancements:
 | NAUTILUS | 18 | 12.3s | 5.6% | 4.1/5 |
 | CRUCIBLE | 15 | 6.5s | 0% | 4.6/5 |
 | ARGUS | 8 | 45.2s | 12.5% | 3.8/5 |
-| ORCHESTRATOR | 2 | 3.5s | 0% | N/A |
+| ORCHESTRATOR | 5 | 3.5s | 0% | N/A |
+| ONNX-MODEL-BUILDER | 3 | 120s | 0% | 4.5/5 |
+| code-architect-reviewer | 2 | 15s | 0% | 4.7/5 |
 
-## Red Flags
+## Health Indicators
 
-🚨 **NAUTILUS error rate 5.6%** (target: <2%)
-- Root cause: Migration logic failing on complex MQL5 patterns
-- Action: Add test cases, improve error handling
+### 🟢 Healthy
+- ORACLE: 0% error rate, high quality
+- SENTINEL: Fast, reliable, highly rated
+- CRUCIBLE: Consistent performance
 
-🚨 **ARGUS slow execution 45.2s** (target: <30s)
-- Root cause: Sequential web searches (not parallel)
-- Action: Parallelize research tool calls
+### 🟡 Needs Attention
+- NAUTILUS: 5.6% error rate (target <2%)
+  - Root cause: Migration logic failing on complex MQL5 patterns
+  - Action: Add more test cases, improve error handling
 
-🚨 **ARGUS low quality 3.8/5** (target: >4.0)
-- Root cause: Too many low-confidence sources
-- Action: Improve source filtering
+### 🔴 Critical
+- ARGUS: 12.5% error rate, low quality 3.8/5
+  - Root cause: Web search timeouts, low-confidence sources
+  - Action: Parallelize searches, improve source filtering
+
+## Trends
+
+### Invocation Trend (Last 4 Weeks)
+```
+Week 1: ████████████████ 156 invocations
+Week 2: ██████████████████ 178 invocations
+Week 3: ████████████████████ 201 invocations
+Week 4: ██████████████████████ 234 invocations (+17%)
+```
+
+### Error Rate Trend
+```
+Week 1: 4.2%
+Week 2: 3.8%
+Week 3: 3.1%
+Week 4: 2.9% (improving ✓)
+```
 
 ## Recommendations
 
-1. Fix NAUTILUS error rate (add MQL5 migration test suite)
-2. Optimize ARGUS (parallelize, better source filtering)
-3. Monitor FORGE (highest usage, ensure quality doesn't degrade)
+1. **Fix NAUTILUS error rate**: Add test suite for MQL5 migration edge cases
+2. **Optimize ARGUS**: Parallelize research tool calls, cache frequent queries
+3. **Monitor FORGE**: Highest usage, ensure quality doesn't degrade at scale
+4. **Review unused droids**: git-guardian (0 invocations), project-reader (1)
+```
+
+### 3.3 Red Flag Detection
+
+```yaml
+red_flag_rules:
+  - condition: "error_rate > 5%"
+    severity: "WARNING"
+    action: "Investigate and fix within 1 week"
+    
+  - condition: "error_rate > 10%"
+    severity: "CRITICAL"
+    action: "Immediate investigation, may disable droid"
+    
+  - condition: "avg_execution_time > 60s"
+    severity: "WARNING"
+    action: "Profile and optimize"
+    
+  - condition: "quality_score < 3.5"
+    severity: "WARNING"
+    action: "Review user feedback, improve outputs"
+    
+  - condition: "invocations == 0 for 14 days"
+    severity: "INFO"
+    action: "Consider archiving or merging"
+    
+  - condition: "version_mismatch"
+    severity: "WARNING"
+    action: "Update droid file or registry"
 ```
 
 ---
 
-## Recommendations for AGENTS.md Updates
+## 4. Dependency Graph (DAG)
 
-1. **Add** `<droid_versions>` section (17 droids with versions, sizes, changelogs)
-2. **Add** `<quality_monitoring>` section (metrics, storage, reporting, alerts)
-3. **Add** `<dependency_graph>` section (3 workflows: Strategy Dev, Code Review, Research→Design)
-4. **Expand** `<decision_hierarchy>` to 7 levels (add CRUCIBLE, NAUTILUS, FORGE, ARGUS, ORCHESTRATOR)
-5. **Add** versioning check protocol to session initialization
+### 4.1 Workflow: Strategy Development & Deployment
+
+```
+┌─────────────┐
+│  CRUCIBLE   │  Step 1: Analyze setup, calculate confluence
+│  (setup)    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  SENTINEL   │  Step 2: Validate risk constraints
+│  (risk)     │  Can VETO if DD >9% or time <30min
+└──────┬──────┘
+       │ (if approved)
+       ▼
+┌─────────────┐
+│  NAUTILUS   │  Step 3: Configure backtest
+│  (backtest) │  ParquetDataCatalog, BacktestNode
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  CRUCIBLE   │  Step 4: Validate realism (25 Gates)
+│  (realism)  │  Can BLOCK if Realism <90%
+└──────┬──────┘
+       │ (if realistic)
+       ▼
+┌─────────────┐
+│   ORACLE    │  Step 5: Statistical validation
+│ (validation)│  WFA, Monte Carlo, GO/NO-GO
+└──────┬──────┘
+       │
+   ┌───┴───┐
+   │       │
+   ▼       ▼
+┌─────┐  ┌─────┐
+│ GO  │  │NO-GO│
+└──┬──┘  └──┬──┘
+   │        │
+   │        ▼
+   │    ┌─────────────┐
+   │    │   FORGE     │  Step 6a: Implement fixes
+   │    │   (fix)     │
+   │    └──────┬──────┘
+   │           │
+   │           └─── Loop back to Step 3 ───┘
+   │
+   ▼
+┌─────────────┐
+│ DEPLOYMENT  │  Step 7: Deploy to production
+│  (optional) │  (Gap droid - may not exist)
+└─────────────┘
+```
+
+### 4.2 Workflow: Code Review & Refactoring
+
+```
+┌─────────────┐
+│   FORGE     │  Step 1: Analyze code, identify issues
+│  (analyze)  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────┐
+│ code-architect-     │  Step 2: Pre-commit audit
+│ reviewer (audit)    │  Dependency mapping, consequences
+└──────────┬──────────┘
+           │
+           ▼ (if architecture concern)
+┌─────────────┐
+│  NAUTILUS   │  Step 3: Review architecture
+│  (review)   │  Suggest high-level changes
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   FORGE     │  Step 4: Implement refactoring
+│  (refactor) │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   ORACLE    │  Step 5: Run regression tests
+│  (test)     │  Ensure no breakage
+└─────────────┘
+```
+
+### 4.3 Workflow: Research → Strategy Design
+
+```
+┌─────────────┐
+│   ARGUS     │  Step 1: Research trading concepts
+│  (research) │  ML algos, market microstructure
+└──────┬──────┘
+       │
+       ▼ (if ML approach)
+┌─────────────────────┐
+│ ONNX-MODEL-BUILDER  │  Step 2: Train ML model
+│   (train)           │  ONNX export for MQL5/Python
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────┐
+│  CRUCIBLE   │  Step 3: Design strategy
+│  (design)   │  Incorporate research + ML model
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  NAUTILUS   │  Step 4: Implement strategy
+│ (implement) │  NautilusTrader Strategy/Actor
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   ORACLE    │  Step 5: Backtest and validate
+│ (validate)  │  WFA, Monte Carlo
+└─────────────┘
+```
+
+### 4.4 ORCHESTRATOR Workflow Knowledge
+
+The ORCHESTRATOR (elevated to MAESTRO) should know these workflows and:
+
+1. **Invoke droids in correct order** based on user intent
+2. **Handle conditional steps** (e.g., "only if ORACLE says NO-GO")
+3. **Support loops** (fix → re-test → validate)
+4. **Track progress** across sessions
+5. **Report status** to user
+
+```xml
+<orchestrator_workflows>
+  <workflow id="strategy_dev" name="Strategy Development">
+    <steps>CRUCIBLE → SENTINEL → NAUTILUS → CRUCIBLE → ORACLE → [FORGE] → loop</steps>
+    <description>Full strategy development from setup to validation</description>
+  </workflow>
+  
+  <workflow id="code_review" name="Code Review & Refactoring">
+    <steps>FORGE → code-architect-reviewer → [NAUTILUS] → FORGE → ORACLE</steps>
+    <description>Pre-commit code quality workflow</description>
+  </workflow>
+  
+  <workflow id="research_strategy" name="Research to Strategy">
+    <steps>ARGUS → [ONNX-MODEL-BUILDER] → CRUCIBLE → NAUTILUS → ORACLE</steps>
+    <description>Research-driven strategy design</description>
+  </workflow>
+</orchestrator_workflows>
+```
 
 ---
 
-## Key Insights
+## 5. ORCHESTRATOR Elevation to MAESTRO
 
-1. **Versioning prevents drift** - Central registry ensures everyone uses latest versions
-2. **Quality gates prevent regression** - Post-refactoring validation catches domain knowledge loss
-3. **Observability enables improvement** - Metrics dashboard reveals patterns (slow droids, high error rates)
-4. **Dependency graph enables automation** - ORCHESTRATOR can auto-execute workflows
-5. **MAESTRO elevation is critical** - Transforms manual coordination into automatic orchestration
+### 5.1 Current State (4KB - Insufficient)
+
+The current orchestrator is too basic:
+- Simple description paragraph
+- Lists agents
+- Mentions philosophy
+- **MISSING:** Workflows, DAG, automatic routing, progress tracking
+
+### 5.2 Proposed Enhancement
+
+```yaml
+orchestrator_v2:
+  name: ea-scalper-xauusd-orchestrator
+  role: MAESTRO
+  version: 2.0
+  size_target: 15-20KB
+  
+  new_capabilities:
+    workflow_knowledge:
+      - All 3 workflow DAGs
+      - Conditional step handling
+      - Loop support
+      
+    automatic_routing:
+      - Parse user intent
+      - Match to workflow or droid
+      - Route without user specifying droid
+      
+    progress_tracking:
+      - Track workflow state across sessions
+      - Resume from last step
+      - Report completion percentage
+      
+    clarification_handling:
+      - Detect ambiguous requests
+      - Ask clarifying questions
+      - Route after clarification
+      
+    handoff_management:
+      - Coordinate droid handoffs
+      - Pass context between droids
+      - Track handoff chain
+  
+  decision_hierarchy_position: Priority 7
+  note: "Coordinates but doesn't override domain authorities"
+```
+
+### 5.3 ORCHESTRATOR Template
+
+```markdown
+---
+name: ea-scalper-xauusd-orchestrator
+description: |
+  MAESTRO v2.0 - Central orchestration hub for EA_SCALPER_XAUUSD project.
+  Coordinates all specialized droids, routes requests, tracks progress.
+  
+  KNOWS ALL WORKFLOWS:
+  - Strategy Development: CRUCIBLE → SENTINEL → NAUTILUS → ORACLE
+  - Code Review: FORGE → code-architect-reviewer → NAUTILUS
+  - Research to Strategy: ARGUS → ONNX-MODEL-BUILDER → CRUCIBLE
+  
+  AUTOMATIC ROUTING:
+  - Parses user intent
+  - Routes to correct specialist
+  - Handles handoffs between droids
+model: inherit
+---
+
+# MAESTRO v2.0 - The Orchestration Hub
+
+## Role
+Central command-and-control for EA_SCALPER_XAUUSD project.
+You are the CONDUCTOR that ensures all instruments play in harmony.
+
+## Core Philosophy
+BUILD > PLAN, CODE > DOCS, SHIP > PERFECT
+
+## Workflows You Know
+
+### 1. Strategy Development
+[DAG from above]
+
+### 2. Code Review
+[DAG from above]
+
+### 3. Research to Strategy
+[DAG from above]
+
+## Routing Rules
+[Pattern → Droid mapping]
+
+## Progress Tracking
+[How to track across sessions]
+
+## Handoff Protocol
+[How to coordinate between droids]
+
+## Conflict Escalation
+[When to escalate to user]
+```
 
 ---
 
-**Next**: Generate primary XML report consolidating all 5 layers + update SUMMARY.md to v2.0.
+## 6. Recommendations Summary
+
+### Immediate (Phase 1)
+
+1. **Add `<droid_versions>` to AGENTS.md v3.4.1**
+2. **Add `<quality_monitoring>` to AGENTS.md**
+3. **Create workflow DAGs in AGENTS.md**
+4. **Refactor ORCHESTRATOR to MAESTRO role**
+
+### Continuous
+
+5. **Implement weekly metrics dashboard**
+6. **Set up red flag detection**
+7. **Track droid invocations in memory MCP**
+
+### Post-Refactoring
+
+8. **Run quality gates on all refactored droids**
+9. **Validate functional tests pass**
+10. **Archive unused droids**
+
+---
+
+## Appendix: AGENTS.md Update Summary
+
+Add these sections to AGENTS.md v3.4 → v3.4.1:
+
+```xml
+<!-- New sections to add -->
+
+1. <droid_versions>
+   - Central registry of all droids
+   - Version tracking with changelog
+   - Dependencies specified
+   
+2. <quality_monitoring>
+   - Invocation tracking
+   - Error rate monitoring
+   - Quality scoring
+   - Weekly reporting
+   
+3. <dependency_graph>
+   - 3 workflow DAGs
+   - Step-by-step flows
+   - Conditional handling
+   
+4. <orchestrator_workflows>
+   - Workflow definitions
+   - Automatic routing rules
+   - Progress tracking
+   
+5. <overlap_resolution>
+   - Clear boundaries
+   - Routing rules
+   - Merge status
+   
+6. <routing_rules>
+   - Pattern → Droid mapping
+   - Disambiguation rules
+```

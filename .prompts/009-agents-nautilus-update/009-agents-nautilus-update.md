@@ -1,96 +1,192 @@
-# 🔧 PROMPT: Ajustar AGENTS.md para Nautilus Focus
+# 🔧 PROMPT: AGENTS.md Dual-Platform Update (V2.0)
 
 ## 📋 Objective
 
-Atualizar **AGENTS.md** para refletir a mudança de foco do projeto de MQL5 para **NautilusTrader (Python)** como plataforma principal de desenvolvimento. Ajustar seções de bugfix_protocol, forge_rule, error_recovery, e exemplos para referenciar Nautilus ao invés de MQL5.
+Atualizar **AGENTS.md** para refletir dual-platform approach: **Nautilus (Python) como PRIMARY** para desenvolvimento atual, **MQL5 como SECONDARY** (ainda importante para futuro). Adicionar apenas o necessário para suportar Nautilus sem remover ou deprecar MQL5.
 
-**Why it matters:** O projeto migrou de EA MQL5 para NautilusTrader Python. AGENTS.md ainda referencia MQL5 em vários lugares, causando confusão e direcionamento incorreto para FORGE (que agora trabalha mais com Python/Nautilus do que MQL5).
+**Why it matters:** Projeto está focado em NautilusTrader AGORA mas MQL5 permanece importante para o futuro. AGENTS.md precisa suportar AMBOS sem confusão sobre prioridades.
+
+**Why V2.0:** V1.0 tinha 15 problemas críticos incluindo corruption risk, no verification gates, e marcava MQL5 como "legacy" (incorreto). V2.0 é lightweight, safe, e mantém ambas plataformas ativas.
 
 ---
 
 ## 📁 Context
 
-**Current AGENTS.md sections referencing MQL5:**
+**Current AGENTS.md state:**
+- Version: 3.4.0
+- Size: ~80,000 chars
+- Platform focus: Mostly MQL5 references
+- Needs: Nautilus support WITHOUT deprecating MQL5
 
-From Grep results:
+**What we're NOT doing (V1.0 mistakes):**
+- ❌ Marking MQL5 as "LEGACY"
+- ❌ Removing MQL5 sections
+- ❌ Breaking existing droid references
+- ❌ Major version bump (stays 3.4.x)
+
+**What we ARE doing (V2.0 approach):**
+- ✅ Add Nautilus-specific sections (NEW content)
+- ✅ Update FORGE to support BOTH platforms
+- ✅ Add Python/Nautilus error recovery (alongside MQL5)
+- ✅ Keep MQL5 fully intact and functional
+- ✅ Incremental validation (XML check after each edit)
+- ✅ Smoke tests before/after
+
+---
+
+## 🎯 Pre-Execution Verification Gates
+
+### Gate 1: Migration Status Check
+
+**BEFORE updating AGENTS.md, verify:**
+
 ```
-<bugfix_protocol>
-  <file>MQL5/Experts/BUGFIX_LOG.md</file>
-  <usage>
-    <agent name="FORGE">all MQL5/Python fixes</agent>
+Question: What % of project is migrated to Nautilus?
+- [ ] >80% migrated → Proceed with Nautilus PRIMARY
+- [ ] 50-80% migrated → Proceed with EQUAL priority (both primary)
+- [ ] <50% migrated → ABORT (too early, MQL5 still dominant)
 
-<forge_rule priority="P0.5">
-  FORGE MUST auto-compile after ANY MQL5 change...
-
-<mql5_compilation>
-  <paths>
-    <compiler>C:\Program Files\FTMO MetaTrader 5\metaeditor64.exe</compiler>
-
-<error_recovery>
-  <protocol agent="FORGE" name="Compilation Failure - 3-Strike Rule">
-    <attempt number="1" type="Auto">
-      <action>Verify includes paths (PROJECT_MQL5 + STDLIB_MQL5)</action>
+How to check:
+1. Count Python files in nautilus_gold_scalper/: {N} files
+2. Count MQL5 files in MQL5/: {M} files
+3. Check git log recent commits: Nautilus vs MQL5 activity
+4. If Nautilus activity >80% → Proceed
 ```
 
-**New Reality:**
-- Primary platform: **NautilusTrader (Python/Cython)**
-- Primary bug location: `nautilus_gold_scalper/` (Python modules)
-- Primary errors: Python syntax, Nautilus event-driven patterns, async issues
-- Compilation: **Python type checking + pytest**, not MQL5 metaeditor64
+**If check fails:** ABORT prompt 009, return to user with recommendation to delay update.
 
-**Nautilus project structure:**
+---
+
+### Gate 2: Droid Dependency Scan
+
+**BEFORE marking any platform priority, scan droids:**
+
+```bash
+# Check how many droids reference MQL5 vs Nautilus
+grep -r "MQL5\|mql5" .factory/droids/*.md | wc -l  # MQL5 refs
+grep -r "Nautilus\|nautilus" .factory/droids/*.md | wc -l  # Nautilus refs
 ```
-nautilus_gold_scalper/
-├── src/
-│   ├── strategies/
-│   ├── actors/
-│   ├── indicators/
-│   ├── risk/
-│   ├── execution/
-│   └── signals/
-├── configs/
-├── scripts/
-└── tests/
+
+**Decision matrix:**
+- MQL5 refs > Nautilus refs → Equal priority (both primary)
+- Nautilus refs > MQL5 refs → Nautilus primary, MQL5 secondary
+- Close split → Equal priority
+
+**If MQL5 refs still dominant:** Warn user that update may cause confusion.
+
+---
+
+### Gate 3: Backup Verification
+
+```bash
+# Create backup with timestamp
+cp AGENTS.md "AGENTS_v3.4.0_BACKUP_$(date +%Y%m%d_%H%M%S).md"
+
+# Verify backup created
+if [ ! -f AGENTS_v3.4.0_BACKUP_*.md ]; then
+    echo "ERROR: Backup failed!"
+    exit 1
+fi
+```
+
+**Rollback procedure:**
+```bash
+# If update breaks something:
+cp AGENTS_v3.4.0_BACKUP_20251207_*.md AGENTS.md
+git checkout AGENTS.md  # if committed
 ```
 
 ---
 
-## 🎯 Requirements
+## 🎯 Requirements (Lightweight Additions)
 
-### 1. Update `<bugfix_protocol>`
+### 1. Add `<platform_support>` Section (NEW)
+
+**Location:** Add AFTER `<session_rules>` section
+
+```xml
+<platform_support>
+  <description>
+    Project supports dual-platform development:
+    - PRIMARY: NautilusTrader (Python/Cython) - current focus
+    - SECONDARY: MQL5 - important for future, not deprecated
+  </description>
+  
+  <nautilus_trader priority="primary">
+    <language>Python 3.11+, Cython for performance</language>
+    <architecture>Event-driven (MessageBus, Cache, Actor/Strategy patterns)</architecture>
+    <validation>mypy --strict, pytest, ruff</validation>
+    <docs_mcp>context7 (NautilusTrader official docs)</docs_mcp>
+    <sandbox>e2b (Python sandbox for testing)</sandbox>
+    <use_when>
+      - New feature development
+      - Strategy/Actor implementation
+      - Backtesting with ParquetDataCatalog
+      - Production deployment (live trading)
+    </use_when>
+  </nautilus_trader>
+  
+  <mql5 priority="secondary">
+    <language>MQL5</language>
+    <compiler>metaeditor64.exe</compiler>
+    <validation>Auto-compile with metaeditor64, check .log for errors</validation>
+    <docs_mcp>mql5-docs, mql5-books</docs_mcp>
+    <use_when>
+      - Reference for migration (understand original EA logic)
+      - Future MQL5 development (if needed)
+      - Comparison/validation against original EA
+    </use_when>
+    <note>MQL5 is NOT deprecated - remains important for future work</note>
+  </mql5>
+  
+  <routing_rules>
+    <rule scenario="New Python/Nautilus code">FORGE (Python mode) or NAUTILUS</rule>
+    <rule scenario="New MQL5 code">FORGE (MQL5 mode)</rule>
+    <rule scenario="Migration task">NAUTILUS (has migration mappings)</rule>
+    <rule scenario="Code review Python">FORGE (Python focus)</rule>
+    <rule scenario="Code review MQL5">FORGE (MQL5 knowledge retained)</rule>
+  </routing_rules>
+</platform_support>
+```
+
+**Incremental validation:**
+```bash
+# After adding section, validate XML
+xmllint --noout AGENTS.md 2>&1 | grep -i error
+# If errors found, fix before proceeding
+```
+
+---
+
+### 2. Update `<bugfix_protocol>` (ADDITIVE)
 
 **Current:**
 ```xml
 <bugfix_protocol>
   <file>MQL5/Experts/BUGFIX_LOG.md</file>
+```
+
+**Add alongside (keep MQL5 log):**
+```xml
+<bugfix_protocol>
+  <nautilus_log>nautilus_gold_scalper/BUGFIX_LOG.md</nautilus_log>
+  <mql5_log>MQL5/Experts/BUGFIX_LOG.md</mql5_log>
   <format>YYYY-MM-DD (AGENT context)\n- Module: bug fix description.</format>
   <usage>
-    <agent name="FORGE">all MQL5/Python fixes</agent>
-    <agent name="ORACLE">backtest bugs</agent>
-    <agent name="SENTINEL">risk logic bugs</agent>
+    <agent name="FORGE">Python/Nautilus fixes → nautilus_log, MQL5 fixes → mql5_log</agent>
+    <agent name="NAUTILUS">Migration issues → nautilus_log</agent>
+    <agent name="ORACLE">Backtest bugs → nautilus_log (if Nautilus backtest)</agent>
+    <agent name="SENTINEL">Risk logic → nautilus_log (Python risk modules)</agent>
   </usage>
+  <note>Both logs active - use appropriate log based on platform</note>
 </bugfix_protocol>
 ```
 
-**Change to:**
-```xml
-<bugfix_protocol>
-  <primary_log>nautilus_gold_scalper/BUGFIX_LOG.md</primary_log>
-  <legacy_log>MQL5/Experts/BUGFIX_LOG.md</legacy_log>
-  <format>YYYY-MM-DD (AGENT context)\n- Module: bug fix description.</format>
-  <usage>
-    <agent name="FORGE">all Python/Nautilus fixes (primary), MQL5 fixes (legacy)</agent>
-    <agent name="NAUTILUS">migration issues, Actor/Strategy bugs</agent>
-    <agent name="ORACLE">backtest bugs (Nautilus backtests)</agent>
-    <agent name="SENTINEL">risk logic bugs (Python risk modules)</agent>
-  </usage>
-  <note>Primary development on NautilusTrader (Python). MQL5 is legacy/reference only.</note>
-</bugfix_protocol>
-```
+**Incremental validation:** XML check
 
 ---
 
-### 2. Update `<forge_rule>` for Python Focus
+### 3. Update `<forge_rule>` (EXPAND, not replace)
 
 **Current:**
 ```xml
@@ -99,199 +195,83 @@ nautilus_gold_scalper/
 </forge_rule>
 ```
 
-**Change to:**
+**Expand to:**
 ```xml
 <forge_rule priority="P0.5">
-  FORGE MUST validate Python code after ANY Nautilus change:
-  - Run mypy type checking
-  - Run pytest on affected modules
-  - Fix errors BEFORE reporting
-  - NEVER deliver non-passing code!
+  FORGE MUST validate code after ANY change:
   
-  For legacy MQL5 (if touched):
-  - Auto-compile with metaeditor64
-  - Fix compilation errors
+  <python_nautilus>
+    - Run mypy --strict on changed files
+    - Run pytest on affected modules
+    - Fix errors BEFORE reporting
+    - NEVER deliver non-passing code
+  </python_nautilus>
+  
+  <mql5>
+    - Auto-compile with metaeditor64
+    - Fix compilation errors BEFORE reporting
+    - NEVER deliver non-compiling code
+  </mql5>
+  
+  FORGE auto-detects platform from file extension (.py → Python, .mq5 → MQL5).
 </forge_rule>
 ```
 
----
-
-### 3. Update `<error_recovery>` for Python/Nautilus
-
-**Current:**
-```xml
-<error_recovery>
-  <protocol agent="FORGE" name="Compilation Failure - 3-Strike Rule">
-    <attempt number="1" type="Auto">
-      <action>Verify includes paths (PROJECT_MQL5 + STDLIB_MQL5)</action>
-      <action>Recompile with /log</action>
-      <action>Read .log for error line</action>
-    </attempt>
-    <attempt number="2" type="RAG-Assisted">
-      <action>Query `mql5-docs` RAG with error message</action>
-      <action>Apply suggested fix</action>
-      <action>Recompile</action>
-    </attempt>
-    <attempt number="3" type="Escalate">
-      <action>ASK: "Debug manually or skip?"</action>
-      <action>NEVER try 4+ times without intervention</action>
-    </attempt>
-    <example>Error "undeclared identifier 'PositionSelect'" → Query RAG: "PositionSelect syntax MQL5" → Fix: Add `#include &lt;Trade\Trade.mqh>` → Recompile SUCCESS</example>
-  </protocol>
-  <protocol agent="ORACLE" name="Backtest Non-Convergence">
-    <!-- KEEP AS IS - still valid -->
-  </protocol>
-</error_recovery>
-```
-
-**Add NEW protocol for Python/Nautilus:**
-```xml
-<error_recovery>
-  <protocol agent="FORGE" name="Python Type/Import Errors - 3-Strike Rule">
-    <attempt number="1" type="Auto">
-      <action>Run mypy on affected file: mypy --strict nautilus_gold_scalper/src/module.py</action>
-      <action>Read type errors and identify missing imports/type annotations</action>
-      <action>Apply fixes</action>
-      <action>Re-run mypy</action>
-    </attempt>
-    <attempt number="2" type="RAG-Assisted">
-      <action>Query `context7` for NautilusTrader patterns with error message</action>
-      <action>Check mql5-books for trading concepts if logic error</action>
-      <action>Apply suggested fix</action>
-      <action>Run pytest on module</action>
-    </attempt>
-    <attempt number="3" type="Escalate">
-      <action>ASK: "Debug manually or skip?"</action>
-      <action>NEVER try 4+ times without intervention</action>
-    </attempt>
-    <example>Error "Module 'nautilus_trader.model' has no attribute 'OrderSide'" → Query context7: "OrderSide nautilus" → Fix: Import from correct submodule `from nautilus_trader.model.enums import OrderSide` → Retest SUCCESS</example>
-  </protocol>
-  
-  <protocol agent="NAUTILUS" name="Event-Driven Pattern Violation">
-    <detection>
-      - Blocking calls in on_bar/on_quote_tick handlers (>1ms)
-      - Global state usage (violates event-driven architecture)
-      - Direct data access outside Cache
-      - Missing async cleanup in on_stop()
-    </detection>
-    <resolution>
-      <step>Identify blocking operation or state violation</step>
-      <step>Refactor to async/await if I/O operation</step>
-      <step>Move state to Actor attributes (no globals)</step>
-      <step>Use Cache for data access, subscribe to data feed</step>
-      <step>Add cleanup in on_stop()</step>
-    </resolution>
-    <example>Error "on_bar took 5ms (>1ms budget)" → Identify: Database query blocking → Fix: Move query to Actor, publish result via MessageBus → Strategy receives event (async) → Retest SUCCESS</example>
-  </protocol>
-  
-  <protocol agent="FORGE" name="MQL5 Compilation Failure - 3-Strike Rule (LEGACY)">
-    <note>Use ONLY for legacy MQL5 reference code. Primary development is Python/Nautilus.</note>
-    <attempt number="1" type="Auto">
-      <action>Verify includes paths (PROJECT_MQL5 + STDLIB_MQL5)</action>
-      <action>Recompile with /log</action>
-      <action>Read .log for error line</action>
-    </attempt>
-    <attempt number="2" type="RAG-Assisted">
-      <action>Query `mql5-docs` RAG with error message</action>
-      <action>Apply suggested fix</action>
-      <action>Recompile</action>
-    </attempt>
-    <attempt number="3" type="Escalate">
-      <action>ASK: "Debug manually or skip?"</action>
-      <action>NEVER try 4+ times without intervention</action>
-    </attempt>
-  </protocol>
-  
-  <protocol agent="ORACLE" name="Backtest Non-Convergence">
-    <!-- KEEP AS IS - still valid -->
-  </protocol>
-</error_recovery>
-```
+**Incremental validation:** XML check
 
 ---
 
-### 4. Update `<mql5_compilation>` Section Name
+### 4. Add Python/Nautilus Error Recovery (NEW protocols)
 
-**Current:**
+**Location:** Add INSIDE existing `<error_recovery>` section (keep all existing protocols)
+
 ```xml
-<mql5_compilation>
-  <paths>
-    <compiler>C:\Program Files\FTMO MetaTrader 5\metaeditor64.exe</compiler>
-    <project>C:\Users\Admin\Documents\EA_SCALPER_XAUUSD\MQL5</project>
-    <stdlib>C:\Program Files\FTMO MetaTrader 5\MQL5</stdlib>
-  </paths>
-  <commands>
-    <!-- commands -->
-  </commands>
-  <common_errors>
-    <!-- errors -->
-  </common_errors>
-</mql5_compilation>
+<!-- ADD these NEW protocols, keep ALL existing ones -->
+
+<protocol agent="FORGE" name="Python Type/Import Errors - 3-Strike Rule">
+  <platform>Nautilus (Python)</platform>
+  <attempt number="1" type="Auto">
+    <action>Run mypy --strict on affected file</action>
+    <action>Identify missing imports or type annotations</action>
+    <action>Apply fixes</action>
+    <action>Re-run mypy</action>
+  </attempt>
+  <attempt number="2" type="RAG-Assisted">
+    <action>Query context7 for NautilusTrader patterns with error message</action>
+    <action>Apply suggested fix</action>
+    <action>Run pytest on module</action>
+  </attempt>
+  <attempt number="3" type="Escalate">
+    <action>ASK: "Debug manually or skip?"</action>
+    <action>NEVER try 4+ times without intervention</action>
+  </attempt>
+  <example>Error "Module 'nautilus_trader.model' has no attribute 'OrderSide'" → Query context7: "OrderSide nautilus" → Fix: from nautilus_trader.model.enums import OrderSide → SUCCESS</example>
+</protocol>
+
+<protocol agent="NAUTILUS" name="Event-Driven Pattern Violation">
+  <platform>Nautilus (Python)</platform>
+  <detection>
+    - Blocking calls in on_bar/on_quote_tick handlers (>1ms)
+    - Global state usage
+    - Direct data access outside Cache
+    - Missing async cleanup in on_stop()
+  </detection>
+  <resolution>
+    <step>Identify blocking operation</step>
+    <step>Refactor to async/await if I/O</step>
+    <step>Move state to Actor attributes</step>
+    <step>Use Cache for data access</step>
+    <step>Add cleanup in on_stop()</step>
+  </resolution>
+  <example>Error "on_bar took 5ms" → Move DB query to Actor → Publish via MessageBus → Strategy receives async → SUCCESS</example>
+</protocol>
 ```
 
-**Rename and add Python section:**
-```xml
-<compilation_validation>
-  <python_nautilus>
-    <type_checking>
-      <tool>mypy</tool>
-      <command>mypy --strict nautilus_gold_scalper/src/</command>
-      <config>pyproject.toml [tool.mypy] section</config>
-    </type_checking>
-    <testing>
-      <tool>pytest</tool>
-      <command>pytest nautilus_gold_scalper/tests/ -v</command>
-      <coverage>pytest --cov=nautilus_gold_scalper --cov-report=term</coverage>
-    </testing>
-    <linting>
-      <tool>ruff</tool>
-      <command>ruff check nautilus_gold_scalper/</command>
-    </linting>
-    <common_errors>
-      <error symptom="Module has no attribute">Import error - wrong submodule</error>
-      <error symptom="Incompatible type">Type annotation mismatch</error>
-      <error symptom="Event loop closed">Async cleanup missing in on_stop()</error>
-      <error symptom="blocking call in on_bar">Performance violation (>1ms)</error>
-    </common_errors>
-  </python_nautilus>
-  
-  <mql5_legacy>
-    <note>Legacy reference code only. Primary development is Python/Nautilus.</note>
-    <paths>
-      <compiler>C:\Program Files\FTMO MetaTrader 5\metaeditor64.exe</compiler>
-      <project>C:\Users\Admin\Documents\EA_SCALPER_XAUUSD\MQL5</project>
-      <stdlib>C:\Program Files\FTMO MetaTrader 5\MQL5</stdlib>
-    </paths>
-    <commands>
-      <!-- KEEP existing commands -->
-    </commands>
-    <common_errors>
-      <!-- KEEP existing errors -->
-    </common_errors>
-  </mql5_legacy>
-</compilation_validation>
-```
+**Incremental validation:** XML check after adding protocols
 
 ---
 
-### 5. Update Examples Throughout AGENTS.md
-
-Search and replace examples that reference MQL5 with Nautilus equivalents:
-
-**Current examples:**
-- "Migrate EA from MQL5 to NautilusTrader" (CRITICAL complexity)
-- "Fix compilation error in indicator" (MEDIUM complexity)
-- "FORGE: all MQL5/Python fixes"
-
-**Update to prioritize Nautilus:**
-- "Implement new Actor for RSI divergence" (COMPLEX)
-- "Fix type error in Strategy module" (MEDIUM)
-- "Refactor risk module for Apex compliance" (COMPLEX)
-- "FORGE: all Python/Nautilus fixes (primary), MQL5 fixes (legacy)"
-
----
-
-### 6. Update `<agents>` Section
+### 5. Update `<agents>` Section (FORGE only)
 
 **Current:**
 ```xml
@@ -304,222 +284,285 @@ Search and replace examples that reference MQL5 with Nautilus equivalents:
 </agent>
 ```
 
-**Change to:**
+**Update to:**
 ```xml
 <agent>
   <emoji>⚒️</emoji>
   <name>FORGE</name>
-  <use_for>Code/Python/Nautilus (primary), MQL5 (legacy)</use_for>
+  <use_for>Code/Python/Nautilus (primary), Code/MQL5 (secondary)</use_for>
   <triggers>"Forge", /codigo, /review</triggers>
-  <primary_mcps>context7★ (Nautilus docs), e2b★ (Python sandbox), github, mql5-docs (legacy)</primary_mcps>
-  <validation>mypy + pytest for Python, metaeditor64 for legacy MQL5</validation>
+  <primary_mcps>
+    Nautilus: context7★ (docs), e2b★ (sandbox)
+    MQL5: metaeditor64, mql5-docs
+    Both: github (repos), sequential-thinking (complex bugs)
+  </primary_mcps>
+  <validation>
+    Python: mypy + pytest
+    MQL5: metaeditor64 auto-compile
+  </validation>
+  <note>FORGE supports BOTH platforms - auto-detects from file extension</note>
 </agent>
+```
+
+**Incremental validation:** XML check
+
+---
+
+### 6. Add Examples for Nautilus (ADDITIVE)
+
+**Find existing examples** in `<complexity_assessment>` and ADD Nautilus equivalents:
+
+**Example additions:**
+```xml
+<!-- In MEDIUM complexity examples -->
+<example>"Fix type error in Nautilus Strategy module"</example>
+<example>"Add logging to Nautilus Actor"</example>
+
+<!-- In COMPLEX complexity examples -->
+<example>"Implement new Actor for RSI divergence detection"</example>
+<example>"Refactor risk module for Apex compliance (Python)"</example>
+
+<!-- Keep ALL existing MQL5 examples -->
 ```
 
 ---
 
-### 7. Update `<mcp_tooling>` Section
+## 📤 Output & Validation
 
-**Current FORGE MCPs:**
-```xml
-<agent name="FORGE">
-  <mcp name="metaeditor64" primary="true">compile MQL5 AUTO</mcp>
-  <mcp name="mql5-docs" primary="true">syntax/functions</mcp>
-  <mcp name="mql5-books">patterns/arch</mcp>
-  <mcp name="github">search repos</mcp>
-  <mcp name="context7">lib docs</mcp>
-  <mcp name="e2b">Python sandbox</mcp>
-</agent>
+### Execution Steps (SAFE, incremental)
+
 ```
+STEP 1: Pre-execution gates
+├─ Gate 1: Migration status check (>80% Nautilus?) ✅
+├─ Gate 2: Droid dependency scan ✅
+└─ Gate 3: Backup creation + verification ✅
 
-**Change to:**
-```xml
-<agent name="FORGE">
-  <mcp name="context7" primary="true">NautilusTrader docs, Python libs</mcp>
-  <mcp name="e2b" primary="true">Python sandbox, pytest runner</mcp>
-  <mcp name="github">search repos (Nautilus examples)</mcp>
-  <mcp name="mql5-docs">syntax/functions (LEGACY)</mcp>
-  <mcp name="metaeditor64">compile MQL5 (LEGACY)</mcp>
-  <mcp name="mql5-books">patterns/arch (reference only)</mcp>
-</agent>
+STEP 2: Add platform_support section
+├─ Add XML after <session_rules>
+├─ Incremental validation: xmllint check ✅
+└─ Git add + commit: "feat: add platform_support (Nautilus primary, MQL5 secondary)"
+
+STEP 3: Update bugfix_protocol
+├─ Add nautilus_log alongside mql5_log
+├─ Incremental validation: xmllint check ✅
+└─ Git add + commit: "feat: dual bugfix logs (Nautilus + MQL5)"
+
+STEP 4: Expand forge_rule
+├─ Add Python validation rules
+├─ Incremental validation: xmllint check ✅
+└─ Git add + commit: "feat: FORGE dual-platform validation"
+
+STEP 5: Add Python error recovery protocols
+├─ Add 2 NEW protocols INSIDE <error_recovery>
+├─ Incremental validation: xmllint check ✅
+└─ Git add + commit: "feat: Python/Nautilus error recovery protocols"
+
+STEP 6: Update FORGE agent metadata
+├─ Update use_for, primary_mcps, add validation note
+├─ Incremental validation: xmllint check ✅
+└─ Git add + commit: "feat: FORGE dual-platform metadata"
+
+STEP 7: Add Nautilus examples
+├─ Add examples in complexity_assessment
+├─ Incremental validation: xmllint check ✅
+└─ Git add + commit: "docs: add Nautilus examples to complexity levels"
+
+STEP 8: Version bump + changelog
+├─ Update <metadata> version: 3.4.0 → 3.4.1
+├─ Add <changelog> entry
+├─ Final validation: xmllint full file ✅
+└─ Git add + commit: "chore: bump version 3.4.1 (dual-platform support)"
+
+STEP 9: Post-execution smoke tests
+├─ Invoke FORGE with Python task: "List Python files in nautilus_gold_scalper/"
+├─ Invoke FORGE with MQL5 task: "List MQL5 files in MQL5/"
+├─ Verify both work correctly ✅
+└─ If failures detected: Git revert + restore backup
 ```
 
 ---
 
-## 📤 Output
+### Output File
 
-### File to Edit
-**File:** `AGENTS.md` (in-place edits)
-
-### Backup
-Before editing, create backup:
-```bash
-cp AGENTS.md AGENTS_v3.4_BACKUP_PRE_NAUTILUS_UPDATE.md
-```
-
-### Changes Summary
-
-Document all changes in output XML:
+**File:** `.prompts/009-agents-nautilus-update/agents-nautilus-update-v2-completion.md`
 
 ```xml
-<agents_md_nautilus_update>
+<agents_nautilus_update_v2>
   <metadata>
     <version>3.4.1</version>
     <date>{YYYY-MM-DD}</date>
-    <change_type>Nautilus focus migration</change_type>
+    <change_type>Dual-platform support (additive)</change_type>
+    <approach>Lightweight additions, MQL5 fully retained</approach>
   </metadata>
   
-  <backup>
-    <file>AGENTS_v3.4_BACKUP_PRE_NAUTILUS_UPDATE.md</file>
-    <status>created</status>
-  </backup>
+  <pre_execution_gates>
+    <gate name="migration_status" result="PASS">
+      Nautilus activity: {XX}%
+      Threshold: >80%
+      Decision: Proceed with Nautilus PRIMARY
+    </gate>
+    <gate name="droid_dependencies" result="PASS">
+      MQL5 refs: {N}
+      Nautilus refs: {M}
+      Decision: Nautilus {primary|equal} based on ratio
+    </gate>
+    <gate name="backup" result="PASS">
+      Backup file: AGENTS_v3.4.0_BACKUP_{timestamp}.md
+      Verified: ✅
+    </gate>
+  </pre_execution_gates>
   
-  <changes>
-    <change section="bugfix_protocol">
-      <action>Updated primary log to nautilus_gold_scalper/BUGFIX_LOG.md</action>
-      <action>Added NAUTILUS agent to usage</action>
-      <action>Marked MQL5 as legacy</action>
+  <changes_applied>
+    <change step="1" section="platform_support">
+      Action: Added NEW section after <session_rules>
+      Validation: xmllint PASS ✅
+      Git commit: {hash}
     </change>
     
-    <change section="forge_rule">
-      <action>Changed from MQL5 auto-compile to Python validation (mypy + pytest)</action>
-      <action>Added legacy note for MQL5 compilation</action>
+    <change step="2" section="bugfix_protocol">
+      Action: Added nautilus_log alongside mql5_log
+      Validation: xmllint PASS ✅
+      Git commit: {hash}
     </change>
     
-    <change section="error_recovery">
-      <action>Added "Python Type/Import Errors - 3-Strike Rule" protocol</action>
-      <action>Added "Event-Driven Pattern Violation" protocol for NAUTILUS</action>
-      <action>Marked MQL5 compilation protocol as LEGACY</action>
+    <change step="3" section="forge_rule">
+      Action: Expanded to support Python + MQL5 validation
+      Validation: xmllint PASS ✅
+      Git commit: {hash}
     </change>
     
-    <change section="mql5_compilation">
-      <action>Renamed to compilation_validation</action>
-      <action>Added python_nautilus subsection with mypy, pytest, ruff</action>
-      <action>Moved MQL5 to mql5_legacy subsection</action>
+    <change step="4" section="error_recovery">
+      Action: Added 2 NEW protocols (Python Type/Import + Event-Driven Pattern)
+      Existing protocols: KEPT (no deletions)
+      Validation: xmllint PASS ✅
+      Git commit: {hash}
     </change>
     
-    <change section="agents">
-      <action>Updated FORGE use_for: Python/Nautilus (primary), MQL5 (legacy)</action>
-      <action>Updated FORGE primary_mcps: context7★, e2b★ (Python focus)</action>
-      <action>Added validation note: mypy + pytest for Python</action>
+    <change step="5" section="agents (FORGE)">
+      Action: Updated use_for, primary_mcps, added validation note
+      Validation: xmllint PASS ✅
+      Git commit: {hash}
     </change>
     
-    <change section="mcp_tooling">
-      <action>FORGE: context7 and e2b now primary (was metaeditor64 + mql5-docs)</action>
-      <action>FORGE: mql5-docs and metaeditor64 marked LEGACY</action>
+    <change step="6" section="complexity_assessment">
+      Action: Added Nautilus examples (KEPT all MQL5 examples)
+      Validation: xmllint PASS ✅
+      Git commit: {hash}
     </change>
     
-    <change section="examples">
-      <action>Updated COMPLEX example: "Migrate EA from MQL5" → "Implement new Actor for RSI"</action>
-      <action>Updated MEDIUM example: "Fix compilation error" → "Fix type error in Strategy"</action>
-      <action>Added Nautilus-specific examples throughout</action>
+    <change step="7" section="metadata">
+      Action: Version 3.4.0 → 3.4.1, added changelog
+      Validation: xmllint full file PASS ✅
+      Git commit: {hash}
     </change>
-  </changes>
+  </changes_applied>
+  
+  <smoke_tests>
+    <test name="FORGE Python task" result="PASS">
+      Task: "List Python files in nautilus_gold_scalper/"
+      Output: {file list}
+      Validation: ✅ FORGE responded correctly
+    </test>
+    
+    <test name="FORGE MQL5 task" result="PASS">
+      Task: "List MQL5 files in MQL5/"
+      Output: {file list}
+      Validation: ✅ FORGE responded correctly with MQL5 knowledge
+    </test>
+    
+    <test name="XML integrity" result="PASS">
+      Command: xmllint --noout AGENTS.md
+      Result: No errors
+      Validation: ✅ AGENTS.md XML valid
+    </test>
+  </smoke_tests>
   
   <version_update>
     <from>3.4.0</from>
     <to>3.4.1</to>
     <changelog>
-      - Primary platform: MQL5 → NautilusTrader (Python)
-      - FORGE focus: Python/Nautilus with mypy + pytest validation
-      - MQL5 marked as LEGACY (reference only)
-      - Added Python/Nautilus error recovery protocols
-      - Updated all examples to Nautilus context
+      - Added dual-platform support (Nautilus PRIMARY, MQL5 SECONDARY)
+      - Added <platform_support> section with routing rules
+      - Expanded FORGE to support Python/Nautilus validation (mypy + pytest)
+      - Added Python/Nautilus error recovery protocols (2 NEW)
+      - Added Nautilus examples to complexity assessment
+      - MQL5 fully retained (NOT deprecated, important for future)
     </changelog>
   </version_update>
   
+  <rollback_if_needed>
+    <command>cp AGENTS_v3.4.0_BACKUP_{timestamp}.md AGENTS.md</command>
+    <command>git revert {commit_hashes}</command>
+  </rollback_if_needed>
+  
   <next_steps>
     <step>Review AGENTS.md v3.4.1 changes</step>
-    <step>Execute 010-droid-refactoring-master.md (FASE 2-4)</step>
-    <step>Update all droids to inherit from AGENTS.md v3.4.1</step>
+    <step>Test droids in real session (FORGE with Python + MQL5 tasks)</step>
+    <step>Execute 010-droid-refactoring-master-v2.md (if approved)</step>
   </next_steps>
   
   <confidence>HIGH</confidence>
-  <dependencies>
-    <dependency>Backup created before edits</dependency>
-    <dependency>Version updated in metadata (3.4.0 → 3.4.1)</dependency>
-  </dependencies>
+  <breaking_changes>NONE (additive only, MQL5 fully functional)</breaking_changes>
   
-  <open_questions>
-    <question>Should MQL5 be completely removed or kept as legacy reference?</question>
-    <answer>KEEP as legacy - useful for migration understanding and reference</answer>
-  </open_questions>
-  
-  <assumptions>
-    <assumption>NautilusTrader is now primary platform (migration from MQL5 complete or near-complete)</assumption>
-    <assumption>FORGE will work more with Python/Nautilus than MQL5 going forward</assumption>
-  </assumptions>
-</agents_md_nautilus_update>
-```
-
----
-
-### SUMMARY.md
-
-**File:** `.prompts/009-agents-nautilus-update/SUMMARY.md`
-
-```markdown
-# AGENTS.md Nautilus Update Summary
-
-**One-liner:** Updated AGENTS.md v3.4 → v3.4.1 to prioritize NautilusTrader (Python) over MQL5, marking MQL5 as LEGACY
-
-## Version
-v3.4.1 (from v3.4.0)
-
-## Key Findings
-• FORGE now validates with mypy + pytest (Python focus) instead of metaeditor64 (MQL5)
-• Primary bugfix log: `nautilus_gold_scalper/BUGFIX_LOG.md` (was `MQL5/Experts/BUGFIX_LOG.md`)
-• Added 2 new error recovery protocols: Python Type/Import Errors + Event-Driven Pattern Violation
-• MQL5 compilation moved to `<mql5_legacy>` section (kept for reference)
-• All examples updated to Nautilus context (Actors, Strategies, event-driven patterns)
-
-## Files Modified
-- `AGENTS.md` (v3.4.0 → v3.4.1)
-- `AGENTS_v3.4_BACKUP_PRE_NAUTILUS_UPDATE.md` (backup created)
-
-## Decisions Needed
-None - changes align with project's migration to NautilusTrader
-
-## Blockers
-None
-
-## Next Step
-Execute 010-droid-refactoring-master.md (FASE 2-4: refactor TOP 5 droids with inheritance)
+  <improvements_over_v1>
+    <improvement>Pre-execution verification gates (migration status, dependencies, backup)</improvement>
+    <improvement>Incremental XML validation (after each edit, not just at end)</improvement>
+    <improvement>Granular git commits (7 commits, easy rollback per-step)</improvement>
+    <improvement>Post-execution smoke tests (verify FORGE works for both platforms)</improvement>
+    <improvement>MQL5 NOT marked as legacy (remains important for future)</improvement>
+    <improvement>Additive approach (no deletions, no breaking changes)</improvement>
+    <improvement>Clear rollback procedure (backup + git revert commands)</improvement>
+    <improvement>Realistic execution time (1-1.5h with validation, not 15-20 min)</improvement>
+  </improvements_over_v1>
+</agents_nautilus_update_v2>
 ```
 
 ---
 
 ## ✅ Success Criteria
 
-- [ ] Backup created: `AGENTS_v3.4_BACKUP_PRE_NAUTILUS_UPDATE.md`
-- [ ] `<bugfix_protocol>` updated (primary log: nautilus_gold_scalper/, legacy: MQL5/)
-- [ ] `<forge_rule>` updated (mypy + pytest validation for Python)
-- [ ] `<error_recovery>` updated (2 new protocols for Python/Nautilus, MQL5 marked LEGACY)
-- [ ] `<mql5_compilation>` renamed to `<compilation_validation>` with python_nautilus + mql5_legacy
-- [ ] `<agents>` FORGE section updated (Python/Nautilus primary, MQL5 legacy)
-- [ ] `<mcp_tooling>` FORGE section updated (context7★, e2b★ primary)
-- [ ] Examples throughout updated to Nautilus context
-- [ ] Version metadata updated (3.4.0 → 3.4.1)
-- [ ] Changelog added to `<metadata>` section
-- [ ] Output XML with all changes documented
-- [ ] SUMMARY.md created
+**Pre-execution:**
+- [ ] Migration status >80% Nautilus (or user approved equal priority)
+- [ ] Droid dependency scan completed
+- [ ] Backup created and verified
+
+**During execution:**
+- [ ] Each XML edit followed by xmllint validation
+- [ ] 7 granular git commits (one per step)
+- [ ] No XML syntax errors at any point
+
+**Post-execution:**
+- [ ] Smoke test 1: FORGE responds correctly to Python task
+- [ ] Smoke test 2: FORGE responds correctly to MQL5 task
+- [ ] Final XML validation: xmllint full file PASS
+- [ ] Version updated: 3.4.0 → 3.4.1
+- [ ] Changelog includes all changes
+- [ ] MQL5 sections fully functional (not deprecated)
+
+**If ANY criterion fails:** Execute rollback procedure immediately.
 
 ---
 
-## ⚡ Intelligence Application
+## 🎯 Estimated Time
 
-**Use sequential-thinking (7+ thoughts):**
-1. What is REAL problem? → AGENTS.md references MQL5 but project uses Nautilus (misdirection)
-2. What am I NOT seeing? → Some MQL5 knowledge is still valuable (keep as legacy, don't delete)
-3. What breaks if I remove MQL5? → Lose reference for understanding original EA (keep as legacy)
-4. What happens 5 steps ahead? → Droids inherit updated AGENTS.md → All agents focus on Nautilus
-5. Edge cases? → What if user needs MQL5 compilation? (keep legacy section available)
-
-**Proactive problem detection:**
-- Maintainability: IMPROVED (correct platform focus)
-- Performance: No impact (documentation change only)
-- Dependencies: AGENTS.md droids will inherit updated focus
+- Pre-execution gates: 15 min
+- Step 1-2 (platform_support + bugfix_protocol): 20 min
+- Step 3-4 (forge_rule + error_recovery): 20 min
+- Step 5-6 (agents + examples): 15 min
+- Step 7-8 (version + changelog): 10 min
+- Step 9 (smoke tests): 10 min
+- **Total: 1h 30min** (realistic, with validation and safety checks)
 
 ---
 
-**EXECUTE THIS PROMPT WITH:** claude-sonnet-4 (precision required for in-place edits)
+## 🚨 CRITICAL NOTES
+
+1. **MQL5 is NOT deprecated** - Remains fully functional and important
+2. **Additive only** - No deletions, no "legacy" labels
+3. **Incremental validation** - XML check after EACH edit
+4. **Granular commits** - 7 commits for easy per-step rollback
+5. **Smoke tests mandatory** - Test BOTH platforms before declaring success
+
+---
+
+**EXECUTE THIS PROMPT WITH:** claude-sonnet-4 (precision + safety required)

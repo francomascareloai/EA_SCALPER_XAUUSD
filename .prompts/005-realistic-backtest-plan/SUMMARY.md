@@ -83,7 +83,8 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.60 (tar
 
 | Blocker | Impact | Resolution Path |
 |---------|--------|-----------------|
-| P0 issues unfixed | Cannot start validation | Complete Phase 1 (4.25 days) |
+| ~~P0 issues unfixed~~ | ~~Cannot start~~ | ✅ **RESOLVED** (UPDATE 2025-12-07) |
+| ~~Data download pending~~ | ~~Cannot backtest~~ | ✅ **RESOLVED** (25.5M ticks ready) |
 | Apex demo account | Cannot paper trade | Owner to provision |
 | NinjaTrader adapter | Cannot go live | Complete after paper trading |
 
@@ -106,14 +107,16 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.60 (tar
 
 ## Next Steps
 
-| # | Action | Owner | Target |
+| # | Action | Owner | Status |
 |---|--------|-------|--------|
-| 1 | Fix ORACLE Bug #2 (threshold 65→70) | FORGE | Day 1 |
-| 2 | Implement TimeConstraintManager | FORGE | Day 1-2 |
-| 3 | Implement consistency rule | FORGE | Day 3 |
-| 4 | Integrate CircuitBreaker | FORGE | Day 4 |
-| 5 | Download Dukascopy data | FORGE | Day 6 |
-| 6 | Run baseline backtest | ORACLE | Day 8 |
+| 1 | Fix ORACLE Bug #2 (threshold 65→70) | FORGE | ✅ DONE |
+| 2 | Implement TimeConstraintManager | FORGE | ✅ DONE |
+| 3 | Implement consistency rule | FORGE | ✅ DONE |
+| 4 | Integrate CircuitBreaker | FORGE | ✅ DONE |
+| 5 | ~~Download Dukascopy data~~ | FORGE | ✅ **DATA EXISTS** (25.5M ticks) |
+| 6 | Run baseline backtest | ORACLE | ⏳ **READY TO RUN** |
+
+**UPDATE 2025-12-07**: Items 1-5 complete. Data at `data/ticks/xauusd_2020_2024_stride20.parquet`.
 
 ---
 
