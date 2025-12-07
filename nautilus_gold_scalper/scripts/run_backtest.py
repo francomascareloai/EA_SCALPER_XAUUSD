@@ -78,6 +78,16 @@ def load_tick_data(
         df['datetime'] = pd.to_datetime(df['datetime'], utc=True)
     else:
         df['datetime'] = df['datetime'].dt.tz_convert('UTC')
+
+    # Basic validation: no NaN, monotonic increasing timestamps
+    if df['datetime'].isna().any():
+        raise ValueError("Tick data contains NaN datetimes")
+    if not df['datetime'].is_monotonic_increasing:
+        df = df.sort_values('datetime')
+        if not df['datetime'].is_monotonic_increasing:
+            raise ValueError("Tick data timestamps are not monotonic even after sort")
+    if df[['bid', 'ask']].isna().any().any():
+        raise ValueError("Tick data contains NaN bid/ask values")
     
     if start_date:
         df = df[df['datetime'] >= start_date]
@@ -91,18 +101,21 @@ def load_tick_data(
     return df
 
 
-def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair) -> list:
+def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0) -> list:
     """Convert DataFrame to QuoteTick objects."""
     print("Converting to QuoteTick objects...")
     
+    slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
     ticks = []
     for idx, row in df.iterrows():
         ts_ns = int(row['datetime'].timestamp() * 1e9)
+        bid_px = row['bid'] - slip_value
+        ask_px = row['ask'] + slip_value
         
         tick = QuoteTick(
             instrument_id=instrument.id,
-            bid_price=Price.from_str(f"{row['bid']:.2f}"),
-            ask_price=Price.from_str(f"{row['ask']:.2f}"),
+            bid_price=Price.from_str(f"{bid_px:.2f}"),
+            ask_price=Price.from_str(f"{ask_px:.2f}"),
             bid_size=Quantity.from_str("1.00"),
             ask_size=Quantity.from_str("1.00"),
             ts_event=ts_ns,
@@ -162,12 +175,16 @@ class BacktestRunner:
         self,
         initial_balance: float = 100_000.0,
         log_level: str = "WARNING",
+        slippage_ticks: int = 2,
+        commission_per_contract: float = 2.5,
     ):
         self.initial_balance = initial_balance
         self.log_level = log_level
         self.engine = None
         self.venue = Venue("SIM")
         self.instrument = None
+        self.slippage_ticks = slippage_ticks
+        self.commission_per_contract = commission_per_contract
     
     def run(
         self,
@@ -197,7 +214,7 @@ class BacktestRunner:
         engine_config = BacktestEngineConfig(
             trader_id=TraderId("GOLD-TICK-001"),
             logging=LoggingConfig(log_level=self.log_level),
-            risk_engine=RiskEngineConfig(bypass=True),
+            risk_engine=RiskEngineConfig(bypass=False),
         )
         
         self.engine = NautilusEngine(config=engine_config)
@@ -237,7 +254,7 @@ class BacktestRunner:
         print(f"Bar type: {bar_type}")
         
         # Convert ticks to QuoteTicks for spread-aware execution
-        quote_ticks = create_quote_ticks(df, self.instrument)
+        quote_ticks = create_quote_ticks(df, self.instrument, slippage_ticks=self.slippage_ticks)
 
         # Pre-aggregate ticks to M5 bars
         bars = aggregate_ticks_to_bars(df, bar_type, interval_minutes=5)
@@ -320,13 +337,17 @@ class BacktestRunner:
             
             # Calculate summary
             final_balance = float(account['total'].iloc[-1]) if len(account) > 0 else 100000
-            total_pnl = final_balance - 100000
+            fills_count = len(fills) if 'fills' in locals() and fills is not None else 0
+            total_commissions = fills_count * self.commission_per_contract
+            total_pnl = final_balance - 100000 - total_commissions
             
             print(f"\n" + "="*60)
             print("SUMMARY")
             print("="*60)
             print(f"Final Balance: ${final_balance:,.2f}")
-            print(f"Total PnL: ${total_pnl:,.2f} ({total_pnl/1000:.2f}%)")
+            print(f"Total PnL (net commissions): ${total_pnl:,.2f} ({total_pnl/1000:.2f}%)")
+            if total_commissions > 0:
+                print(f"Commissions: ${total_commissions:,.2f} ({fills_count} fills @ {self.commission_per_contract} each)")
             
             # Win rate from positions
             if 'positions' in dir() and len(positions) > 0 and 'realized_pnl' in positions.columns:
@@ -364,7 +385,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run XAUUSD backtest')
     parser.add_argument('--start', default='2024-01-01', help='Start date')
     parser.add_argument('--end', default='2024-03-31', help='End date')
-    parser.add_argument('--threshold', type=int, default=65, help='Execution threshold')
+    parser.add_argument('--threshold', type=int, default=70, help='Execution threshold')
     parser.add_argument('--sample', type=int, default=1, help='Tick sample rate (1 = all ticks)')
     parser.add_argument('--sweep', action='store_true', help='Run parameter sweep')
     parser.add_argument('--no-news', action='store_true', help='Disable news filter')
@@ -380,7 +401,7 @@ def main():
         import json
         from datetime import datetime
         
-        thresholds = [50, 60, 65, 70, 75]
+        thresholds = [60, 65, 70, 75]
         results = []
         
         for thresh in thresholds:

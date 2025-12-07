@@ -24,7 +24,7 @@ from nautilus_trader.model.objects import Price, Quantity
 from .base_strategy import BaseGoldStrategy, BaseStrategyConfig
 from ..core.definitions import (
     SignalType, SignalQuality, MarketRegime, TradingSession,
-    TIER_INVALID,
+    TIER_INVALID, XAUUSD_POINT,
 )
 from ..indicators.structure_analyzer import MarketBias
 from ..core.data_types import ConfluenceResult, RegimeAnalysis, SessionInfo, OrderBlock, FairValueGap
@@ -48,6 +48,7 @@ from ..signals.news_calendar import NewsCalendar, NewsTradeAction
 from ..risk.prop_firm_manager import PropFirmManager
 from ..risk.position_sizer import PositionSizer
 from ..risk.drawdown_tracker import DrawdownTracker
+from ..risk.spread_monitor import SpreadMonitor, SpreadState
 
 
 class GoldScalperConfig(BaseStrategyConfig, frozen=True):
@@ -77,6 +78,12 @@ class GoldScalperConfig(BaseStrategyConfig, frozen=True):
     use_news_filter: bool = True
     news_score_penalty: int = -15
     news_size_multiplier: float = 0.5
+
+    # Operational/Apex rules
+    flatten_time_et: str = "16:59"  # HH:MM ET hard cutoff
+    allow_overnight: bool = False
+    slippage_ticks: int = 2
+    commission_per_contract: float = 2.5
 
 
 class GoldScalperStrategy(BaseGoldStrategy):
@@ -121,6 +128,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
         self._drawdown_tracker: Optional[DrawdownTracker] = None
         self._news_calendar: Optional[NewsCalendar] = None
         self._news_size_mult: float = 1.0
+        self._spread_monitor: Optional[SpreadMonitor] = None
+        self._spread_snapshot: Optional[Any] = None
         
         # Analysis state (per timeframe)
         self._htf_bias: MarketBias = MarketBias.RANGING
@@ -188,6 +197,13 @@ class GoldScalperStrategy(BaseGoldStrategy):
             )
             # Initialize prop-firm state with starting equity
             self._prop_firm.initialize(starting_equity=float(self.config.account_balance))
+
+        # Spread monitor (risk realism)
+        self._spread_monitor = SpreadMonitor(
+            symbol="XAUUSD",
+            max_spread_pips=float(self.config.max_spread_points) / 10.0,  # convert points->pips (pip_factor=10)
+            pip_factor=10.0,
+        )
         
         # Validate all critical analyzers
         if not self._validate_analyzers():
@@ -244,6 +260,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             # Reset daily counters
             self._daily_trades = 0
             self._daily_pnl = 0.0
+            self._trading_blocked_today = False
             if self._drawdown_tracker:
                 try:
                     self._drawdown_tracker.reset_daily()
@@ -251,8 +268,11 @@ class GoldScalperStrategy(BaseGoldStrategy):
                     pass
             
             # Reset prop firm manager if active
-            if self._prop_firm is not None and hasattr(self._prop_firm, 'on_new_day'):
-                self._prop_firm.on_new_day()
+            if self._prop_firm is not None:
+                try:
+                    self._prop_firm.on_new_day(current_equity=self._equity_base)
+                except Exception:
+                    self.log.debug("PropFirmManager daily reset failed", exc_info=True)
             
             # Reset drawdown tracker if active
             if self._drawdown_tracker is not None and hasattr(self._drawdown_tracker, 'on_new_day'):
@@ -323,7 +343,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _on_ltf_bar(self, bar: Bar) -> None:
         """Process M5 bar - Update execution-level analysis."""
-        pass  # Main signal checking done in _check_for_signal
+        # Enforce intraday operational rules (Apex)
+        self._enforce_cutoff(bar.ts_event)
+        # Main signal checking done in _check_for_signal
+        pass
     
     def _check_for_signal(self, bar: Bar) -> None:
         """Check for trading signal and execute if valid."""
@@ -354,6 +377,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
             
             if not self._current_session.is_trading_allowed:
                 return
+
+        # Apex cutoff / overnight guard (block new trades after cutoff)
+        if getattr(self, "_trading_blocked_today", False):
+            return
         
         # Check prop firm limits (only if enabled)
         if self.config.prop_firm_enabled and self._prop_firm and not self._prop_firm.can_trade():
@@ -373,6 +400,17 @@ class GoldScalperStrategy(BaseGoldStrategy):
             self._news_size_mult = max(news_window.size_multiplier, 0.0)
         
         # Check spread
+        if self._spread_snapshot:
+            if not self._spread_snapshot.can_trade:
+                if len(self._ltf_bars) % 500 == 0:
+                    print(f"[SIGNAL] Spread blocked: {self._spread_snapshot.reason}")
+                return
+            spread_score_adj = self._spread_snapshot.score_adjustment
+            spread_size_mult = self._spread_snapshot.size_multiplier
+        else:
+            spread_score_adj = 0
+            spread_size_mult = 1.0
+
         if self._current_spread > self.config.max_spread_points:
             if len(self._ltf_bars) % 500 == 0:
                 print(f"[SIGNAL] Spread too high: {self._current_spread} > {self.config.max_spread_points}")
@@ -396,7 +434,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             return
         
         news_score_adj = news_window.score_adjustment if news_window else 0
-        effective_score = confluence_result.total_score + news_score_adj
+        effective_score = confluence_result.total_score + news_score_adj + spread_score_adj
         
         if len(self._ltf_bars) % 500 == 0:
             print(
@@ -661,11 +699,15 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _calculate_position_size(self, sl_distance: float) -> Optional[Quantity]:
         """Calculate position size based on risk and regime."""
+        spread_mult = 1.0
+        if self._spread_snapshot:
+            spread_mult = max(0.0, min(1.0, self._spread_snapshot.size_multiplier))
         if not self._position_sizer:
             # Default sizing
             current_equity = self._equity_base
             risk_amount = current_equity * float(self.config.risk_per_trade) / 100
             risk_amount *= getattr(self, "_news_size_mult", 1.0)
+            risk_amount *= spread_mult  # reduce size under high spread
             point_value = 1.0  # Gold point value (adjust per broker)
             lots = risk_amount / (sl_distance * point_value)
             return Quantity.from_str(str(round(max(0.01, lots), 2)))
@@ -677,13 +719,14 @@ class GoldScalperStrategy(BaseGoldStrategy):
         
         # Calculate base size
         news_mult = getattr(self, "_news_size_mult", 1.0)
-        risk_pct = float(self.config.risk_per_trade) * news_mult
+        risk_pct = float(self.config.risk_per_trade) * news_mult * spread_mult
         
         # Use PositionSizer.calculate_lot
+        sl_pips = sl_distance / XAUUSD_POINT  # convert price distance to pips (0.01 per point)
         position_size = self._position_sizer.calculate_lot(
             balance=self._equity_base,
             risk_percent=risk_pct,
-            stop_loss_pips=sl_distance,  # Convert points to pips if needed
+            stop_loss_pips=sl_pips,
             regime_multiplier=regime_mult,
         )
         
@@ -699,6 +742,15 @@ class GoldScalperStrategy(BaseGoldStrategy):
         spread = float(tick.ask_price - tick.bid_price)
         if self.instrument:
             self._current_spread = int(spread / self.instrument.price_increment)
+        if self._spread_monitor:
+            try:
+                snapshot = self._spread_monitor.update(
+                    bid=tick.bid_price.as_double(),
+                    ask=tick.ask_price.as_double(),
+                )
+                self._spread_snapshot = snapshot
+            except Exception:
+                self._spread_snapshot = None
         
         # Update prop-firm trailing drawdown with mark-to-market equity
         if self._prop_firm:
@@ -708,3 +760,38 @@ class GoldScalperStrategy(BaseGoldStrategy):
                     self._prop_firm.update_equity(equity)
                 except Exception as exc:
                     logger.debug(f"Prop firm equity update failed: {exc}")
+
+        # After close of trading window flatten positions
+        self._enforce_cutoff(tick.ts_event)
+
+    # ========== Operational helpers ==========
+    def _enforce_cutoff(self, ts_ns: int) -> None:
+        """
+        Enforce end-of-day cutoff and no-overnight rules.
+        Closes open positions and blocks new trades after cutoff.
+        """
+        from datetime import time
+        try:
+            from zoneinfo import ZoneInfo
+            eastern = ZoneInfo("America/New_York")
+        except Exception:
+            eastern = timezone.utc
+
+        if getattr(self.config, "allow_overnight", False):
+            return
+
+        dt_utc = datetime.fromtimestamp(ts_ns / 1e9, tz=timezone.utc)
+        dt_et = dt_utc.astimezone(eastern)
+
+        cutoff_h, cutoff_m = map(int, self.config.flatten_time_et.split(":"))
+        cutoff = time(hour=cutoff_h, minute=cutoff_m)
+
+        if dt_et.time() >= cutoff:
+            if not getattr(self, "_trading_blocked_today", False):
+                self._trading_blocked_today = True
+                self.log.warning(f"Cutoff reached ({dt_et.time()} ET) - blocking new trades")
+            if self._position:
+                self._close_position()
+            self._is_trading_allowed = False
+        else:
+            self._trading_blocked_today = False

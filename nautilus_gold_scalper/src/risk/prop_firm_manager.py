@@ -89,6 +89,19 @@ class PropFirmManager:
             self._consecutive_wins = 0
         self.update_equity(self._equity + profit)
 
+    def on_new_day(self, current_equity: Optional[float] = None) -> None:
+        """
+        Reset daily loss tracking at start of trading day.
+        Args:
+            current_equity: equity snapshot to set as new daily start (optional)
+        """
+        if current_equity is not None:
+            self._equity = current_equity
+        self._daily_start_equity = self._equity
+        self._consecutive_wins = 0
+        self._consecutive_losses = 0
+        self._last_update = datetime.now(timezone.utc)
+
     # -------------------- checks
     def can_trade(self) -> bool:
         state = self.get_state()
@@ -167,4 +180,3 @@ class PropFirmManager:
 
     def update_current_balance(self, balance: float) -> None:
         self.update_equity(balance)
-

@@ -79,6 +79,13 @@ def load_bar_data(filepath: str, start_date: str = None, end_date: str = None) -
         'Volume': 'volume'
     })
     df = df[['open', 'high', 'low', 'close', 'volume']]
+
+    if df.isna().any().any():
+        raise ValueError("Bar data contains NaN values")
+    if not df.index.is_monotonic_increasing:
+        df = df.sort_index()
+        if not df.index.is_monotonic_increasing:
+            raise ValueError("Bar data timestamps not monotonic even after sort")
     
     # Filter by date
     if start_date:
@@ -110,7 +117,7 @@ def run_nautilus_backtest(
             log_level_file="DEBUG",
         ),
         risk_engine=RiskEngineConfig(
-            bypass=True,  # Bypass for backtest speed
+            bypass=False,  # Enforce risk for realism
         ),
     )
     
@@ -164,7 +171,7 @@ def run_nautilus_backtest(
         ltf_bar_type=bar_type,
         
         # Scoring thresholds
-        execution_threshold=50,  # Lower for testing
+        execution_threshold=70,
         min_mtf_confluence=50.0,
         
         # Risk settings

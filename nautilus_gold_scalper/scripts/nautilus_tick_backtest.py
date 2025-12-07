@@ -66,6 +66,15 @@ def load_tick_data(
         df['datetime'] = pd.to_datetime(df['datetime'], utc=True)
     else:
         df['datetime'] = df['datetime'].dt.tz_convert('UTC')
+
+    if df['datetime'].isna().any():
+        raise ValueError("Tick data contains NaN datetimes")
+    if not df['datetime'].is_monotonic_increasing:
+        df = df.sort_values('datetime')
+        if not df['datetime'].is_monotonic_increasing:
+            raise ValueError("Tick data timestamps are not monotonic after sort")
+    if df[['bid', 'ask']].isna().any().any():
+        raise ValueError("Tick data contains NaN bid/ask values")
     
     # Filter by date
     if start_date:
@@ -81,18 +90,21 @@ def load_tick_data(
     return df
 
 
-def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair) -> list:
+def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0) -> list:
     """Convert DataFrame to QuoteTick objects."""
     print("Converting to QuoteTick objects...")
     
+    slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
     ticks = []
     for idx, row in df.iterrows():
         ts_ns = int(row['datetime'].timestamp() * 1e9)
+        bid_px = row['bid'] - slip_value
+        ask_px = row['ask'] + slip_value
         
         tick = QuoteTick(
             instrument_id=instrument.id,
-            bid_price=Price.from_str(f"{row['bid']:.2f}"),
-            ask_price=Price.from_str(f"{row['ask']:.2f}"),
+            bid_price=Price.from_str(f"{bid_px:.2f}"),
+            ask_price=Price.from_str(f"{ask_px:.2f}"),
             bid_size=Quantity.from_str("1.00"),  # Match instrument precision (2 decimals)
             ask_size=Quantity.from_str("1.00"),
             ts_event=ts_ns,
@@ -113,6 +125,7 @@ def run_tick_backtest(
     initial_balance: float = 100_000.0,
     sample_rate: int = 10,  # Sample every 10th tick for speed
     log_level: str = "WARNING",
+    slippage_ticks: int = 2,
 ):
     """Run backtest using tick data."""
     
@@ -124,7 +137,7 @@ def run_tick_backtest(
     engine_config = BacktestEngineConfig(
         trader_id=TraderId("GOLD-TICK-001"),
         logging=LoggingConfig(log_level=log_level),
-        risk_engine=RiskEngineConfig(bypass=True),
+        risk_engine=RiskEngineConfig(bypass=False),
     )
     
     engine = BacktestEngine(config=engine_config)
@@ -152,7 +165,7 @@ def run_tick_backtest(
     df = load_tick_data(str(tick_path), start_date, end_date, sample_rate)
     
     # Convert to QuoteTicks
-    ticks = create_quote_ticks(df, xauusd)
+    ticks = create_quote_ticks(df, xauusd, slippage_ticks=slippage_ticks)
     
     # Add tick data to engine
     engine.add_data(ticks)
@@ -177,7 +190,7 @@ def run_tick_backtest(
         ltf_bar_type=bar_type,  # Subscribe to bars aggregated from ticks
         
         # Thresholds
-        execution_threshold=50,
+        execution_threshold=70,
         
         # Disable filters for initial testing
         use_session_filter=False,
