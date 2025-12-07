@@ -1166,8 +1166,10 @@
         <examples>
           <example>"Add input validation to function"</example>
           <example>"Fix compilation error in indicator"</example>
+          <example>"Fix type error in Nautilus Strategy module"</example>
           <example>"Refactor function for clarity"</example>
           <example>"Add logging to module"</example>
+          <example>"Add logging to Nautilus Actor"</example>
         </examples>
         
         <time_estimate>10-30 minutes</time_estimate>
@@ -1184,7 +1186,9 @@
         
         <examples>
           <example>"Implement new indicator with Actor pattern"</example>
+          <example>"Implement new Actor for RSI divergence detection"</example>
           <example>"Refactor risk module for Apex compliance"</example>
+          <example>"Refactor risk module for Apex compliance (Python)"</example>
           <example>"Add circuit breaker with state management"</example>
           <example>"Integrate ONNX model inference"</example>
         </examples>
