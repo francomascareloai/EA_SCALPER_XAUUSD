@@ -520,6 +520,6 @@ class SpreadMonitor:
 # ✓ CHECK 2: Bounds & Null (deque, Optional typing, inf checks)
 # ✓ CHECK 3: Division by zero guards (avg_spread > 0, std_dev > 0, sl_distance > 0)
 # ✓ CHECK 4: Resource management (deque auto-manages, no manual cleanup needed)
-# ✓ CHECK 5: FTMO compliance (spread gates prevent bad executions)
+# ✓ CHECK 5: Prop firm compliance (spread gates prevent bad executions)
 # ✓ CHECK 6: REGRESSION - New module, no dependents yet
 # ✓ CHECK 7: BUG PATTERNS - No known patterns violated

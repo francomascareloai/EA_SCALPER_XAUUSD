@@ -392,6 +392,6 @@ class PositionSizer:
 # - Bounds & Null: Division by zero guards, min/max enforcement
 # - Division by zero: Guards in all formulas
 # - Resource management: No resources to manage
-# - FTMO compliance: Respects risk limits
+# - Apex compliance: Respects trailing DD and risk limits
 # - Regression: New module, no dependencies
 # - Bug patterns: None detected

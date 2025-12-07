@@ -342,6 +342,6 @@ class VaRCalculator:
 # - Bounds & Null: Division by zero guards, empty list checks
 # - Division by zero: Guards in all formulas
 # - Resource management: No resources to manage
-# - FTMO compliance: Provides risk metrics for compliance
+# - Apex compliance: Risk metrics for trailing DD and position sizing
 # - Regression: New module, no dependencies
 # - Bug patterns: None detected

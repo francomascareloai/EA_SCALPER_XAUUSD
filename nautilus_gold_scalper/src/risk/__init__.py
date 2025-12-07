@@ -43,7 +43,7 @@ Example:
     circuit_breaker.update_equity(current_equity=100_250)
 """
 
-from .prop_firm_manager import PropFirmManager
+from .prop_firm_manager import PropFirmManager, PropFirmLimits, PropFirmState, RiskLevel, AccountTerminatedException
 from .position_sizer import PositionSizer, LotSizeMethod
 from .drawdown_tracker import DrawdownTracker, DrawdownSnapshot
 from .var_calculator import VaRCalculator
@@ -54,6 +54,10 @@ from .consistency_tracker import ConsistencyTracker
 
 __all__ = [
     "PropFirmManager",
+    "PropFirmLimits",
+    "PropFirmState",
+    "RiskLevel",
+    "AccountTerminatedException",
     "PositionSizer",
     "LotSizeMethod",
     "DrawdownTracker",

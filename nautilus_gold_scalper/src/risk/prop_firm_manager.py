@@ -10,8 +10,14 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional, Tuple
 from datetime import datetime, timezone
+from decimal import Decimal
 
 from .consistency_tracker import ConsistencyTracker
+
+
+class AccountTerminatedException(Exception):
+    """Raised when Apex Trading limits are breached (DD > 10% or consistency rule violated)."""
+    pass
 
 
 class RiskLevel(IntEnum):
@@ -182,9 +188,14 @@ class PropFirmManager:
     def _hard_stop(self, state: PropFirmState) -> None:
         """
         Stop strategy and flatten positions when breach occurs.
+        Raises AccountTerminatedException after cleanup.
         """
         if self._strategy is None:
-            return
+            raise AccountTerminatedException(
+                f"Apex Trading limits breached: Daily loss={state.daily_loss_current:.2f}, "
+                f"Trailing DD={state.trailing_dd_current:.2f}"
+            )
+        
         try:
             self._strategy.log.critical(
                 f"APEX DD BREACH - stopping strategy. Daily={state.daily_loss_current:.2f}, "
@@ -192,9 +203,18 @@ class PropFirmManager:
             )
             self._strategy.close_all_positions(self._strategy.config.instrument_id)
             self._strategy.stop()
-        except Exception:
+        except Exception as e:
             # last resort: mark trading not allowed
             self._strategy._is_trading_allowed = False
+            raise AccountTerminatedException(
+                f"Apex Trading limits breached and cleanup failed: {e}"
+            ) from e
+        
+        # Raise exception to signal termination even if cleanup succeeded
+        raise AccountTerminatedException(
+            f"Apex Trading account terminated: Daily={state.daily_loss_current:.2f}, "
+            f"Trailing DD={state.trailing_dd_current:.2f}"
+        )
 
     # -------------------- compatibility for run_backtest
     def check_can_trade(self) -> bool:
