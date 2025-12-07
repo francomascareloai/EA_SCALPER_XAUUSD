@@ -1,25 +1,23 @@
 # Backtest Code Audit - Summary
 
 ## One-Liner
-Found 4 P0 blockers (no Apex daily reset/overnight flat, risk engine bypass, sizing unit bug, threshold drift) plus unused safety modules; backtest realism is NO-GO.
+P0s cleared (risk engine on, slippage applied, cutoff/overnight enforced, pips sizing, daily reset); remaining P1s keep status **CONDITIONAL** until integration/tests/telemetry land.
 
 ## Version
-v1 - Initial audit (2025-12-07)
+v3 - Post-fix update (2025-12-07)
 
 ## Key Findings
-- Daily loss never resets in PropFirmManager (no `on_new_day`), and strategy lacks 4:59 PM ET/no-overnight enforcement → Apex breach risk.
-- Risk engine bypassed with zero slippage/commissions; config realism knobs are unused, so results materially overstate performance.
-- Execution thresholds inconsistent (strategy 70 vs runners 65/50); PositionSizer receives price units instead of pips, skewing lot sizes.
-- SpreadMonitor, CircuitBreaker, StrategySelector, EntryOptimizer, TradeManager, ML stack all unused; tests lack end-to-end backtest coverage (“não testa 100%”).
+- Risk engine enforced; slippage injected; execution threshold aligned to 70; summary nets commissions.
+- Apex ops: 4:59 PM ET flatten + no-overnight; PropFirmManager now resets daily; SpreadMonitor affects score/size.
+- Remaining gaps: CircuitBreaker/StrategySelector/EntryOptimizer still unused; DrawdownTracker reset uses wall-clock; YAML realism knobs not loaded.
+- No latency/partial-fill model; no Sharpe/Sortino/Calmar/SQN outputs; no end-to-end backtest coverage yet.
 
 ## Decisions Needed
-- Approve immediate P0 fixes (reset hook, slippage/commission wiring, sizing unit conversion, threshold alignment) before any further backtests.
-- Confirm target execution threshold (70 vs 65) and desired slippage/commission assumptions for Apex realism.
+- Prioritize P1 integration (circuit breaker/selector/entry optimizer) and YAML-driven realism before GO decision.
+- Approve adding latency/partial-fill model and telemetry metrics (Sharpe/Sortino/Calmar/SQN, DD%) in runners.
 
 ## Blockers
-- Apex compliance (daily reset, cutoff/overnight) not implemented.
-- Realism costs (slippage/commission) omitted; risk engine bypassed.
-- Lot sizing unit mismatch can over/under-size positions.
+- None at P0; P1 items above gate GO decision.
 
 ## Next Step
-Implement P0 fixes and rerun tick backtest with validated data; add end-to-end pytest covering Apex rules and realism costs.
+Implement P1 items (integration + YAML + E2E test + latency/partial fills/metrics), then rerun tick backtest to move from CONDITIONAL to GO.

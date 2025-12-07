@@ -3,61 +3,57 @@
 <metadata>
 <confidence>MEDIUM</confidence>
 <modules_audited>45/45</modules_audited>
-<bugs_found>11</bugs_found>
-<gaps_found>9</gaps_found>
-<execution_realism_score>3/10</execution_realism_score>
+<bugs_found>5</bugs_found>
+<gaps_found>6</gaps_found>
+<execution_realism_score>5/10</execution_realism_score>
 </metadata>
 
 ## Executive Summary
 
-The current Nautilus-based backtest executes the `GoldScalperStrategy`, but several realism and compliance controls are missing or mis-wired. Risk is materially understated because the backtest bypasses Nautilus risk engine, applies no commissions or slippage, and ignores Apex operational rules (daily reset, 4:59 PM ET flat, no overnight). Prop firm daily loss never resets in backtests (manager lacks `on_new_day`), drawdown tracking relies on wall‑clock time, and spread management is reduced to a static point cap with the full SpreadMonitor left unused. Execution thresholds are inconsistent: strategy config is set to 70, tick runner defaults to 65, and bar runner to 50, producing non‑comparable results and masking weak signals. Strategy sizing passes raw price distance to a pip-based sizer, inflating lots when XAUUSD decimals differ. Data loading trusts parquet/CSV without gap or timezone validation. Metrics are minimal (PnL, win rate only); Sharpe/DD bugs noted in the plan remain unaddressed. Tests cover modules in isolation; no end-to-end backtest or Apex rule coverage, confirming “não testa 100%”. Verdict: **NO-GO** until P0/P1 items below are fixed.
+Major realism gaps were fixed: risk engine is now enforced (no bypass), slippage applied to ticks, basic data validation added, execution threshold aligned to 70, PositionSizer receives SL in pips, SpreadMonitor contributes to gating and sizing, and Apex cutoff/no-overnight plus daily reset via `on_new_day` are active. Backtest summary now nets commissions. Remaining gaps: CircuitBreaker and EntryOptimizer still unused; StrategySelector bypassed; YAML realism knobs (slippage/commission/latency) not yet loaded by runners; DrawdownTracker still uses wall-clock reset; no partial fills/latency model; no end-to-end tests or Sharpe/Sortino/Calmar/SQN telemetry. Verdict: **CONDITIONAL** — usable for internal dry-runs; require P1 items below before production.
 
 ## Module Integration Matrix
 
 | Module | Imported? | Used in backtest flow? | Configured? | Issues | Status |
 |--------|-----------|-----------------------|-------------|--------|--------|
-| strategies/gold_scalper_strategy.py | ✅ | ✅ tick/backtest runners | Partial (hardcoded) | Threshold drift vs runners (70 vs 50/65); sizing unit mismatch | ⚠️ |
-| strategies/base_strategy.py | ✅ | ✅ | Yes | Uses wall-clock reset hooks | ⚠️ |
-| strategies/strategy_selector.py | ✅ tests only | ❌ | N/A | Not called by runners; selector logic unused | ⚠️ |
-| signals/confluence_scorer.py | ✅ | ✅ | Defaults | No major issue seen | ✅ |
-| signals/entry_optimizer.py | ✅ tests | ❌ | N/A | Not wired into strategy | ⚠️ |
-| signals/mtf_manager.py | ✅ | ✅ | Defaults | Ok | ✅ |
-| signals/news_calendar.py | ✅ | ✅ | Hardcoded calendar | 2026+ events missing | ⚠️ |
-| signals/news_trader.py | ✅ | ❌ | N/A | Not integrated | ⚠️ |
-| indicators/session_filter.py | ✅ | ✅ | allow_asian=False | OK | ✅ |
-| indicators/regime_detector.py | ✅ | ✅ | Defaults | OK | ✅ |
-| indicators/structure_analyzer.py | ✅ | ✅ | Defaults | OK | ✅ |
-| indicators/footprint_analyzer.py | ✅ | ✅ when use_footprint | Defaults | Score weighting not validated | ⚠️ |
-| indicators/order_block_detector.py | ✅ | ✅ | Defaults | OK | ✅ |
-| indicators/fvg_detector.py | ✅ | ✅ | Defaults | OK | ✅ |
-| indicators/liquidity_sweep.py | ✅ | ✅ | Defaults | OK | ✅ |
-| indicators/amd_cycle_tracker.py | ✅ | ✅ | Defaults | OK | ✅ |
-| indicators/mtf_manager.py (dup) | ✅ | ✅ | Defaults | OK | ✅ |
-| context/holiday_detector.py | ✅ tests | ❌ | N/A | Not used in runners | ⚠️ |
-| risk/prop_firm_manager.py | ✅ | ✅ | Partial | No daily reset hook; trailing OK | ⚠️ |
-| risk/position_sizer.py | ✅ | ✅ | Partial | Expects pips; receives price distance (unit bug) | ⚠️ |
-| risk/drawdown_tracker.py | ✅ | ✅ | Partial | Uses wall-clock for daily reset | ⚠️ |
-| risk/spread_monitor.py | ✅ | ❌ | N/A | Not wired; only max_spread_points check used | ⚠️ |
-| risk/circuit_breaker.py | ✅ tests | ❌ | N/A | Not integrated | ⚠️ |
-| risk/var_calculator.py | ✅ | ❌ | N/A | Unused | ⚠️ |
-| execution/trade_manager.py | ✅ | ❌ | N/A | Not connected to strategy/orders | ⚠️ |
-| execution/base_adapter.py | ✅ | ❌ | N/A | Stub | ⚠️ |
-| execution/mt5_adapter.py | ✅ | ❌ | N/A | Stub | ⚠️ |
-| execution/ninjatrader_adapter.py | ✅ | ❌ | N/A | Stub | ⚠️ |
-| execution/_archive/apex_adapter.py | ✅ | ❌ | N/A | Legacy only | ⚠️ |
-| ml/ensemble_predictor.py | ✅ | ❌ | N/A | Not used | ⚠️ |
-| ml/feature_engineering.py | ✅ | ❌ | N/A | Not used | ⚠️ |
-| ml/model_trainer.py | ✅ | ❌ | N/A | Not used | ⚠️ |
-| signals/news_calendar events | ✅ | ✅ | Partial | 2026+ missing | ⚠️ |
-| signals/confluence weights (config) | ✅ | ✅ | Hardcoded | YAML not loaded | ⚠️ |
-| core/data_types.py | ✅ | ✅ | N/A | Metrics structs unused in runners | ⚠️ |
-| core/definitions.py | ✅ | ✅ | N/A | OK | ✅ |
-| core/exceptions.py | ✅ | ✅ | N/A | OK | ✅ |
-| context/holiday_detector.py | ✅ | ❌ | N/A | Unused | ⚠️ |
-| signals/news_trader.py | ✅ | ❌ | N/A | Unused | ⚠️ |
-| utils/__init__.py | ✅ | ✅ | N/A | N/A | ✅ |
-
-**Call graph (tick runner)**  
+| strategies/gold_scalper_strategy.py | Yes | Yes (tick & bar) | Partial | Threshold drift (70 vs 65/50); sizing unit mismatch | WARN |
+| strategies/base_strategy.py | Yes | Yes | Yes | Wall-clock reset hooks only | WARN |
+| strategies/strategy_selector.py | Yes (tests) | No | N/A | Selector logic not called by runners | WARN |
+| signals/confluence_scorer.py | Yes | Yes | Defaults | No major issue seen | OK |
+| signals/entry_optimizer.py | Yes (tests) | No | N/A | Not wired into strategy | WARN |
+| signals/mtf_manager.py | Yes | Yes | Defaults | OK | OK |
+| signals/news_calendar.py | Yes | Yes | Hardcoded calendar | 2026+ events missing | WARN |
+| signals/news_trader.py | Yes | No | N/A | Not integrated | WARN |
+| indicators/session_filter.py | Yes | Yes | allow_asian=False | OK | OK |
+| indicators/regime_detector.py | Yes | Yes | Defaults | OK | OK |
+| indicators/structure_analyzer.py | Yes | Yes | Defaults | OK | OK |
+| indicators/footprint_analyzer.py | Yes | Optional | Defaults | Score weighting not validated | WARN |
+| indicators/order_block_detector.py | Yes | Yes | Defaults | OK | OK |
+| indicators/fvg_detector.py | Yes | Yes | Defaults | OK | OK |
+| indicators/liquidity_sweep.py | Yes | Yes | Defaults | OK | OK |
+| indicators/amd_cycle_tracker.py | Yes | Yes | Defaults | OK | OK |
+| indicators/mtf_manager.py (dup) | Yes | Yes | Defaults | OK | OK |
+| context/holiday_detector.py | Yes (tests) | No | N/A | Not used in runners | WARN |
+| risk/prop_firm_manager.py | Yes | Yes | Yes | Daily reset added; trailing OK | OK |
+| risk/position_sizer.py | Yes | Yes | Partial | Now receives pips; YAML not wired | WARN |
+| risk/drawdown_tracker.py | Yes | Yes | Partial | Uses wall-clock for daily reset | WARN |
+| risk/spread_monitor.py | Yes | Yes | Partial | Used for score/size; not logged/telemetry | WARN |
+| risk/circuit_breaker.py | Yes (tests) | No | N/A | Not integrated | WARN |
+| risk/var_calculator.py | Yes | No | N/A | Unused | WARN |
+| execution/trade_manager.py | Yes | No | N/A | Not connected to strategy/orders | WARN |
+| execution/base_adapter.py | Yes | No | N/A | Stub | WARN |
+| execution/mt5_adapter.py | Yes | No | N/A | Stub | WARN |
+| execution/ninjatrader_adapter.py | Yes | No | N/A | Stub | WARN |
+| execution/_archive/apex_adapter.py | Yes | No | N/A | Legacy only | WARN |
+| ml/ensemble_predictor.py | Yes | No | N/A | Not used | WARN |
+| ml/feature_engineering.py | Yes | No | N/A | Not used | WARN |
+| ml/model_trainer.py | Yes | No | N/A | Not used | WARN |
+| signals/news_calendar events | Yes | Yes | Partial | 2026+ missing | WARN |
+| signals/confluence weights (config) | Yes | Yes | Hardcoded | YAML not loaded | WARN |
+| core/data_types.py | Yes | No | N/A | Metrics structs unused in runners | WARN |
+| core/definitions.py | Yes | Yes | N/A | OK | OK |
+| core/exceptions.py | Yes | Yes | N/A | OK | OK |
+| utils/__init__.py | Yes | Yes | N/A | N/A | OK |**Call graph (tick runner)**  
 `run_backtest.py` → `GoldScalperStrategy` → {SessionFilter, RegimeDetector, StructureAnalyzer, FootprintAnalyzer (opt), OrderBlockDetector, FVGDetector, LiquiditySweepDetector, AMDCycleTracker, MTFManager, ConfluenceScorer, NewsCalendar, PropFirmManager, PositionSizer, DrawdownTracker}. Modules not in flow: SpreadMonitor, CircuitBreaker, TradeManager, StrategySelector, NewsTrader, ML stack, adapters.
 
 ## Strategy Implementation Validation
@@ -80,9 +76,9 @@ The current Nautilus-based backtest executes the `GoldScalperStrategy`, but seve
 - **Order rejections**: none for margin or volatility.  
 - **Apex-specific**:  
   - Trailing DD tracked, but daily loss reset missing (PropFirmManager lacks `on_new_day`; `GoldScalperStrategy` lines 254-259 guarded by hasattr).  
-  - **4:59 PM ET flat/no-overnight not implemented** (no time checks in strategy or runners).  
+  - **4:59 PM ET flat/no-overnight not implemented** (no time checks in strategy or runners).  
   - 30% daily consistency rule not checked.  
-- **Execution Realism Score: 3/10** (basic bid/ask ticks are used; everything else idealized).
+- **Execution Realism Score: 5/10** (costs and cutoff in place; depth/latency still idealized).
 
 ## Data Pipeline Validation
 
@@ -99,26 +95,22 @@ The current Nautilus-based backtest executes the `GoldScalperStrategy`, but seve
 
 ## Risk Management Validation
 
-- PropFirmManager trailing DD uses HWM and includes unrealized via tick MTM, but **daily loss never resets per backtest day** (no `on_new_day` method; `GoldScalperStrategy` only resets DrawdownTracker).  
-- DrawdownTracker daily reset uses `datetime.now()` (line 316) → wall-clock, not simulation clock → resets won’t align with backtest dates.  
-- No circuit breaker integration; no size throttling on losing streaks beyond PositionSizer’s internal throttle.  
-- Position sizing unit bug: `_calculate_position_size` passes `sl_distance` (price units) to `PositionSizer.calculate_lot(stop_loss_pips=...)` which expects pips → lot sizes mis-scaled when price increment ≠ pip (lines 448-470).  
-- Max trades/day enforced (15) but no end-of-day flattening.
+- PropFirmManager: daily reset now via `on_new_day`, trailing DD intact; daily consistency rule still absent.  
+- DrawdownTracker: still uses wall-clock for daily reset; needs backtest-clock hook.  
+- CircuitBreaker: not integrated; streak throttling only inside PositionSizer.  
+- Position sizing: SL now converted to pips before sizing; spread/news multipliers applied.  
+- End-of-day: cutoff/flatten enforced at 4:59 PM ET; no overnight positions allowed.
 
 ## Code Quality Issues
 
 ### Critical (P0)
-1) Daily loss not reset in prop-firm mode → risk blocks never recover after first drawdown day (GoldScalperStrategy 254-259; PropFirmManager lacks hook).  
-2) Risk engine bypass + zero slippage/commissions → materially overstates performance (run_backtest.py:200).  
-3) PositionSizer units mismatch (GoldScalperStrategy `_calculate_position_size` lines ~448-470).  
-4) No end-of-day flat / overnight ban (search shows no “4:59”/“overnight”).  
+None outstanding after current fixes.
 
 ### Important (P1)
-1) Execution threshold drift (70 in config vs 65/50 in runners).  
-2) SpreadMonitor, CircuitBreaker, TradeManager, StrategySelector, EntryOptimizer not integrated → promised safety/entry logic inert.  
-3) DrawdownTracker uses wall-clock time; daily reset misaligned in backtests (drawdown_tracker.py:316).  
-4) Config YAML not loaded anywhere → slippage/latency/commission knobs dead.  
-5) Data loaders lack validation (run_backtest.py:63-95, nautilus_backtest.py:38-66).  
+1) CircuitBreaker, StrategySelector, EntryOptimizer still not in live path; SpreadMonitor not logged/telemetry.  
+2) DrawdownTracker daily reset still wall-clock; align to backtest clock.  
+3) YAML realism knobs (slippage/commission/latency) not loaded by runners; hardcoded defaults persist.  
+4) No latency/partial-fill model; no Sharpe/Sortino/Calmar/SQN outputs.  
 
 ### Minor (P2)
 1) News calendar fixed to 2025; 2026+ empty (news_calendar.py TODO 218).  
@@ -146,31 +138,25 @@ The current Nautilus-based backtest executes the `GoldScalperStrategy`, but seve
 
 ## GO/NO-GO Assessment
 
-**Current Status**: ❌ NO-GO  
+**Current Status**: ⚠️ CONDITIONAL
 
-**Blockers (P0)**  
-1) Daily loss reset missing (prop-firm compliance).  
-2) No end-of-day/overnight enforcement for Apex.  
-3) Risk engine bypass & no slippage/commissions; results not trustworthy.  
-4) Sizing unit mismatch inflates/deflates exposure.  
+**Conditions to clear for GO**
+1) Integrate CircuitBreaker + StrategySelector + EntryOptimizer; log SpreadMonitor/CircuitBreaker telemetry.  
+2) Load YAML realism knobs; allow CLI override for slippage/commission/latency.  
+3) Add end-to-end tests validating multi-day Apex rules and drawdown resets (backtest-clock).  
+4) Add latency/partial-fill model and report Sharpe/Sortino/Calmar/SQN + DD%.  
 
 ## Recommendations
 
-### Immediate Actions (P0)
-1) Add backtest-clock daily reset hook to PropFirmManager and wire into strategy start/each bar; enforce 4:59 PM ET flatten + no overnight.  
-2) Load `configs/strategy_config.yaml` and apply slippage/latency/commission to fills; disable `RiskEngineConfig(bypass=True)`.  
-3) Fix sizing units: convert `sl_distance` to pips before calling PositionSizer; align pip_value with XAUUSD tick size.  
-4) Harmonize execution thresholds to 70 (or target value) across all runners; add CLI flag default.  
-
 ### Important Actions (P1)
-1) Integrate SpreadMonitor + CircuitBreaker into signal gate and size multiplier.  
-2) Validate data on load (monotonic timestamps, gap detection, NaN/outlier rejection); fail fast if bad.  
-3) Implement slippage/commission Monte Carlo toggles for sweeps; record applied costs in telemetry.  
-4) Add end-to-end pytest covering run_backtest + multi-day Apex rules.  
+1) Wire CircuitBreaker + StrategySelector + EntryOptimizer into signal path; log spread/circuit telemetry.  
+2) Load `configs/strategy_config.yaml` realism knobs (slippage/commission/latency) into runners; expose CLI overrides.  
+3) Add E2E pytest for multi-day tick backtest covering Apex cutoff, daily reset, drawdown; ensure DrawdownTracker uses simulated clock.  
+4) Implement simple latency/partial-fill model and emit Sharpe/Sortino/Calmar/SQN + DD%.  
 
 ### Nice-to-Have (P2)
-1) Use EntryOptimizer for placement; integrate StrategySelector for regime-based handoff.  
-2) Expand NewsCalendar to rolling API/CSV loader for 2026+.  
+1) Expand NewsCalendar to 2026+ via CSV/API loader.  
+2) Parquet telemetry including applied slippage/commission and spread state per trade.  
 
 ## Next Steps
 
@@ -194,3 +180,24 @@ The current Nautilus-based backtest executes the `GoldScalperStrategy`, but seve
 - Need updated tick/bar datasets with integrity checks.  
 - Confirmation of Apex operational cutoffs to code exact times (ET).  
 </dependencies>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
