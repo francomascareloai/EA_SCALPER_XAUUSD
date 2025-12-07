@@ -114,6 +114,42 @@ def load_yaml_config(config_path: Path) -> dict:
         return {}
 
 
+def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
+    """Build GoldScalperConfig from YAML dict + defaults."""
+    confluence_cfg = cfg.get("confluence", {}) if isinstance(cfg, dict) else {}
+    risk_cfg = cfg.get("risk", {}) if isinstance(cfg, dict) else {}
+    news_cfg = cfg.get("news", {}) if isinstance(cfg, dict) else {}
+    spread_cfg = cfg.get("spread", {}) if isinstance(cfg, dict) else {}
+    exec_cfg = cfg.get("execution", {}) if isinstance(cfg, dict) else {}
+
+    execution_threshold = confluence_cfg.get("execution_threshold", confluence_cfg.get("min_score_to_trade", 70))
+
+    return GoldScalperConfig(
+        strategy_id="GOLD-TICK-001",
+        instrument_id=instrument_id,
+        ltf_bar_type=bar_type,
+        execution_threshold=int(execution_threshold),
+        min_mtf_confluence=float(confluence_cfg.get("min_score_to_trade", 50)),
+        use_session_filter=True,
+        use_regime_filter=True,
+        use_mtf=exec_cfg.get("use_mtf", True),
+        use_footprint=exec_cfg.get("use_footprint", True),
+        prop_firm_enabled=True,
+        account_balance=exec_cfg.get("initial_balance", 100000.0),
+        daily_loss_limit_pct=float(risk_cfg.get("dd_soft", 5.0)) * 100 if risk_cfg.get("dd_soft", 0) < 1 else float(risk_cfg.get("dd_soft", 5.0)),
+        total_loss_limit_pct=float(risk_cfg.get("dd_hard", 10.0)) * 100 if risk_cfg.get("dd_hard", 0) < 1 else float(risk_cfg.get("dd_hard", 10.0)),
+        risk_per_trade=Decimal(str(risk_cfg.get("max_risk_per_trade", 0.5))),
+        max_spread_points=int(spread_cfg.get("max_spread_points", exec_cfg.get("max_spread_points", 80))),
+        use_news_filter=news_cfg.get("enabled", True),
+        news_score_penalty=int(news_cfg.get("score_penalty", -15)),
+        news_size_multiplier=float(news_cfg.get("size_multiplier", 0.5)),
+        flatten_time_et=exec_cfg.get("flatten_time_et", "16:59"),
+        allow_overnight=exec_cfg.get("allow_overnight", False),
+        slippage_ticks=int(exec_cfg.get("slippage_ticks", 2)),
+        commission_per_contract=float(exec_cfg.get("commission_per_contract", 2.5)),
+    )
+
+
     def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0, latency_ms: int = 0) -> list:
         """Convert DataFrame to QuoteTick objects."""
         print("Converting to QuoteTick objects...")
@@ -281,28 +317,9 @@ class BacktestRunner:
         self.engine.add_data(bars)
         print(f"Added {len(quote_ticks):,} ticks and {len(bars):,} bars to engine")
         
-        # Configure strategy
-        strategy_config = GoldScalperConfig(
-            strategy_id="GOLD-TICK-001",
-            instrument_id=self.instrument.id,
-            ltf_bar_type=bar_type,
-            
-            # Thresholds
-            execution_threshold=execution_threshold,
-            
-            # Filters
-            use_session_filter=use_session_filter,
-            use_regime_filter=use_regime_filter,
-            use_mtf=use_mtf,
-            use_footprint=use_footprint,
-            prop_firm_enabled=prop_firm_enabled,
-            use_news_filter=use_news_filter,
-            account_balance=self.initial_balance,
-            debug_mode=debug_mode,
-            
-            # Disable HTF requirement (no H1 bars from tick data)
-            require_htf_align=False,
-        )
+        # Configure strategy from YAML + overrides
+        strategy_cfg_dict = load_yaml_config(Path(__file__).parent.parent / "configs" / "strategy_config.yaml")
+        strategy_config = build_strategy_config(strategy_cfg_dict, bar_type, self.instrument.id)
         
         strategy = GoldScalperStrategy(config=strategy_config)
         self.engine.add_strategy(strategy)
