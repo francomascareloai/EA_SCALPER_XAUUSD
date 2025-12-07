@@ -2230,13 +2230,16 @@ DOCS/
   </agent_outputs>
 
   <bugfix_protocol>
-    <file>MQL5/Experts/BUGFIX_LOG.md</file>
+    <nautilus_log>nautilus_gold_scalper/BUGFIX_LOG.md</nautilus_log>
+    <mql5_log>MQL5/Experts/BUGFIX_LOG.md</mql5_log>
     <format>YYYY-MM-DD (AGENT context)\n- Module: bug fix description.</format>
     <usage>
-      <agent name="FORGE">all MQL5/Python fixes</agent>
-      <agent name="ORACLE">backtest bugs</agent>
-      <agent name="SENTINEL">risk logic bugs</agent>
+      <agent name="FORGE">Python/Nautilus fixes → nautilus_log, MQL5 fixes → mql5_log</agent>
+      <agent name="NAUTILUS">Migration issues → nautilus_log</agent>
+      <agent name="ORACLE">Backtest bugs → nautilus_log (if Nautilus backtest)</agent>
+      <agent name="SENTINEL">Risk logic → nautilus_log (Python risk modules)</agent>
     </usage>
+    <note>Both logs active - use appropriate log based on platform</note>
   </bugfix_protocol>
 
   <naming_conventions>
