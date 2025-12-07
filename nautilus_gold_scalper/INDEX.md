@@ -15,23 +15,25 @@
 - `src/ml/` – feature engineering, trainer, ensemble predictor
 - `src/execution/` – trade manager (needs test fix), adapters archive
 - `tests/` – unit coverage per module family
-- `reports/backtests/` – output/logs (telemetry CSV from runners)
+- `reports/backtests/` - output/logs (telemetry CSV from runners)
 
 ## Current State (backtesting realism)
-- Tick-first Nautilus runner (`scripts/run_backtest.py`): auto-detects tick files under `Python_Agent_Hub/ml_pipeline/data`, converts to `QuoteTick`, aggregates to M5 bars, defaults to all ticks (sample=1), execution threshold 65.
+- Tick-first Nautilus runner (`scripts/run_backtest.py`): auto-detects tick files under `Python_Agent_Hub/ml_pipeline/data`, converts to `QuoteTick`, aggregates to M5 bars, defaults to all ticks (sample=1), execution threshold 70.
 - Prop/FTMO risk tightened: intrabar mark-to-market + `DrawdownTracker` enforcing daily/total DD; auto-halt + flatten on breach; daily reset wired.
 - News-aware: `GoldScalperStrategy` now gates signals with `NewsCalendar` (blocking CRITICAL/HIGH windows, score penalty, size multiplier).
 - Footprint thresholds rebalanced (strong-signal threshold 60) to align with tests; still feeds confluence.
 - MT5/Ninja adapters stubbed (`src/execution/mt5_adapter.py`, `ninjatrader_adapter.py`) plus base offline adapter.
 - All Python tests green: `python -m pytest tests` (183 passed).
+- Config single-source: `configs/strategy_config.yaml` now holds execution realism, spread monitor, cutoff times, circuit breaker, consistency cap, and telemetry JSONL path.
+- Telemetry: JSONL sink (`logs/telemetry.jsonl`) captures spread/circuit/cutoff/partial-fill events for audits.
 
 ## Open Issues (next)
 1) Batch runner still bar-based (`scripts/batch_backtest.py`); upgrade to tick pipeline + news gating for large sweeps.  
-2) Telemetry remains CSV-only; add Parquet schema (signal/open/close, news context, DD) for 1k+ backtests.  
+2) Telemetry JSONL added; still need Parquet schema (signal/open/close, news context, DD) for 1k+ backtests.  
 3) Strategy still runs with HTF disabled when using tick-only bars; optional H1 reconstruction from ticks is pending.  
 4) News events rely on hardcoded 2025 calendar; add loader for CSV/API and inject per-backtest window.  
 5) Execution adapters: wire real MT5/Ninja connections (currently offline stubs) and decide venue routing.  
-6) Prop firm circuit breaker: map to config yaml (dd_soft/dd_hard/total) and log triggers.
+6) Prop firm circuit breaker: mapped to YAML thresholds; still need stress tests + cooldown tuning.
 
 ## Planned Improvements (backtest scale & quality)
 - Tick batch sweeps + WFA using same QuoteTick pipeline; reuse new news/DD gating.

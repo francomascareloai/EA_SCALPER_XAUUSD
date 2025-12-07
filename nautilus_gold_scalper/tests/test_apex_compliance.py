@@ -13,14 +13,18 @@ from datetime import datetime, time
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from nautilus_gold_scalper.src.risk import (
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from src.risk import (
     PropFirmManager,
     PropFirmLimits,
     AccountTerminatedException,
     CircuitBreaker,
 )
-from nautilus_gold_scalper.src.risk.time_constraint_manager import TimeConstraintManager
-from nautilus_gold_scalper.src.risk.consistency_tracker import ConsistencyTracker
+from src.risk.time_constraint_manager import TimeConstraintManager
+from src.risk.consistency_tracker import ConsistencyTracker
 
 
 class TestApexCompliance:
@@ -148,7 +152,7 @@ class TestApexCompliance:
     def test_config_values_loaded(self):
         """Test that config values are loaded correctly from YAML."""
         # This test verifies that GoldScalperConfig has correct default values
-        from nautilus_gold_scalper.src.strategies.gold_scalper_strategy import GoldScalperConfig
+        from src.strategies.gold_scalper_strategy import GoldScalperConfig
         
         config = GoldScalperConfig()
         

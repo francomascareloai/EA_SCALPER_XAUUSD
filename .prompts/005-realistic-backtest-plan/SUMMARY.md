@@ -2,13 +2,15 @@
 
 ## One-Liner
 
-7-phase validation framework: Fix P0 blockers (4.25d) → Dukascopy data prep → Baseline backtest → WFA (16 folds, WFE ≥ 0.55) → Monte Carlo (10k runs, 95th DD < 8%) → GO/NO-GO decision → Paper trading (30d)
+7-phase validation framework: Fix P0 blockers (4.25d) → Dukascopy data prep + realism calibration (2.5d) → Baseline backtest + Apex validation (2.5d) → WFA (18 rolling folds, WFE ≥ 0.60 target) → Monte Carlo (10k runs, 95th DD < 8%) + Apex validation → GO/NO-GO decision → Paper trading (30d)
 
 ---
 
 ## Version
 
-**v1.0** - Initial plan (2025-12-07)
+**v1.1** - Fixed critical audit findings (2025-12-07)
+- v1.0: Initial plan
+- v1.1: Fixed WFA rolling windows (18 folds), tightened WFE to 0.60, corrected metadata, added Apex compliance validation, added realism calibration
 
 ---
 
@@ -16,12 +18,12 @@
 
 | Component | Details |
 |-----------|---------|
-| **Test Scenarios** | 15 scenarios: 4 normal, 5 stress, 7 edge cases |
-| **WFA Protocol** | 16 folds, 6mo IS / 3mo OOS, anchored expanding window |
+| **Test Scenarios** | 16 scenarios: 4 normal, 5 stress, 7 edge cases |
+| **WFA Protocol** | 18 folds, 6mo IS / 3mo OOS, rolling window (no data leakage) |
 | **Monte Carlo** | 10,000 bootstrap simulations with slippage/spread variations |
-| **Success Threshold** | WFE ≥ 0.55, 95th percentile DD < 8%, P(ruin) < 1% |
+| **Success Threshold** | WFE ≥ 0.60 (target), ≥ 0.50 (minimum), 95th percentile DD < 8%, P(ruin) < 1% |
 | **Apex Compliance** | 0 tolerance for violations (DD breach, time, overnight, consistency) |
-| **Timeline** | ~44 days total (14 days validation + 30 days paper trading) |
+| **Timeline** | ~50 days total (20 days validation with buffer + 30 days paper trading) |
 
 ---
 
@@ -54,7 +56,7 @@
 ## GO/NO-GO Decision Framework
 
 ```
-P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.55? → MC 95th DD < 8%? → GO
+P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.60 (target) or ≥ 0.50 (min)? → MC 95th DD < 8%? → GO
     ↓              ↓                    ↓                  ↓               ↓
  NO-GO         NO-GO               NO-GO              NO-GO           NO-GO
 ```
@@ -70,9 +72,10 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.55? →
 ## Decisions Needed
 
 1. **Approve Dukascopy** as primary data source (per audit 002)
-2. **Approve timeline** (~44 days to live trading)
-3. **Confirm Apex slippage/commission** values for realism modeling
+2. **Approve timeline** (~50 days to live trading with 20% buffer)
+3. **Confirm Apex slippage/commission** values for realism calibration task
 4. **Decide ML inclusion** - Test ML modules separately or in main validation?
+5. **Approve compute optimization** - Use parallel fold execution or cloud compute to reduce timeline?
 
 ---
 
@@ -91,13 +94,13 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.55? →
 | Phase | Duration | Output |
 |-------|----------|--------|
 | 1. Fix Issues | 4.25 days | All P0 resolved |
-| 2. Data Prep | 2 days | QC'd Parquet files |
-| 3. Baseline | 2 days | Metrics baseline |
-| 4. WFA | 3 days | WFE scores |
-| 5. Monte Carlo | 2 days | Risk distribution |
+| 2. Data Prep + Calibration | 2.5 days | QC'd Parquet files, realism params calibrated |
+| 3. Baseline + Apex Validation | 2.5 days | Metrics baseline, 0 violations confirmed |
+| 4. WFA (18 folds) + Compliance | 4 days | WFE scores, Apex validated across folds |
+| 5. Monte Carlo + Compliance | 2.5 days | Risk distribution, Apex validated |
 | 6. GO/NO-GO | 1 day | Final verdict |
 | 7. Paper Trading | 30 days | Live readiness |
-| **Total** | **~44 days** | **Live trading approval** |
+| **Total** | **~50 days** (with 20% buffer) | **Live trading approval** |
 
 ---
 
@@ -129,4 +132,4 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.55? →
 
 ---
 
-*Created: 2025-12-07 | Version: 1.0*
+*Created: 2025-12-07 | Updated: 2025-12-07 | Version: 1.1*

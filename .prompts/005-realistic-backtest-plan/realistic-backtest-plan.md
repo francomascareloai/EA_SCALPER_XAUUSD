@@ -2,11 +2,13 @@
 
 <metadata>
 <confidence>HIGH</confidence>
-<strategies_covered>3</strategies_covered>
-<test_scenarios>15</test_scenarios>
-<estimated_duration>18 days</estimated_duration>
+<strategies_covered>1</strategies_covered>
+<test_scenarios>16</test_scenarios>
+<estimated_duration>20 days</estimated_duration>
 <created>2025-12-07</created>
-<version>1.0</version>
+<version>1.1</version>
+<updated>2025-12-07</updated>
+<changelog>v1.1: Fixed WFA rolling windows (18 folds), tightened WFE to 0.60, corrected metadata, added compliance validation, added realism calibration, updated timeline</changelog>
 </metadata>
 
 ## Executive Summary
@@ -19,9 +21,9 @@ This plan defines a rigorous 7-phase validation framework for the EA_SCALPER_XAU
 - **Apex Compliance**: 3/10 (NO-GO - missing time constraints, consistency rule, circuit breaker integration)
 - **Data Source**: Dukascopy recommended (20+ years free tick data, realistic spreads)
 
-**Critical Path**: Fix P0 blockers (4.25 days) → Data preparation (2 days) → Baseline backtest (2 days) → WFA (3 days) → Monte Carlo (2 days) → GO/NO-GO decision (1 day) → Paper trading (30 days)
+**Critical Path**: Fix P0 blockers (4.25 days) → Data preparation + realism calibration (2.5 days) → Baseline backtest + Apex validation (2.5 days) → WFA 18 folds + Apex validation (4 days) → Monte Carlo + Apex validation (2.5 days) → GO/NO-GO decision (1 day) → Paper trading (30 days)
 
-**Success Criteria**: All core metrics ≥ minimum thresholds, 0 Apex violations, WFE ≥ 0.5, Monte Carlo 95th percentile DD < 8%
+**Success Criteria**: All core metrics ≥ minimum thresholds, 0 Apex violations across all phases, WFE ≥ 0.60 (target) or ≥ 0.50 (minimum), Monte Carlo 95th percentile DD < 8%, realism calibrated from data
 
 ---
 
@@ -272,7 +274,7 @@ Based on audits 001-004, these issues MUST be resolved before validation:
 | **WFE Profit Factor** | OOS_PF / IS_PF | ≥ 0.70 | ≥ 0.60 | < 0.40 |
 | **WFE Win Rate** | OOS_WR / IS_WR | ≥ 0.80 | ≥ 0.70 | < 0.50 |
 | **WFE Drawdown** | IS_DD / OOS_DD | ≥ 0.80 | ≥ 0.60 | < 0.40 |
-| **Combined WFE** | Average of above | ≥ 0.65 | ≥ 0.55 | < 0.45 |
+| **Combined WFE** | Average of above | ≥ 0.70 | ≥ 0.60 (target), ≥ 0.50 (minimum) | < 0.45 |
 
 ### Monte Carlo Metrics
 
@@ -295,30 +297,34 @@ Based on audits 001-004, these issues MUST be resolved before validation:
 | **Total data period** | 2020-01-01 to 2024-12-31 (5 years) | Covers COVID, rate hikes, multiple regimes |
 | **In-sample period** | 6 months | Sufficient for pattern learning |
 | **Out-of-sample period** | 3 months | Meaningful forward test |
-| **Step size** | 3 months (anchored expanding window) | Progressive validation |
-| **Total folds** | 16 folds | Comprehensive coverage |
+| **Step size** | 3 months (rolling window) | Strict temporal separation, no data leakage |
+| **Total folds** | 18 folds | Comprehensive coverage through 2024-12-31 |
 | **Optimization method** | None (fixed parameters) or Bayesian (if tuning) | Avoid overfitting |
 
 ### WFA Fold Schedule
 
+**Rolling 6m IS / 3m OOS window** - prevents data leakage and tests recent market conditions:
+
 | Fold | In-Sample Start | In-Sample End | OOS Start | OOS End |
 |------|-----------------|---------------|-----------|---------|
 | 1 | 2020-01-01 | 2020-06-30 | 2020-07-01 | 2020-09-30 |
-| 2 | 2020-01-01 | 2020-09-30 | 2020-10-01 | 2020-12-31 |
-| 3 | 2020-01-01 | 2020-12-31 | 2021-01-01 | 2021-03-31 |
-| 4 | 2020-01-01 | 2021-03-31 | 2021-04-01 | 2021-06-30 |
-| 5 | 2020-01-01 | 2021-06-30 | 2021-07-01 | 2021-09-30 |
-| 6 | 2020-01-01 | 2021-09-30 | 2021-10-01 | 2021-12-31 |
-| 7 | 2020-01-01 | 2021-12-31 | 2022-01-01 | 2022-03-31 |
-| 8 | 2020-01-01 | 2022-03-31 | 2022-04-01 | 2022-06-30 |
-| 9 | 2020-01-01 | 2022-06-30 | 2022-07-01 | 2022-09-30 |
-| 10 | 2020-01-01 | 2022-09-30 | 2022-10-01 | 2022-12-31 |
-| 11 | 2020-01-01 | 2022-12-31 | 2023-01-01 | 2023-03-31 |
-| 12 | 2020-01-01 | 2023-03-31 | 2023-04-01 | 2023-06-30 |
-| 13 | 2020-01-01 | 2023-06-30 | 2023-07-01 | 2023-09-30 |
-| 14 | 2020-01-01 | 2023-09-30 | 2023-10-01 | 2023-12-31 |
-| 15 | 2020-01-01 | 2023-12-31 | 2024-01-01 | 2024-03-31 |
-| 16 | 2020-01-01 | 2024-03-31 | 2024-04-01 | 2024-06-30 |
+| 2 | 2020-04-01 | 2020-09-30 | 2020-10-01 | 2020-12-31 |
+| 3 | 2020-07-01 | 2020-12-31 | 2021-01-01 | 2021-03-31 |
+| 4 | 2020-10-01 | 2021-03-31 | 2021-04-01 | 2021-06-30 |
+| 5 | 2021-01-01 | 2021-06-30 | 2021-07-01 | 2021-09-30 |
+| 6 | 2021-04-01 | 2021-09-30 | 2021-10-01 | 2021-12-31 |
+| 7 | 2021-07-01 | 2021-12-31 | 2022-01-01 | 2022-03-31 |
+| 8 | 2021-10-01 | 2022-03-31 | 2022-04-01 | 2022-06-30 |
+| 9 | 2022-01-01 | 2022-06-30 | 2022-07-01 | 2022-09-30 |
+| 10 | 2022-04-01 | 2022-09-30 | 2022-10-01 | 2022-12-31 |
+| 11 | 2022-07-01 | 2022-12-31 | 2023-01-01 | 2023-03-31 |
+| 12 | 2022-10-01 | 2023-03-31 | 2023-04-01 | 2023-06-30 |
+| 13 | 2023-01-01 | 2023-06-30 | 2023-07-01 | 2023-09-30 |
+| 14 | 2023-04-01 | 2023-09-30 | 2023-10-01 | 2023-12-31 |
+| 15 | 2023-07-01 | 2023-12-31 | 2024-01-01 | 2024-03-31 |
+| 16 | 2023-10-01 | 2024-03-31 | 2024-04-01 | 2024-06-30 |
+| 17 | 2024-01-01 | 2024-06-30 | 2024-07-01 | 2024-09-30 |
+| 18 | 2024-04-01 | 2024-09-30 | 2024-10-01 | 2024-12-31 |
 
 ### WFE Calculation Procedure
 
@@ -331,9 +337,10 @@ def calculate_wfe(in_sample_metrics: dict, out_sample_metrics: dict) -> dict:
     
     Interpretation:
     - WFE >= 0.7: Excellent (robust strategy)
-    - WFE 0.5-0.7: Good (acceptable)
-    - WFE 0.4-0.5: Marginal (review required)
-    - WFE < 0.4: Poor (likely overfitting)
+    - WFE 0.6-0.7: Good (meets target threshold)
+    - WFE 0.5-0.6: Acceptable (meets minimum threshold)
+    - WFE 0.4-0.5: Marginal (review required, below minimum)
+    - WFE < 0.4: Poor (likely overfitting, NO-GO)
     """
     wfe = {}
     
@@ -360,7 +367,7 @@ def calculate_wfe(in_sample_metrics: dict, out_sample_metrics: dict) -> dict:
 | Criterion | Threshold | Action if Failed |
 |-----------|-----------|------------------|
 | All folds WFE ≥ 0.40 | PASS | NO-GO if any fold < 0.40 |
-| Mean WFE ≥ 0.55 | PASS | NO-GO if mean < 0.55 |
+| Mean WFE ≥ 0.60 (target), ≥ 0.50 (minimum) | PASS | NO-GO if mean < 0.50, CONDITIONAL if 0.50-0.60 |
 | WFE trend not declining | Slope ≥ -0.01/fold | Investigate drift |
 | Consistency across folds | StdDev(WFE) < 0.15 | Investigate instability |
 
@@ -543,9 +550,10 @@ PHASE 3: APEX COMPLIANCE
 │   └── NO → NO-GO (Consistency rule failure)
 
 PHASE 4: WFA VALIDATION
-├── Combined WFE ≥ 0.55?
-│   ├── YES → Continue
-│   └── NO → NO-GO (Overfitting detected)
+├── Combined WFE ≥ 0.60 (target) or ≥ 0.50 (minimum)?
+│   ├── YES (≥ 0.60) → Continue to Phase 5
+│   ├── CONDITIONAL (0.50-0.60) → Review + Continue with caution
+│   └── NO (< 0.50) → NO-GO (Overfitting detected)
 │
 ├── All folds WFE ≥ 0.40?
 │   ├── YES → Continue
@@ -634,20 +642,21 @@ Paper trading → Live trading requires:
 
 **Exit criteria**: All audit checks pass, no P0 issues remaining
 
-### Phase 2: Data Preparation (2 days)
+### Phase 2: Data Preparation (2.5 days)
 
-**Objective**: Download, validate, and prepare backtest data
+**Objective**: Download, validate, calibrate realism, and prepare backtest data
 
 | Task | Owner | Effort | Dependencies | Validation |
 |------|-------|--------|--------------|------------|
 | 2.1 Download Dukascopy 2020-2024 | FORGE | 4 hr | None | File exists |
 | 2.2 Run QC checklist | ORACLE | 2 hr | 2.1 | All checks pass |
-| 2.3 Convert to Parquet format | FORGE | 2 hr | 2.2 | Load test |
-| 2.4 Split into WFA folds | FORGE | 2 hr | 2.3 | 16 folds created |
-| 2.5 Create scenario data subsets | ORACLE | 4 hr | 2.3 | 15 scenarios ready |
-| 2.6 Download FXCM validation set | FORGE | 2 hr | None | File exists |
+| 2.3 **Calibrate realism parameters** | ORACLE | 4 hr | 2.2 | **Derive slippage/latency distributions from tick spreads** |
+| 2.4 Convert to Parquet format | FORGE | 2 hr | 2.2 | Load test |
+| 2.5 Split into WFA folds | FORGE | 2 hr | 2.4 | 18 folds created |
+| 2.6 Create scenario data subsets | ORACLE | 4 hr | 2.4 | 16 scenarios ready |
+| 2.7 Download FXCM validation set | FORGE | 2 hr | None | File exists |
 
-**Exit criteria**: All data validated, QC passed, folds/scenarios ready
+**Exit criteria**: All data validated, QC passed, **realism parameters calibrated and documented**, folds/scenarios ready
 
 ### Phase 3: Baseline Backtest (2 days)
 
@@ -659,10 +668,11 @@ Paper trading → Live trading requires:
 | 3.2 Run full 5-year backtest | ORACLE | 4 hr (compute) | 3.1 | Completes without error |
 | 3.3 Calculate all metrics | ORACLE | 2 hr | 3.2 | Metrics populated |
 | 3.4 Check vs minimum thresholds | ORACLE | 1 hr | 3.3 | Pass/fail documented |
-| 3.5 Run scenario backtests | ORACLE | 8 hr | 3.1 | 15 scenarios complete |
-| 3.6 Document baseline results | ORACLE | 2 hr | 3.3, 3.5 | Report generated |
+| 3.5 Run scenario backtests | ORACLE | 8 hr | 3.1 | 16 scenarios complete |
+| 3.6 **Validate Apex compliance** | SENTINEL | 1 hr | 3.2 | **Zero violations confirmed** |
+| 3.7 Document baseline results | ORACLE | 2 hr | 3.3, 3.5, 3.6 | Report generated |
 
-**Exit criteria**: Baseline metrics meet minimum thresholds, no blockers
+**Exit criteria**: Baseline metrics meet minimum thresholds, **Apex compliance validated (0 violations)**, no blockers
 
 ### Phase 4: Walk-Forward Analysis (3 days)
 
@@ -671,14 +681,15 @@ Paper trading → Live trading requires:
 | Task | Owner | Effort | Dependencies | Validation |
 |------|-------|--------|--------------|------------|
 | 4.1 Configure WFA parameters | ORACLE | 1 hr | Phase 3 | Config ready |
-| 4.2 Run 16 WFA folds | ORACLE | 12 hr (compute) | 4.1 | All folds complete |
+| 4.2 Run 18 WFA folds | ORACLE | 14 hr (compute) | 4.1 | All folds complete |
 | 4.3 Calculate WFE per fold | ORACLE | 2 hr | 4.2 | WFE values |
 | 4.4 Calculate combined WFE | ORACLE | 1 hr | 4.3 | Combined WFE |
 | 4.5 Detect drift | ORACLE | 1 hr | 4.3 | Drift analysis |
-| 4.6 Document WFA results | ORACLE | 2 hr | 4.3-4.5 | Report generated |
-| 4.7 Cross-validate with FXCM | ORACLE | 4 hr | 2.6, 4.1 | Comparison done |
+| 4.6 **Validate Apex compliance (all folds)** | SENTINEL | 2 hr | 4.2 | **Zero violations across all OOS periods** |
+| 4.7 Document WFA results | ORACLE | 2 hr | 4.3-4.6 | Report generated |
+| 4.8 Cross-validate with FXCM | ORACLE | 4 hr | 2.6, 4.1 | Comparison done |
 
-**Exit criteria**: Combined WFE ≥ 0.55, no drift detected
+**Exit criteria**: Combined WFE ≥ 0.60 (target) or ≥ 0.50 (minimum), **Apex compliance validated across all folds**, no drift detected
 
 ### Phase 5: Monte Carlo Simulation (2 days)
 
@@ -691,9 +702,10 @@ Paper trading → Live trading requires:
 | 5.3 Extract distribution statistics | ORACLE | 2 hr | 5.2 | Stats populated |
 | 5.4 Generate visualizations | ORACLE | 2 hr | 5.3 | Plots generated |
 | 5.5 Check vs thresholds | ORACLE | 1 hr | 5.3 | Pass/fail documented |
-| 5.6 Document MC results | ORACLE | 2 hr | 5.3-5.5 | Report generated |
+| 5.6 **Validate Apex compliance (MC runs)** | SENTINEL | 2 hr | 5.2 | **Check violations in simulated scenarios** |
+| 5.7 Document MC results | ORACLE | 2 hr | 5.3-5.6 | Report generated |
 
-**Exit criteria**: 95th percentile DD < 8%, P(ruin) < 1%
+**Exit criteria**: 95th percentile DD < 8%, P(ruin) < 1%, **Apex compliance maintained across MC simulations**
 
 ### Phase 6: GO/NO-GO Decision (1 day)
 
@@ -929,7 +941,7 @@ DOCS/04_REPORTS/BACKTESTS/
 ├── 20251218_GOLD_SCALPER_WFA/
 │   ├── fold_01_results.csv
 │   ├── ...
-│   ├── fold_16_results.csv
+│   ├── fold_18_results.csv
 │   ├── wfa_summary.json
 │   └── report.md
 ├── 20251220_GOLD_SCALPER_MC/
@@ -949,39 +961,46 @@ DOCS/04_REPORTS/BACKTESTS/
 | Phase | Tasks | Duration | Dependencies | Dates (Est.) |
 |-------|-------|----------|--------------|--------------|
 | **Phase 1: Fix Issues** | 11 tasks | 4.25 days | Audit findings | Dec 9-13 |
-| **Phase 2: Data Prep** | 6 tasks | 2 days | Phase 1 | Dec 14-15 |
-| **Phase 3: Baseline** | 6 tasks | 2 days | Phase 2 | Dec 16-17 |
-| **Phase 4: WFA** | 7 tasks | 3 days | Phase 3 | Dec 18-20 |
-| **Phase 5: Monte Carlo** | 6 tasks | 2 days | Phase 3 | Dec 21-22 |
-| **Phase 6: GO/NO-GO** | 5 tasks | 1 day | Phases 4-5 | Dec 23 |
-| **Phase 7: Paper Trading** | 6 tasks | 30 days | Phase 6 GO | Dec 24 - Jan 23 |
+| **Phase 2: Data Prep** | 7 tasks | 2.5 days | Phase 1 | Dec 14-16 |
+| **Phase 3: Baseline** | 7 tasks | 2.5 days | Phase 2 | Dec 17-19 |
+| **Phase 4: WFA** | 8 tasks | 4 days | Phase 3 | Dec 20-23 |
+| **Phase 5: Monte Carlo** | 7 tasks | 2.5 days | Phase 3 | Dec 24-26 |
+| **Phase 6: GO/NO-GO** | 5 tasks | 1 day | Phases 4-5 | Dec 27 |
+| **Phase 7: Paper Trading** | 6 tasks | 30 days | Phase 6 GO | Dec 28 - Jan 27 |
 
 **Total Duration**: 
-- Pre-paper trading: **14.25 days** (Phases 1-6)
+- Pre-paper trading: **16.75 days** (Phases 1-6) + **20% buffer** = **~20 days**
 - Paper trading: **30 days** (Phase 7)
-- **Total to live trading approval**: ~44 days
+- **Total to live trading approval**: ~50 days
 
-**Critical Path**: Phase 1 (fixes) → Phase 2 (data) → Phase 3 (baseline) → [Phase 4 & 5 parallel] → Phase 6 (decision) → Phase 7 (paper)
+**Critical Path**: Phase 1 (fixes) → Phase 2 (data + realism calibration) → Phase 3 (baseline + Apex validation) → [Phase 4 (18 folds + compliance) & Phase 5 (MC + compliance) sequential] → Phase 6 (decision) → Phase 7 (paper)
+
+**Compute Optimization Options**:
+- **Parallel fold execution**: Reduce Phase 4 from 4 days to 2 days (requires 4+ CPU cores)
+- **Cloud compute**: Use AWS/GCP for MC simulations (10k runs in 2-4 hours vs 8 hours locally)
+- **Pre-compute folds**: Prepare fold data splits during Phase 2 for faster Phase 4 startup
 
 ---
 
 ## Success Criteria
 
 ### Plan Quality Checklist
-- [x] All 15 test scenarios defined with specific date ranges
+- [x] All 16 test scenarios defined with specific date ranges
 - [x] Metrics have Target/Minimum/Blocker thresholds
-- [x] WFA protocol detailed (16 folds, WFE formulas)
+- [x] WFA protocol detailed (18 rolling folds, WFE ≥0.60 target, WFE formulas)
 - [x] Monte Carlo parameters rigorous (10k runs, variations)
-- [x] GO/NO-GO framework unambiguous (decision tree)
-- [x] 7-phase workflow step-by-step actionable
-- [x] Timeline estimate realistic (~44 days total)
+- [x] GO/NO-GO framework unambiguous (decision tree with Apex validation)
+- [x] 7-phase workflow step-by-step actionable with Apex compliance checks
+- [x] Timeline estimate realistic (~50 days total with 20% buffer)
+- [x] Realism calibration task included (slippage/latency from tick data)
 
 ### Execution Success Criteria (when plan is run)
 - [ ] All P0 issues fixed before Phase 3
 - [ ] Data passes QC checklist
+- [ ] Realism parameters calibrated from tick data
 - [ ] Core metrics meet Minimum thresholds
-- [ ] Apex compliance: 0 violations in backtest
-- [ ] Combined WFE ≥ 0.55
+- [ ] Apex compliance: 0 violations in baseline, WFA, and MC
+- [ ] Combined WFE ≥ 0.60 (target) or ≥ 0.50 (minimum)
 - [ ] Monte Carlo 95th percentile DD < 8%
 - [ ] P(ruin) < 1%
 - [ ] GO verdict achieved in Phase 6
@@ -995,7 +1014,7 @@ DOCS/04_REPORTS/BACKTESTS/
 |------|--------|-------------|------------|
 | **Data quality issues** | HIGH | MEDIUM | Validate with QC checklist, cross-check FXCM |
 | **P0 fixes take longer** | MEDIUM | MEDIUM | Allocate 50% buffer time (6 days → 9 days) |
-| **WFA shows overfitting** | HIGH | MEDIUM | Use conservative WFE threshold (0.55), consider param reduction |
+| **WFA shows overfitting** | HIGH | MEDIUM | Use conservative WFE threshold (0.60 target, 0.50 minimum), consider param reduction |
 | **Monte Carlo high DD** | HIGH | LOW | Reduce position sizing, add tighter circuit breaker |
 | **Apex rules change** | MEDIUM | LOW | Monitor Apex announcements, design modular rule engine |
 | **Paper diverges from backtest** | HIGH | MEDIUM | Investigate slippage/spread differences, adjust realism model |

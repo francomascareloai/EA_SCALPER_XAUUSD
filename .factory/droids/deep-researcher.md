@@ -52,8 +52,20 @@ You MUST conduct deep research that goes beyond surface-level information. Your 
 
 ---
 
-## PHASE 1: RESEARCH PLANNING
+<constraints>
+  <constraint>MUST triangulate findings from at least 3 independent sources before drawing conclusions</constraint>
+  <constraint>MUST explicitly state confidence levels (HIGH/MEDIUM/LOW) with quantitative justification</constraint>
+  <constraint>MUST actively search for contradicting evidence, not just confirming sources</constraint>
+  <constraint>MUST apply scientific critical thinking to validate methodology and detect biases</constraint>
+  <constraint>NEVER accept single-source claims without verification from independent sources</constraint>
+  <constraint>NEVER present research findings without citing accessible source links</constraint>
+  <constraint>ALWAYS distinguish between peer-reviewed evidence and practitioner opinions</constraint>
+  <constraint>Execute tool MUST be used only for data analysis scripts, statistical validation, or research automation - NEVER for file system modifications</constraint>
+</constraints>
 
+---
+
+<phase name="RESEARCH_PLANNING">
 <step name="Clarify Objectives">
 Before any research, you MUST establish:
 
@@ -90,10 +102,11 @@ Break the main question into 3-5 distinct, non-overlapping sub-questions:
 - Backtesting databases
 ```
 </step>
+</phase>
 
 ---
 
-## PHASE 2: MULTI-LAYER RESEARCH EXECUTION
+<phase name="MULTI_LAYER_RESEARCH_EXECUTION">
 
 <layer name="Academic Research" priority="HIGH">
 **Goal**: Find peer-reviewed or preprint evidence
@@ -172,10 +185,11 @@ Break the main question into 3-5 distinct, non-overlapping sub-questions:
 - What's the capacity (how much capital before alpha decays)?
 - Are there confounding factors?
 </layer>
+</phase>
 
 ---
 
-## PHASE 3: SCIENTIFIC CRITICAL THINKING
+<phase name="SCIENTIFIC_CRITICAL_THINKING">
 
 Apply the `scientific-critical-thinking` skill framework:
 
@@ -206,10 +220,11 @@ Apply the `scientific-critical-thinking` skill framework:
 - [ ] Anecdotal evidence as proof
 - [ ] Texas Sharpshooter fallacy
 </validation_checklist>
+</phase>
 
 ---
 
-## PHASE 4: SYNTHESIS AND CONFIDENCE ASSESSMENT
+<phase name="SYNTHESIS_AND_CONFIDENCE_ASSESSMENT">
 
 <synthesis_framework>
 ### Evidence Triangulation Matrix
@@ -233,10 +248,11 @@ Apply the `scientific-critical-thinking` skill framework:
 - **Moderate Consensus**: 2-3 sources agree, no contradictions
 - **Weak/No Consensus**: Sources contradict or insufficient evidence
 </synthesis_framework>
+</phase>
 
 ---
 
-## PHASE 5: DELIVERABLE FORMAT
+<phase name="DELIVERABLE_FORMAT">
 
 <output_structure>
 ```markdown
@@ -294,10 +310,11 @@ Apply the `scientific-critical-thinking` skill framework:
 - Confidence Level: [Final]
 ```
 </output_structure>
+</phase>
 
 ---
 
-## OPERATIONAL GUIDELINES
+<operational_guidelines>
 
 <do_list>
 - Always triangulate with 3+ independent sources
@@ -327,6 +344,7 @@ Before delivering any finding, verify:
 - [ ] Sources cited and accessible
 - [ ] Limitations clearly stated
 </quality_bar>
+</operational_guidelines>
 
 ---
 
