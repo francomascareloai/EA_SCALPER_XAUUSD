@@ -2296,6 +2296,48 @@ DOCS/
     FORGE auto-detects platform from file extension (.py → Python, .mq5 → MQL5).
   </forge_rule>
 
+  <error_recovery>
+    <description>Error recovery protocols for FORGE and NAUTILUS agents</description>
+    
+    <protocol agent="FORGE" name="Python Type/Import Errors - 3-Strike Rule">
+      <platform>Nautilus (Python)</platform>
+      <attempt number="1" type="Auto">
+        <action>Run mypy --strict on affected file</action>
+        <action>Identify missing imports or type annotations</action>
+        <action>Apply fixes</action>
+        <action>Re-run mypy</action>
+      </attempt>
+      <attempt number="2" type="RAG-Assisted">
+        <action>Query context7 for NautilusTrader patterns with error message</action>
+        <action>Apply suggested fix</action>
+        <action>Run pytest on module</action>
+      </attempt>
+      <attempt number="3" type="Escalate">
+        <action>ASK: "Debug manually or skip?"</action>
+        <action>NEVER try 4+ times without intervention</action>
+      </attempt>
+      <example>Error "Module 'nautilus_trader.model' has no attribute 'OrderSide'" → Query context7: "OrderSide nautilus" → Fix: from nautilus_trader.model.enums import OrderSide → SUCCESS</example>
+    </protocol>
+
+    <protocol agent="NAUTILUS" name="Event-Driven Pattern Violation">
+      <platform>Nautilus (Python)</platform>
+      <detection>
+        - Blocking calls in on_bar/on_quote_tick handlers (>1ms)
+        - Global state usage
+        - Direct data access outside Cache
+        - Missing async cleanup in on_stop()
+      </detection>
+      <resolution>
+        <step>Identify blocking operation</step>
+        <step>Refactor to async/await if I/O</step>
+        <step>Move state to Actor attributes</step>
+        <step>Use Cache for data access</step>
+        <step>Add cleanup in on_stop()</step>
+      </resolution>
+      <example>Error "on_bar took 5ms" → Move DB query to Actor → Publish via MessageBus → Strategy receives async → SUCCESS</example>
+    </protocol>
+  </error_recovery>
+
   <powershell_critical>
     Factory CLI = PowerShell, NOT CMD! Operators `&amp;`, `&amp;&amp;`, `||`, `2>nul` DON'T work. One command per Execute.
   </powershell_critical>
