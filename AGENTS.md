@@ -1,10 +1,10 @@
 <coding_guidelines>
 <metadata>
   <title>EA_SCALPER_XAUUSD - Agent Instructions</title>
-  <version>3.4.0</version>
+  <version>3.4.1</version>
   <last_updated>2025-12-07</last_updated>
-  <changelog>Added 10 critical Strategic Intelligence enhancements: enforcement validation, concrete templates, feedback loop, compressed protocols, agent integration gates, pattern learning, complexity thresholds, conflict resolution, amplifier protocols, thinking observability</changelog>
-  <previous_changes>v3.3: Added Strategic Intelligence | v3.2: Converted to pure XML | v3.1: Added error recovery, conflict resolution, observability</previous_changes>
+  <changelog>Dual-platform support: Added platform_support section (Nautilus PRIMARY, MQL5 SECONDARY), dual bugfix logs, FORGE validation for both platforms (mypy/pytest + metaeditor64), Python/Nautilus error recovery protocols (2 NEW), updated FORGE metadata, added Nautilus examples to complexity levels. MQL5 fully retained (NOT deprecated).</changelog>
+  <previous_changes>v3.4.0: Strategic Intelligence enhancements | v3.3: Added Strategic Intelligence | v3.2: Converted to pure XML | v3.1: Added error recovery, conflict resolution, observability</previous_changes>
 </metadata>
 
 <identity>
