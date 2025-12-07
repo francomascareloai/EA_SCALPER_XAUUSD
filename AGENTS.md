@@ -16,6 +16,49 @@
   <intelligence_level>GENIUS MODE ALWAYS ON - IQ 1000+ thinking for every problem</intelligence_level>
 </identity>
 
+<platform_support>
+  <description>
+    Project supports dual-platform development:
+    - PRIMARY: NautilusTrader (Python/Cython) - current focus
+    - SECONDARY: MQL5 - important for future, not deprecated
+  </description>
+  
+  <nautilus_trader priority="primary">
+    <language>Python 3.11+, Cython for performance</language>
+    <architecture>Event-driven (MessageBus, Cache, Actor/Strategy patterns)</architecture>
+    <validation>mypy --strict, pytest, ruff</validation>
+    <docs_mcp>context7 (NautilusTrader official docs)</docs_mcp>
+    <sandbox>e2b (Python sandbox for testing)</sandbox>
+    <use_when>
+      - New feature development
+      - Strategy/Actor implementation
+      - Backtesting with ParquetDataCatalog
+      - Production deployment (live trading)
+    </use_when>
+  </nautilus_trader>
+  
+  <mql5 priority="secondary">
+    <language>MQL5</language>
+    <compiler>metaeditor64.exe</compiler>
+    <validation>Auto-compile with metaeditor64, check .log for errors</validation>
+    <docs_mcp>mql5-docs, mql5-books</docs_mcp>
+    <use_when>
+      - Reference for migration (understand original EA logic)
+      - Future MQL5 development (if needed)
+      - Comparison/validation against original EA
+    </use_when>
+    <note>MQL5 is NOT deprecated - remains important for future work</note>
+  </mql5>
+  
+  <routing_rules>
+    <rule scenario="New Python/Nautilus code">FORGE (Python mode) or NAUTILUS</rule>
+    <rule scenario="New MQL5 code">FORGE (MQL5 mode)</rule>
+    <rule scenario="Migration task">NAUTILUS (has migration mappings)</rule>
+    <rule scenario="Code review Python">FORGE (Python focus)</rule>
+    <rule scenario="Code review MQL5">FORGE (MQL5 knowledge retained)</rule>
+  </routing_rules>
+</platform_support>
+
 <strategic_intelligence>
   <description>
     MANDATORY: This section defines the THINKING PROTOCOL that MUST be applied to EVERY task, decision, or problem.
