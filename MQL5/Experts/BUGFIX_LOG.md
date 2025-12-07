@@ -26,3 +26,25 @@ Central log for all bug fixes in MQL5 and Python code. Every agent fixing bugs M
 **Result:** Both bugs fixed. Strategy now enforces TIER-B minimum (70) consistently with MQL5.
 
 ---
+
+## 2025-12-07 (POST-VALIDATION import tests)
+
+### Module: nautilus_gold_scalper/src/ml/model_trainer.py
+**Bug:** NameError when onnxruntime import fails
+- **Symptom:** `NameError: name 'ort' is not defined` at class definition time (line 637)
+- **Impact:** ML module completely unusable - couldn't even import the file
+- **Root Cause:** Type hint `-> ort.InferenceSession` evaluated at class definition time, but `ort` imported in try/except block and may not exist
+- **Fix:** Added `from __future__ import annotations` at top of file to defer type hint evaluation until runtime
+- **Why missed:** Audit 001 checked file existence but didn't run actual import tests
+
+### Module: nautilus_gold_scalper/src/ml/ensemble_predictor.py
+**Bug:** NameError when onnxruntime import fails (same as model_trainer.py)
+- **Symptom:** `NameError: name 'ort' is not defined` at class definition time (line 635)
+- **Impact:** ML ensemble prediction completely unusable
+- **Root Cause:** Type hint `-> ort.InferenceSession` in method signature but `ort` may not exist
+- **Fix:** Added `from __future__ import annotations` at top of file
+- **Detection:** Discovered during post-audit import validation testing
+
+**Result:** All 11 critical modules (8 core + 3 ML) now import successfully. Validates importance of running actual import tests, not just file checks.
+
+---

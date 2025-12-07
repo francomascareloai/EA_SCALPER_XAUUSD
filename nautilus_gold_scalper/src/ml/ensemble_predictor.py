@@ -8,6 +8,8 @@ Combines multiple ML models for robust predictions:
 - Regime-conditional model selection
 - Confidence calibration
 """
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field, asdict

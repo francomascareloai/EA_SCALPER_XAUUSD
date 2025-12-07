@@ -9,6 +9,8 @@ Provides training infrastructure for trading ML models:
 - Training metrics tracking
 - Early stopping with patience
 """
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any, Callable
