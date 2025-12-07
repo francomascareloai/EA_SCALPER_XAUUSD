@@ -401,8 +401,8 @@ class NewsCalendar:
                 return self._last_result
             self._last_check_time = now_param
         
-        # Ensure cache is valid
-        self._ensure_cache_valid()
+        # Ensure cache is valid (respect backtest time if provided)
+        self._ensure_cache_valid(now=now_param)
         
         # Default result
         result = NewsWindow()
@@ -556,20 +556,21 @@ class NewsCalendar:
     # PRIVATE METHODS
     # ========================================================================
     
-    def _ensure_cache_valid(self) -> None:
+    def _ensure_cache_valid(self, now: Optional[datetime] = None) -> None:
         """Ensure event cache is valid, refresh if needed."""
+        now = now or datetime.now(timezone.utc)
         if self._last_cache_update is None:
-            self._refresh_cache()
+            self._refresh_cache(now=now)
             return
         
-        now = datetime.now(timezone.utc)
         age_minutes = (now - self._last_cache_update).total_seconds() / 60
         
         if age_minutes >= self._cache_ttl_minutes or not self._events:
-            self._refresh_cache()
+            self._refresh_cache(now=now)
     
-    def _refresh_cache(self) -> None:
+    def _refresh_cache(self, now: Optional[datetime] = None) -> None:
         """Refresh event cache from all sources."""
+        now = now or datetime.now(timezone.utc)
         events = []
         
         # Load hardcoded events
@@ -579,7 +580,6 @@ class NewsCalendar:
         # TODO: Optional - Add economic calendar API
         
         # Filter: only future events
-        now = datetime.now(timezone.utc)
         events = [e for e in events if e.time_utc > now]
         
         # Sort by time

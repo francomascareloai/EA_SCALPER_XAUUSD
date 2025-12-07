@@ -26,6 +26,7 @@ class TimeConstraintManager:
         urgent: time = time(16, 30),
         emergency: time = time(16, 55),
         allow_overnight: bool = False,
+        telemetry=None,
     ) -> None:
         self.strategy = strategy
         self.cutoff = cutoff
@@ -36,6 +37,7 @@ class TimeConstraintManager:
         }
         self.allow_overnight = allow_overnight
         self._issued: Set[str] = set()
+        self.telemetry = telemetry
 
     def check(self, ts_ns: int) -> bool:
         """
@@ -80,15 +82,27 @@ class TimeConstraintManager:
 
         self.strategy._is_trading_allowed = False  # internal guard
         setattr(self.strategy, "_trading_blocked_today", True)
-        self.strategy.log.critical(
-            f"APEX TIME CUTOFF {dt_et.strftime('%Y-%m-%d %H:%M:%S %Z')} - all positions closed"
+        cutoff_str = self.cutoff.strftime("%H:%M")
+        self.strategy.log.error(
+            f'{{"event":"apex_cutoff","ts":"{dt_et.isoformat()}","action":"flatten","reason":"{cutoff_str} cutoff"}}'
         )
+        if self.telemetry:
+            self.telemetry.emit(
+                "apex_cutoff",
+                {"ts": dt_et.isoformat(), "action": "flatten", "reason": "cutoff_reached", "cutoff": cutoff_str},
+            )
 
     def _log_warning(self, level: str, dt_et: datetime) -> None:
-        msg = f"APEX cutoff warning ({level}) at {dt_et.strftime('%H:%M:%S %Z')} -> 16:59 cutoff"
+        cutoff_str = self.cutoff.strftime("%H:%M")
+        payload = f'{{"event":"apex_cutoff_warning","level":"{level}","ts":"{dt_et.isoformat()}","cutoff":"{cutoff_str} ET"}}'
         if level == "emergency":
-            self.strategy.log.critical(msg)
+            self.strategy.log.error(payload)
         elif level == "urgent":
-            self.strategy.log.error(msg)
+            self.strategy.log.error(payload)
         else:
-            self.strategy.log.warning(msg)
+            self.strategy.log.warning(payload)
+        if self.telemetry:
+            self.telemetry.emit(
+                "apex_cutoff_warning",
+                {"level": level, "ts": dt_et.isoformat(), "cutoff": cutoff_str},
+            )

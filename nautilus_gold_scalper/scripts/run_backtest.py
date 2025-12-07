@@ -13,6 +13,8 @@ import pandas as pd
 import numpy as np
 import yaml
 import math
+import json
+from typing import Optional, TextIO
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -122,8 +124,23 @@ def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
     news_cfg = cfg.get("news", {}) if isinstance(cfg, dict) else {}
     spread_cfg = cfg.get("spread", {}) if isinstance(cfg, dict) else {}
     exec_cfg = cfg.get("execution", {}) if isinstance(cfg, dict) else {}
+    spreadmon_cfg = cfg.get("spread_monitor", {}) if isinstance(cfg, dict) else {}
+    time_cfg = cfg.get("time", {}) if isinstance(cfg, dict) else {}
+    cb_cfg = cfg.get("circuit_breaker", {}) if isinstance(cfg, dict) else {}
+    consistency_cfg = cfg.get("consistency", {}) if isinstance(cfg, dict) else {}
+    telemetry_cfg = cfg.get("telemetry", {}) if isinstance(cfg, dict) else {}
+    telemetry_capture = telemetry_cfg.get("capture", {}) if isinstance(telemetry_cfg, dict) else {}
 
     execution_threshold = confluence_cfg.get("execution_threshold", confluence_cfg.get("min_score_to_trade", 70))
+
+    # Derive time cutoffs with fallback to execution config
+    cutoff_str = exec_cfg.get("flatten_time_et", time_cfg.get("cutoff_et", "16:59"))
+    warning_str = time_cfg.get("warning_et", "16:00")
+    urgent_str = time_cfg.get("urgent_et", "16:30")
+    emergency_str = time_cfg.get("emergency_et", "16:55")
+
+    max_spread_points = int(exec_cfg.get("max_spread_points", spread_cfg.get("max_spread_points", 80)))
+    max_spread_pips = float(spreadmon_cfg.get("max_spread_pips", max_spread_points / 10.0))
 
     return GoldScalperConfig(
         strategy_id="GOLD-TICK-001",
@@ -144,13 +161,44 @@ def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
         use_news_filter=news_cfg.get("enabled", True),
         news_score_penalty=int(news_cfg.get("score_penalty", -15)),
         news_size_multiplier=float(news_cfg.get("size_multiplier", 0.5)),
-        flatten_time_et=exec_cfg.get("flatten_time_et", "16:59"),
-        allow_overnight=exec_cfg.get("allow_overnight", False),
+        flatten_time_et=cutoff_str,
+        allow_overnight=exec_cfg.get("allow_overnight", time_cfg.get("allow_overnight", False)),
         slippage_ticks=int(exec_cfg.get("slippage_ticks", 2)),
         commission_per_contract=float(exec_cfg.get("commission_per_contract", 2.5)),
         latency_ms=int(exec_cfg.get("latency_ms", 0)),
         partial_fill_prob=float(exec_cfg.get("partial_fill_prob", 0.0)),
         partial_fill_ratio=float(exec_cfg.get("partial_fill_ratio", 0.5)),
+        fill_reject_base=float(exec_cfg.get("fill_reject_base", 0.0)),
+        fill_reject_spread_factor=float(exec_cfg.get("fill_reject_spread_factor", 0.0)),
+        fill_model=str(exec_cfg.get("fill_model", "realistic")),
+        use_selector=exec_cfg.get("use_selector", True),
+        max_spread_pips=max_spread_pips,
+        spread_warning_ratio=float(spreadmon_cfg.get("warning_ratio", spread_cfg.get("warning_ratio", 2.0))),
+        spread_block_ratio=float(spreadmon_cfg.get("block_ratio", spread_cfg.get("block_ratio", 5.0))),
+        spread_history_size=int(spreadmon_cfg.get("history_size", 200)),
+        spread_update_interval=int(spreadmon_cfg.get("update_interval", 1)),
+        spread_pip_factor=float(spreadmon_cfg.get("pip_factor", 10.0)),
+        time_warning_et=warning_str,
+        time_urgent_et=urgent_str,
+        time_emergency_et=emergency_str,
+        cb_level_1_losses=int(cb_cfg.get("level_1_losses", 3)),
+        cb_level_2_losses=int(cb_cfg.get("level_2_losses", 5)),
+        cb_level_3_dd=float(cb_cfg.get("level_3_dd", 3.0)),
+        cb_level_4_dd=float(cb_cfg.get("level_4_dd", 4.0)),
+        cb_level_5_dd=float(cb_cfg.get("level_5_dd", 4.5)),
+        cb_cooldown_1=int(cb_cfg.get("cooldown_minutes", {}).get("level_1", 5)),
+        cb_cooldown_2=int(cb_cfg.get("cooldown_minutes", {}).get("level_2", 15)),
+        cb_cooldown_3=int(cb_cfg.get("cooldown_minutes", {}).get("level_3", 30)),
+        cb_cooldown_4=int(cb_cfg.get("cooldown_minutes", {}).get("level_4", 1440)),
+        cb_size_mult_2=float(cb_cfg.get("size_multipliers", {}).get("level_2", 0.75)),
+        cb_size_mult_3=float(cb_cfg.get("size_multipliers", {}).get("level_3", 0.5)),
+        cb_auto_recovery=bool(cb_cfg.get("auto_recovery", True)),
+        consistency_cap_pct=float(consistency_cfg.get("daily_profit_cap_pct", 30.0)),
+        telemetry_enabled=bool(telemetry_cfg.get("enabled", True)),
+        telemetry_path=str(telemetry_cfg.get("path", "logs/telemetry.jsonl")),
+        telemetry_capture_spread=bool(telemetry_capture.get("spread", True)),
+        telemetry_capture_circuit=bool(telemetry_capture.get("circuit", True)),
+        telemetry_capture_cutoff=bool(telemetry_capture.get("cutoff", True)),
     )
 
 
@@ -159,13 +207,19 @@ def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_tick
     print("Converting to QuoteTick objects...")
     
     slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
-        ticks = []
-        for idx, row in df.iterrows():
-            ts_ns = int(row['datetime'].timestamp() * 1e9)
-            if latency_ms > 0:
-                ts_ns += int(latency_ms * 1e6)
-            bid_px = row['bid'] - slip_value
-            ask_px = row['ask'] + slip_value
+    ticks = []
+    for idx, row in df.iterrows():
+        ts_ns = int(row['datetime'].timestamp() * 1e9)
+        if latency_ms > 0:
+            ts_ns += int(latency_ms * 1e6)
+        # Slip proportional to spread (if available) and random small jitter
+        base_bid = row['bid']
+        base_ask = row['ask']
+        spread = max(0.0, base_ask - base_bid)
+        vol_factor = np.clip(spread / instrument.price_increment, 0, 5)
+        slip_adj = slip_value + (spread * 0.25) + (vol_factor * float(instrument.price_increment) * 0.1)
+        bid_px = base_bid - slip_adj
+        ask_px = base_ask + slip_adj
         
         tick = QuoteTick(
             instrument_id=instrument.id,
@@ -258,7 +312,7 @@ class BacktestRunner:
         use_footprint: bool = True,
         prop_firm_enabled: bool = True,
         use_news_filter: bool = True,
-        execution_threshold: int = 65,
+        execution_threshold: int = 70,
         debug_mode: bool = False,
     ):
         """Run tick-based backtest with NautilusTrader."""
@@ -355,12 +409,27 @@ class BacktestRunner:
         print("\n" + "=" * 60)
         print("BACKTEST RESULTS")
         print("=" * 60)
-        
+
+        output_dir = Path("logs") / "backtest_latest"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        metrics_out: Optional[TextIO] = None
+        if getattr(self, "metrics_jsonl", None):
+            try:
+                metrics_out = open(self.metrics_jsonl, "a", encoding="utf-8")
+            except Exception:
+                metrics_out = None
+
+        fills = None
+        positions = None
+        account = None
+
         try:
             fills = self.engine.trader.generate_order_fills_report()
             print(f"\nOrder Fills: {len(fills)}")
             if len(fills) > 0:
                 print(fills.to_string())
+                fills.to_csv(output_dir / "fills.csv", index=False)
         except Exception as e:
             print(f"Fills report error: {e}")
         
@@ -369,6 +438,7 @@ class BacktestRunner:
             print(f"\nPositions Report:")
             if len(positions) > 0:
                 print(positions.to_string())
+                positions.to_csv(output_dir / "positions.csv", index=False)
             else:
                 print("  No positions")
         except Exception as e:
@@ -376,6 +446,8 @@ class BacktestRunner:
         
         try:
             account = self.engine.trader.generate_account_report(self.venue)
+            if len(account) > 0:
+                account.to_csv(output_dir / "account.csv", index=False)
             
             # Calculate summary
             final_balance = float(account['total'].iloc[-1]) if len(account) > 0 else 100000
@@ -403,20 +475,33 @@ class BacktestRunner:
                     dd = (account['total'] - max_total) / max_total
                     max_dd = dd.min() * 100 if len(dd) else 0
                     calmar = (returns.mean() * 252) / (abs(max_dd) / 100) if max_dd != 0 else 0.0
-                    # SQN: mean trade / std * sqrt(n)
-                    if len(fills) > 1:
-                        trade_pnls = fills['realized_pnl'].astype(float) if 'realized_pnl' in fills.columns else None
-                        if trade_pnls is not None and trade_pnls.std() > 0:
+                    sqn = 0.0
+                    if len(fills) > 1 and 'realized_pnl' in fills.columns:
+                        trade_pnls = fills['realized_pnl'].astype(float)
+                        if trade_pnls.std() > 0:
                             sqn = trade_pnls.mean() / trade_pnls.std() * math.sqrt(len(trade_pnls))
-                        else:
-                            sqn = 0.0
-                    else:
-                        sqn = 0.0
-                    print(f"Sharpe (approx): {sharpe:.2f}")
-                    print(f"Sortino (approx): {sortino:.2f}")
-                    print(f"Max Drawdown: {max_dd:.2f}%")
-                    print(f"Calmar (approx): {calmar:.2f}")
-                    print(f"SQN (approx): {sqn:.2f}")
+                    log_line = {
+                        "event": "metrics",
+                        "sharpe": round(sharpe, 3),
+                        "sortino": round(sortino, 3),
+                        "max_drawdown_pct": round(max_dd, 3),
+                        "calmar": round(calmar, 3),
+                        "sqn": round(sqn, 3),
+                    }
+                    print(json.dumps(log_line))
+                    metrics = {
+                        "final_balance": final_balance,
+                        "total_pnl": total_pnl,
+                        "fills": fills_count,
+                        "commissions": total_commissions,
+                        "sharpe": sharpe,
+                        "sortino": sortino,
+                        "max_drawdown_pct": max_dd,
+                        "calmar": calmar,
+                        "sqn": sqn,
+                    }
+                    with open(output_dir / "metrics.json", "w", encoding="utf-8") as f:
+                        json.dump(metrics, f, indent=2)
             
             # Win rate from positions
             if 'positions' in dir() and len(positions) > 0 and 'realized_pnl' in positions.columns:
@@ -462,9 +547,9 @@ def main():
     parser.add_argument('--latency', type=int, default=None, help='Simulated latency in ms')
     parser.add_argument('--slippage', type=int, default=None, help='Slippage in ticks (overrides config)')
     parser.add_argument('--commission', type=float, default=None, help='Commission per contract (overrides config)')
-    parser.add_argument('--latency', type=int, default=None, help='Simulated latency in ms')
     parser.add_argument('--partial-prob', type=float, default=None, help='Partial fill probability (0-1)')
     parser.add_argument('--partial-ratio', type=float, default=None, help='Partial fill ratio (0-1)')
+    parser.add_argument('--metrics-jsonl', default=None, help='Optional path to write metrics JSONL')
     args = parser.parse_args()
     
     config_path = Path(args.config)
@@ -476,6 +561,7 @@ def main():
     latency_ms = args.latency if args.latency is not None else exec_cfg.get("latency_ms", 0)
     partial_prob = args.partial_prob if args.partial_prob is not None else exec_cfg.get("partial_fill_prob", 0.0)
     partial_ratio = args.partial_ratio if args.partial_ratio is not None else exec_cfg.get("partial_fill_ratio", 0.5)
+    metrics_jsonl = args.metrics_jsonl
 
     runner = BacktestRunner(
         initial_balance=exec_cfg.get("initial_balance", 100_000.0),
@@ -492,7 +578,7 @@ def main():
         import json
         from datetime import datetime
         
-        thresholds = [60, 65, 70, 75]
+        thresholds = [60, 70, 75, 80]
         results = []
         
         for thresh in thresholds:

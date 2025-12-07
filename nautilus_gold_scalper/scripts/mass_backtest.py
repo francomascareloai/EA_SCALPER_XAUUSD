@@ -10,7 +10,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
+from pathlib import Path
+from dataclasses import dataclass, replace
 from itertools import product
 import json
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -25,6 +26,11 @@ from nautilus_trader.config import LoggingConfig
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 
 from src.strategies.gold_scalper_strategy import GoldScalperStrategy, GoldScalperConfig
+# Central config loader (YAML single source); fallback for direct script runs
+try:  # pragma: no cover
+    from scripts.run_backtest import load_yaml_config, build_strategy_config
+except Exception:  # pragma: no cover
+    from run_backtest import load_yaml_config, build_strategy_config  # type: ignore
 
 
 @dataclass
@@ -151,17 +157,20 @@ def run_single_backtest(
         
         engine.add_data(bars)
         
-        # Create strategy with params
-        config = GoldScalperConfig(
-            instrument_id=str(instrument.id),
-            execution_threshold=params.get('execution_threshold', 65),
-            min_mtf_confluence=params.get('min_mtf_confluence', 50.0),
-            require_htf_align=params.get('require_htf_align', True),
-            aggressive_mode=params.get('aggressive_mode', False),
-            use_footprint_boost=params.get('use_footprint_boost', True),
-            use_session_filter=params.get('use_session_filter', False),
-            use_regime_filter=params.get('use_regime_filter', False),
-            use_footprint=params.get('use_footprint', False),
+        # Strategy config from central YAML, then override sweep params
+        cfg_path = Path(__file__).parent.parent / "configs" / "strategy_config.yaml"
+        cfg_dict = load_yaml_config(cfg_path)
+        base_cfg = build_strategy_config(cfg_dict, bar_type=bar_type, instrument_id=instrument.id)
+        config = replace(
+            base_cfg,
+            execution_threshold=params.get("execution_threshold", base_cfg.execution_threshold),
+            min_mtf_confluence=params.get("min_mtf_confluence", base_cfg.min_mtf_confluence),
+            require_htf_align=params.get("require_htf_align", base_cfg.require_htf_align),
+            aggressive_mode=params.get("aggressive_mode", base_cfg.aggressive_mode),
+            use_footprint_boost=params.get("use_footprint_boost", base_cfg.use_footprint_boost),
+            use_session_filter=params.get("use_session_filter", base_cfg.use_session_filter),
+            use_regime_filter=params.get("use_regime_filter", base_cfg.use_regime_filter),
+            use_footprint=params.get("use_footprint", base_cfg.use_footprint),
             debug_mode=False,
         )
         
@@ -253,7 +262,7 @@ def run_single_backtest(
 def generate_parameter_grid() -> List[Dict[str, Any]]:
     """Generate parameter combinations for testing."""
     param_ranges = {
-        'execution_threshold': [40, 50, 60, 65, 70, 75, 80],
+        'execution_threshold': [60, 70, 75, 80],
         'min_mtf_confluence': [30.0, 40.0, 50.0, 60.0],
         'require_htf_align': [True, False],
         'aggressive_mode': [False, True],

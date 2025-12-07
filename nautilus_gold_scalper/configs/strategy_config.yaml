@@ -4,7 +4,7 @@
 # =============================================================================
 
 confluence:
-  min_score_to_trade: 60
+  min_score_to_trade: 70
   footprint_weight: 10
   fib_weight: 10
   session_weights:
@@ -44,8 +44,59 @@ risk:
   kelly_fraction: 0.25
 
 execution:
+  execution_threshold: 70
   slippage_ticks: 2
   latency_ms: 50
   commission_per_contract: 2.5
   fill_model: realistic   # immediate | realistic | worst_case
+  allow_overnight: false
+  partial_fill_prob: 0.1
+  partial_fill_ratio: 0.5
+  fill_reject_base: 0.02
+  fill_reject_spread_factor: 0.05
+  max_spread_points: 80
+  use_selector: true
+  use_mtf: true
+  use_footprint: true
 
+spread_monitor:
+  history_size: 200
+  warning_ratio: 2.0
+  block_ratio: 5.0
+  max_spread_pips: 45.0
+  update_interval: 1
+  pip_factor: 10.0
+
+time:
+  cutoff_et: "16:59"
+  warning_et: "16:00"
+  urgent_et: "16:30"
+  emergency_et: "16:55"
+
+circuit_breaker:
+  level_1_losses: 3
+  level_2_losses: 5
+  level_3_dd: 3.0
+  level_4_dd: 4.0
+  level_5_dd: 4.5
+  cooldown_minutes:
+    level_1: 5
+    level_2: 15
+    level_3: 30
+    level_4: 1440
+  size_multipliers:
+    level_2: 0.75
+    level_3: 0.5
+  auto_recovery: true
+
+consistency:
+  daily_profit_cap_pct: 30.0   # Apex rule
+
+telemetry:
+  enabled: true
+  path: "logs/telemetry.jsonl"
+  capture:
+    spread: true
+    circuit: true
+    cutoff: true
+    metrics: true

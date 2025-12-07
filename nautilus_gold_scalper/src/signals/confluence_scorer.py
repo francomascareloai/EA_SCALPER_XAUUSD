@@ -893,6 +893,16 @@ class ConfluenceScorer:
         result.bearish_factors = self._components.bearish_factors
         result.total_confluences = total_factors
         
+        # Bug #2 Fix: Enforce confluence_min_score from config
+        # If config defines a minimum threshold and score is below, reject signal
+        min_score_config = getattr(self.config, 'confluence_min_score', None)
+        if min_score_config is not None and result.total_score < min_score_config:
+            logger.debug(
+                f"Score {result.total_score:.1f} below config minimum {min_score_config} - rejecting signal"
+            )
+            result.total_score = 0.0  # Reject signal
+            result.direction = SignalType.SIGNAL_NONE
+        
         # Store GENIUS enhancements in result
         result.sequence_steps = sequence_steps
         result.multiplier_adjustments = {

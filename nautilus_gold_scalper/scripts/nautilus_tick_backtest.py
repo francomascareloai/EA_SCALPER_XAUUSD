@@ -11,7 +11,6 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import yaml
-import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -26,6 +25,12 @@ from nautilus_trader.model.enums import BarAggregation, PriceType, AggregationSo
 from nautilus_trader.model.instruments import CurrencyPair
 
 from src.strategies.gold_scalper_strategy import GoldScalperStrategy, GoldScalperConfig
+
+# Reuse central config builder; fallback to local definitions if import fails
+try:  # pragma: no cover - convenience for script execution
+    from scripts.run_backtest import load_yaml_config, build_strategy_config
+except Exception:  # pragma: no cover
+    from run_backtest import load_yaml_config, build_strategy_config  # type: ignore
 
 
 def create_xauusd_instrument(venue: Venue) -> CurrencyPair:
@@ -197,30 +202,8 @@ def run_tick_backtest(
             cfg = yaml.safe_load(f) or {}
     except Exception:
         cfg = {}
-    exec_cfg = cfg.get("execution", {}) if isinstance(cfg, dict) else {}
-    confluence_cfg = cfg.get("confluence", {}) if isinstance(cfg, dict) else {}
-    strategy_config = GoldScalperConfig(
-        strategy_id="GOLD-TICK-001",
-        instrument_id=xauusd.id,
-        ltf_bar_type=bar_type,
-        execution_threshold=int(confluence_cfg.get("execution_threshold", 70)),
-        min_mtf_confluence=float(confluence_cfg.get("min_score_to_trade", 50)),
-        use_session_filter=exec_cfg.get("use_session_filter", False),
-        use_regime_filter=exec_cfg.get("use_regime_filter", False),
-        use_mtf=exec_cfg.get("use_mtf", False),
-        use_footprint=exec_cfg.get("use_footprint", False),
-        prop_firm_enabled=exec_cfg.get("prop_firm_enabled", False),
-        account_balance=exec_cfg.get("initial_balance", initial_balance),
-        flatten_time_et=exec_cfg.get("flatten_time_et", "16:59"),
-        allow_overnight=exec_cfg.get("allow_overnight", False),
-        slippage_ticks=int(exec_cfg.get("slippage_ticks", slippage_ticks)),
-        commission_per_contract=float(exec_cfg.get("commission_per_contract", commission_per_contract)),
-        latency_ms=int(exec_cfg.get("latency_ms", latency_ms)),
-        partial_fill_prob=float(exec_cfg.get("partial_fill_prob", 0.0)),
-        partial_fill_ratio=float(exec_cfg.get("partial_fill_ratio", 0.5)),
-        max_spread_points=int(exec_cfg.get("max_spread_points", 80)),
-        debug_mode=True,
-    )
+    cfg = load_yaml_config(Path(config_path))
+    strategy_config = build_strategy_config(cfg, bar_type=bar_type, instrument_id=xauusd.id)
     
     strategy = GoldScalperStrategy(config=strategy_config)
     engine.add_strategy(strategy)

@@ -18,7 +18,7 @@ class ConsistencyTracker:
         self.initial_balance = Decimal(str(initial_balance))
         self.total_profit = Decimal("0")
         self.daily_profit = Decimal("0")
-        self.consistency_limit = Decimal("0.30")  # 30%
+        self.consistency_limit = Decimal("0.25")  # 25% safety buffer vs Apex 30%
         self._limit_hit = False
         self.et_tz = ZoneInfo(tz)
         self._last_day = None
@@ -41,7 +41,13 @@ class ConsistencyTracker:
             if daily_pct >= self.consistency_limit:
                 self._limit_hit = True
 
-    def can_trade(self, now: datetime) -> bool:
+    def can_trade(self, now: datetime | None = None) -> bool:
+        """
+        Returns True if trading is allowed under the consistency rule.
+        Accepts an optional datetime; defaults to now in ET.
+        """
+        if now is None:
+            now = datetime.now(self.et_tz)
         self._maybe_reset(now)
         return not self._limit_hit
 
