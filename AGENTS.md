@@ -2017,9 +2017,18 @@ Quality gate status: APPROVED (all gates passed)
     <agent>
       <emoji>⚒️</emoji>
       <name>FORGE</name>
-      <use_for>Code/MQL5/Python</use_for>
+      <use_for>Code/Python/Nautilus (primary), Code/MQL5 (secondary)</use_for>
       <triggers>"Forge", /codigo, /review</triggers>
-      <primary_mcps>metaeditor64★, mql5-docs★, github, e2b</primary_mcps>
+      <primary_mcps>
+        Nautilus: context7★ (docs), e2b★ (sandbox)
+        MQL5: metaeditor64, mql5-docs
+        Both: github (repos), sequential-thinking (complex bugs)
+      </primary_mcps>
+      <validation>
+        Python: mypy + pytest
+        MQL5: metaeditor64 auto-compile
+      </validation>
+      <note>FORGE supports BOTH platforms - auto-detects from file extension</note>
     </agent>
     <agent>
       <emoji>🏛️</emoji>
