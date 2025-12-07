@@ -11,6 +11,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import yaml
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -131,6 +132,7 @@ def run_tick_backtest(
     slippage_ticks: int = 2,
     commission_per_contract: float = 2.5,
     latency_ms: int = 0,
+    config_path: str = "nautilus_gold_scalper/configs/strategy_config.yaml",
 ):
     """Run backtest using tick data."""
     
@@ -188,22 +190,31 @@ def run_tick_backtest(
     )
     print(f"Bar type: {bar_type} (aggregated from ticks)")
     
-    # Configure strategy
+    # Load YAML config and build strategy config
+    cfg = {}
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception:
+        cfg = {}
+    exec_cfg = cfg.get("execution", {}) if isinstance(cfg, dict) else {}
+    confluence_cfg = cfg.get("confluence", {}) if isinstance(cfg, dict) else {}
     strategy_config = GoldScalperConfig(
         strategy_id="GOLD-TICK-001",
         instrument_id=xauusd.id,
-        ltf_bar_type=bar_type,  # Subscribe to bars aggregated from ticks
-        
-        # Thresholds
-        execution_threshold=70,
-        
-        # Disable filters for initial testing
-        use_session_filter=False,
-        use_regime_filter=False,
-        use_mtf=False,
-        use_footprint=False,
-        prop_firm_enabled=False,
-        account_balance=initial_balance,
+        ltf_bar_type=bar_type,
+        execution_threshold=int(confluence_cfg.get("execution_threshold", 70)),
+        min_mtf_confluence=float(confluence_cfg.get("min_score_to_trade", 50)),
+        use_session_filter=exec_cfg.get("use_session_filter", False),
+        use_regime_filter=exec_cfg.get("use_regime_filter", False),
+        use_mtf=exec_cfg.get("use_mtf", False),
+        use_footprint=exec_cfg.get("use_footprint", False),
+        prop_firm_enabled=exec_cfg.get("prop_firm_enabled", False),
+        account_balance=exec_cfg.get("initial_balance", initial_balance),
+        flatten_time_et=exec_cfg.get("flatten_time_et", "16:59"),
+        allow_overnight=exec_cfg.get("allow_overnight", False),
+        slippage_ticks=exec_cfg.get("slippage_ticks", slippage_ticks),
+        commission_per_contract=exec_cfg.get("commission_per_contract", commission_per_contract),
         debug_mode=True,
     )
     

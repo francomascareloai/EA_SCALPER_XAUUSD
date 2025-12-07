@@ -23,6 +23,8 @@ from nautilus_trader.model.events import PositionOpened, PositionChanged, Positi
 from nautilus_trader.model.objects import Price, Quantity
 from nautilus_trader.trading.strategy import Strategy
 
+from datetime import datetime, timezone
+
 from ..core.definitions import (
     SignalType, SignalQuality, MarketRegime, TradingSession,
     TIER_S_MIN, TIER_A_MIN, TIER_B_MIN, TIER_C_MIN, TIER_INVALID,
@@ -226,7 +228,8 @@ class BaseGoldStrategy(Strategy):
         if getattr(self, "_drawdown_tracker", None) and self._position:
             equity = self._compute_equity_from_tick(tick)
             if equity is not None:
-                analysis = self._drawdown_tracker.update(equity)
+                now_dt = datetime.fromtimestamp(tick.ts_event / 1e9, tz=timezone.utc)
+                analysis = self._drawdown_tracker.update(equity, now=now_dt)
                 self._apply_drawdown_limits(analysis)
     
     # ========== Position Event Handlers ==========
@@ -270,7 +273,8 @@ class BaseGoldStrategy(Strategy):
             
             # Update drawdown tracker with realized PnL
             if getattr(self, "_drawdown_tracker", None):
-                analysis = self._drawdown_tracker.update(self._equity_base, pnl=pnl)
+                now_dt = datetime.now(timezone.utc)
+                analysis = self._drawdown_tracker.update(self._equity_base, pnl=pnl, now=now_dt)
                 self._apply_drawdown_limits(analysis)
             
             # Prop-firm tracking: feed realized result
