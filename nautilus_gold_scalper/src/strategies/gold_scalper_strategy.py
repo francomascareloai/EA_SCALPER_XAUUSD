@@ -13,6 +13,7 @@ import numpy as np
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Any
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +46,7 @@ from ..signals.confluence_scorer import ConfluenceScorer
 from ..signals.news_calendar import NewsCalendar, NewsTradeAction
 
 # Import risk management
+from ..execution.execution_model import ExecutionCosts, ExecutionModel
 from ..risk.prop_firm_manager import PropFirmManager
 from ..risk.position_sizer import PositionSizer
 from ..risk.drawdown_tracker import DrawdownTracker
@@ -87,6 +89,9 @@ class GoldScalperConfig(BaseStrategyConfig, frozen=True):
     allow_overnight: bool = False
     slippage_ticks: int = 2
     commission_per_contract: float = 2.5
+    latency_ms: int = 0
+    partial_fill_prob: float = 0.0  # 0-1
+    partial_fill_ratio: float = 0.5  # fraction to fill if partial triggers
 
 
 class GoldScalperStrategy(BaseGoldStrategy):
@@ -137,6 +142,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
         self._circuit_breaker: Optional[CircuitBreaker] = None
         self._trading_blocked_today: bool = False
         self._strategy_selector: Optional[StrategySelector] = None
+        self._execution_model: Optional[ExecutionModel] = None
+        self._fill_costs: Dict[str, float] = {}
+        self._consistency_tracker = None
+        self._last_spread_state: Optional[int] = None
         
         # Analysis state (per timeframe)
         self._htf_bias: MarketBias = MarketBias.RANGING
@@ -205,6 +214,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
             )
             # Initialize prop-firm state with starting equity
             self._prop_firm.initialize(starting_equity=float(self.config.account_balance))
+            # Expose consistency tracker for strategy-level guards/resets
+            self._consistency_tracker = getattr(self._prop_firm, "_consistency", None)
 
         # Spread monitor (risk realism)
         self._spread_monitor = SpreadMonitor(
@@ -225,6 +236,20 @@ class GoldScalperStrategy(BaseGoldStrategy):
             daily_loss_limit=float(self.config.daily_loss_limit_pct) / 100.0,
             total_loss_limit=float(self.config.total_loss_limit_pct) / 100.0,
         )
+
+        # Execution realism (per-fill slippage + commission)
+        try:
+            base_cents = Decimal(str(max(1, getattr(self.config, "slippage_ticks", 2)))))
+            comm_per_lot = Decimal(str(getattr(self.config, "commission_per_contract", 2.5)))
+            costs = ExecutionCosts(
+                base_slippage_cents=base_cents,
+                slippage_multiplier=Decimal("1.5"),
+                commission_per_lot=comm_per_lot,
+            )
+            self._execution_model = ExecutionModel(costs)
+        except Exception as exc:
+            self.log.debug(f"ExecutionModel setup failed, fallback to zero costs: {exc}")
+            self._execution_model = None
 
         # Strategy selector (regime/session/safety aware)
         self._strategy_selector = StrategySelector()
@@ -304,6 +329,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
 
             if self._time_manager:
                 self._time_manager.reset_daily()
+            if self._consistency_tracker:
+                self._consistency_tracker.reset_daily()
             if self._circuit_breaker:
                 self._circuit_breaker.reset()
             
@@ -798,6 +825,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             risk_percent=risk_pct,
             stop_loss_pips=sl_pips,
             regime_multiplier=regime_mult,
+            pip_value=self.instrument.pip_value.as_double() if self.instrument and hasattr(self.instrument, "pip_value") else 10.0,
         )
         
         if position_size <= 0:
@@ -823,6 +851,13 @@ class GoldScalperStrategy(BaseGoldStrategy):
                     ask=tick.ask_price.as_double(),
                 )
                 self._spread_snapshot = snapshot
+                # Structured spread log on state change
+                if self._last_spread_state != snapshot.status:
+                    self._last_spread_state = snapshot.status
+                    self.log.info(
+                        f"[SPREAD] state={snapshot.status.name} pts={snapshot.current_spread_points:.2f} "
+                        f"pips={snapshot.current_spread_pips:.2f} ratio={snapshot.spread_ratio:.2f} can_trade={snapshot.can_trade}"
+                    )
             except Exception:
                 self._spread_snapshot = None
         
@@ -874,4 +909,5 @@ class GoldScalperStrategy(BaseGoldStrategy):
         except Exception as exc:
             self.log.debug(f"Equity computation failed: {exc}")
             return None
+
 
