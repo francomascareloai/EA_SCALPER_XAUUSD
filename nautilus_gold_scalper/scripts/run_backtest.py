@@ -12,6 +12,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import yaml
+import math
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -153,11 +154,11 @@ def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
     )
 
 
-    def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0, latency_ms: int = 0) -> list:
-        """Convert DataFrame to QuoteTick objects."""
-        print("Converting to QuoteTick objects...")
-        
-        slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
+def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0, latency_ms: int = 0) -> list:
+    """Convert DataFrame to QuoteTick objects."""
+    print("Converting to QuoteTick objects...")
+    
+    slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
         ticks = []
         for idx, row in df.iterrows():
             ts_ns = int(row['datetime'].timestamp() * 1e9)
@@ -393,17 +394,29 @@ class BacktestRunner:
             if len(account) > 1:
                 returns = account['total'].pct_change().dropna()
                 if len(returns) > 0:
-                    import numpy as np
                     mean_ret = returns.mean()
                     std_ret = returns.std()
+                    downside = returns[returns < 0].std()
                     sharpe = (mean_ret / std_ret) * np.sqrt(252) if std_ret > 0 else 0.0
+                    sortino = (mean_ret / downside) * np.sqrt(252) if downside and downside > 0 else 0.0
                     max_total = account['total'].cummax()
                     dd = (account['total'] - max_total) / max_total
                     max_dd = dd.min() * 100 if len(dd) else 0
                     calmar = (returns.mean() * 252) / (abs(max_dd) / 100) if max_dd != 0 else 0.0
+                    # SQN: mean trade / std * sqrt(n)
+                    if len(fills) > 1:
+                        trade_pnls = fills['realized_pnl'].astype(float) if 'realized_pnl' in fills.columns else None
+                        if trade_pnls is not None and trade_pnls.std() > 0:
+                            sqn = trade_pnls.mean() / trade_pnls.std() * math.sqrt(len(trade_pnls))
+                        else:
+                            sqn = 0.0
+                    else:
+                        sqn = 0.0
                     print(f"Sharpe (approx): {sharpe:.2f}")
+                    print(f"Sortino (approx): {sortino:.2f}")
                     print(f"Max Drawdown: {max_dd:.2f}%")
                     print(f"Calmar (approx): {calmar:.2f}")
+                    print(f"SQN (approx): {sqn:.2f}")
             
             # Win rate from positions
             if 'positions' in dir() and len(positions) > 0 and 'realized_pnl' in positions.columns:
