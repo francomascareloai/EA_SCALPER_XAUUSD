@@ -11,6 +11,7 @@ from datetime import datetime
 
 import pandas as pd
 import numpy as np
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -101,16 +102,30 @@ def load_tick_data(
     return df
 
 
-def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0) -> list:
-    """Convert DataFrame to QuoteTick objects."""
-    print("Converting to QuoteTick objects...")
-    
-    slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
-    ticks = []
-    for idx, row in df.iterrows():
-        ts_ns = int(row['datetime'].timestamp() * 1e9)
-        bid_px = row['bid'] - slip_value
-        ask_px = row['ask'] + slip_value
+def load_yaml_config(config_path: Path) -> dict:
+    """Load YAML config if present, else return empty dict."""
+    if not config_path.exists():
+        return {}
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except Exception as exc:
+        print(f"WARNING: Could not load config {config_path}: {exc}")
+        return {}
+
+
+    def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0, latency_ms: int = 0) -> list:
+        """Convert DataFrame to QuoteTick objects."""
+        print("Converting to QuoteTick objects...")
+        
+        slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
+        ticks = []
+        for idx, row in df.iterrows():
+            ts_ns = int(row['datetime'].timestamp() * 1e9)
+            if latency_ms > 0:
+                ts_ns += int(latency_ms * 1e6)
+            bid_px = row['bid'] - slip_value
+            ask_px = row['ask'] + slip_value
         
         tick = QuoteTick(
             instrument_id=instrument.id,
@@ -177,6 +192,7 @@ class BacktestRunner:
         log_level: str = "WARNING",
         slippage_ticks: int = 2,
         commission_per_contract: float = 2.5,
+        latency_ms: int = 0,
     ):
         self.initial_balance = initial_balance
         self.log_level = log_level
@@ -185,6 +201,7 @@ class BacktestRunner:
         self.instrument = None
         self.slippage_ticks = slippage_ticks
         self.commission_per_contract = commission_per_contract
+        self.latency_ms = latency_ms
     
     def run(
         self,
@@ -254,7 +271,7 @@ class BacktestRunner:
         print(f"Bar type: {bar_type}")
         
         # Convert ticks to QuoteTicks for spread-aware execution
-        quote_ticks = create_quote_ticks(df, self.instrument, slippage_ticks=self.slippage_ticks)
+        quote_ticks = create_quote_ticks(df, self.instrument, slippage_ticks=self.slippage_ticks, latency_ms=self.latency_ms)
 
         # Pre-aggregate ticks to M5 bars
         bars = aggregate_ticks_to_bars(df, bar_type, interval_minutes=5)
@@ -348,6 +365,21 @@ class BacktestRunner:
             print(f"Total PnL (net commissions): ${total_pnl:,.2f} ({total_pnl/1000:.2f}%)")
             if total_commissions > 0:
                 print(f"Commissions: ${total_commissions:,.2f} ({fills_count} fills @ {self.commission_per_contract} each)")
+            # Basic metrics
+            if len(account) > 1:
+                returns = account['total'].pct_change().dropna()
+                if len(returns) > 0:
+                    import numpy as np
+                    mean_ret = returns.mean()
+                    std_ret = returns.std()
+                    sharpe = (mean_ret / std_ret) * np.sqrt(252) if std_ret > 0 else 0.0
+                    max_total = account['total'].cummax()
+                    dd = (account['total'] - max_total) / max_total
+                    max_dd = dd.min() * 100 if len(dd) else 0
+                    calmar = (returns.mean() * 252) / (abs(max_dd) / 100) if max_dd != 0 else 0.0
+                    print(f"Sharpe (approx): {sharpe:.2f}")
+                    print(f"Max Drawdown: {max_dd:.2f}%")
+                    print(f"Calmar (approx): {calmar:.2f}")
             
             # Win rate from positions
             if 'positions' in dir() and len(positions) > 0 and 'realized_pnl' in positions.columns:
@@ -385,15 +417,30 @@ def main():
     parser = argparse.ArgumentParser(description='Run XAUUSD backtest')
     parser.add_argument('--start', default='2024-01-01', help='Start date')
     parser.add_argument('--end', default='2024-03-31', help='End date')
-    parser.add_argument('--threshold', type=int, default=70, help='Execution threshold')
+    parser.add_argument('--threshold', type=int, default=None, help='Execution threshold (overrides config)')
     parser.add_argument('--sample', type=int, default=1, help='Tick sample rate (1 = all ticks)')
     parser.add_argument('--sweep', action='store_true', help='Run parameter sweep')
     parser.add_argument('--no-news', action='store_true', help='Disable news filter')
+    parser.add_argument('--config', default='nautilus_gold_scalper/configs/strategy_config.yaml', help='Path to strategy YAML')
+    parser.add_argument('--latency', type=int, default=None, help='Simulated latency in ms')
+    parser.add_argument('--slippage', type=int, default=None, help='Slippage in ticks (overrides config)')
+    parser.add_argument('--commission', type=float, default=None, help='Commission per contract (overrides config)')
     args = parser.parse_args()
     
+    config_path = Path(args.config)
+    cfg = load_yaml_config(config_path)
+    exec_cfg = cfg.get("execution", {}) if isinstance(cfg, dict) else {}
+    threshold = args.threshold if args.threshold is not None else exec_cfg.get("execution_threshold", 70)
+    slippage_ticks = args.slippage if args.slippage is not None else exec_cfg.get("slippage_ticks", 2)
+    commission = args.commission if args.commission is not None else exec_cfg.get("commission_per_contract", 2.5)
+    latency_ms = args.latency if args.latency is not None else exec_cfg.get("latency_ms", 0)
+
     runner = BacktestRunner(
-        initial_balance=100_000.0,
+        initial_balance=exec_cfg.get("initial_balance", 100_000.0),
         log_level="ERROR" if args.sweep else "INFO",
+        slippage_ticks=slippage_ticks,
+        commission_per_contract=commission,
+        latency_ms=latency_ms,
     )
     
     if args.sweep:
@@ -460,7 +507,7 @@ def main():
             use_footprint=True,
             prop_firm_enabled=True,
             use_news_filter=not args.no_news,
-            execution_threshold=args.threshold,
+            execution_threshold=threshold,
             debug_mode=True,
         )
 

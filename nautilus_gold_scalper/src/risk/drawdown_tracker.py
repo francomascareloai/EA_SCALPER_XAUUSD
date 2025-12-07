@@ -118,12 +118,12 @@ class DrawdownTracker:
         self._last_day_check = self._last_update
 
     # ------------------------------------------------------------------ API
-    def update(self, current_equity: float, pnl: Optional[float] = None) -> DrawdownAnalysis:
+    def update(self, current_equity: float, pnl: Optional[float] = None, now: Optional[datetime] = None) -> DrawdownAnalysis:
         """Update tracker with current equity and optional trade PnL."""
         if current_equity <= 0:
             return self.get_analysis()
 
-        self._check_new_day()
+        self._check_new_day(now)
 
         # Streak handling
         if pnl is not None:
@@ -138,7 +138,7 @@ class DrawdownTracker:
             self._max_losses = max(self._max_losses, self._current_losses)
 
         self._current_equity = current_equity
-        self._last_update = datetime.now(timezone.utc)
+        self._last_update = now or datetime.now(timezone.utc)
 
         # Peak/high-water updates
         if current_equity > self._peak_equity:
@@ -313,8 +313,8 @@ class DrawdownTracker:
             return 0.0
         return max(0.0, (self._current_equity - (self._peak_at_max_dd - self._max_drawdown_abs)) / self._max_drawdown_abs)
 
-    def _check_new_day(self) -> None:
-        now = datetime.now(timezone.utc)
+    def _check_new_day(self, now: Optional[datetime] = None) -> None:
+        now = now or datetime.now(timezone.utc)
         if now.date() != self._last_day_check.date():
             self.reset_daily()
         self._last_day_check = now

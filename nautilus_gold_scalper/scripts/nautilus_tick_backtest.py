@@ -10,6 +10,7 @@ from datetime import datetime
 
 import pandas as pd
 import numpy as np
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -90,7 +91,7 @@ def load_tick_data(
     return df
 
 
-def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0) -> list:
+def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_ticks: int = 0, latency_ms: int = 0) -> list:
     """Convert DataFrame to QuoteTick objects."""
     print("Converting to QuoteTick objects...")
     
@@ -98,6 +99,8 @@ def create_quote_ticks(df: pd.DataFrame, instrument: CurrencyPair, slippage_tick
     ticks = []
     for idx, row in df.iterrows():
         ts_ns = int(row['datetime'].timestamp() * 1e9)
+        if latency_ms > 0:
+            ts_ns += int(latency_ms * 1e6)
         bid_px = row['bid'] - slip_value
         ask_px = row['ask'] + slip_value
         
@@ -126,6 +129,8 @@ def run_tick_backtest(
     sample_rate: int = 10,  # Sample every 10th tick for speed
     log_level: str = "WARNING",
     slippage_ticks: int = 2,
+    commission_per_contract: float = 2.5,
+    latency_ms: int = 0,
 ):
     """Run backtest using tick data."""
     
@@ -165,7 +170,7 @@ def run_tick_backtest(
     df = load_tick_data(str(tick_path), start_date, end_date, sample_rate)
     
     # Convert to QuoteTicks
-    ticks = create_quote_ticks(df, xauusd, slippage_ticks=slippage_ticks)
+    ticks = create_quote_ticks(df, xauusd, slippage_ticks=slippage_ticks, latency_ms=latency_ms)
     
     # Add tick data to engine
     engine.add_data(ticks)
