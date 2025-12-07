@@ -271,12 +271,14 @@ class BaseGoldStrategy(Strategy):
             # LTF bar is primary execution timeframe - check for signals
             has_data = self._has_enough_data()
             
-            # Debug: Print every 500 bars
-            if len(self._ltf_bars) % 500 == 0:
-                print(f"[LTF] bars={len(self._ltf_bars)}, trading_allowed={self._is_trading_allowed}, has_data={has_data}")
+            # Debug: Print every 100 bars (more frequent for debugging)
+            if len(self._ltf_bars) % 100 == 0:
+                self.log.info(f"[LTF_BAR] #{len(self._ltf_bars)}: trading_allowed={self._is_trading_allowed}, has_data={has_data}, will_check_signal={self._is_trading_allowed and has_data}")
             
             if self._is_trading_allowed and has_data:
                 self._check_for_signal(bar)
+            elif not has_data and len(self._ltf_bars) % 100 == 0:
+                self.log.info(f"[LTF_BAR] Skipping signal check: insufficient data (need {self._min_bars_for_signal} bars, have {len(self._ltf_bars)})")
     
     def on_quote_tick(self, tick: QuoteTick) -> None:
         """Process quote tick for spread monitoring."""
@@ -356,6 +358,19 @@ class BaseGoldStrategy(Strategy):
 
             self._daily_pnl += net_pnl
             self._equity_base += net_pnl
+
+            # Track realized PnL for telemetry/metrics and adaptive sizing
+            if hasattr(self, "_trade_pnl_history"):
+                try:
+                    self._trade_pnl_history.append(net_pnl)
+                except Exception:
+                    pass
+
+            if getattr(self, "_position_sizer", None):
+                try:
+                    self._position_sizer.register_trade_result(net_pnl)
+                except Exception:
+                    self.log.debug("Position sizer trade result update failed", exc_info=True)
             
             self.log.info(
                 f"Position CLOSED with PnL: {pnl:.2f} (net {-close_cost:.2f} costs applied) "

@@ -164,6 +164,7 @@ def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
         flatten_time_et=cutoff_str,
         allow_overnight=exec_cfg.get("allow_overnight", time_cfg.get("allow_overnight", False)),
         slippage_ticks=int(exec_cfg.get("slippage_ticks", 2)),
+        slippage_multiplier=float(exec_cfg.get("slippage_multiplier", 1.5)),
         commission_per_contract=float(exec_cfg.get("commission_per_contract", 2.5)),
         latency_ms=int(exec_cfg.get("latency_ms", 0)),
         partial_fill_prob=float(exec_cfg.get("partial_fill_prob", 0.0)),

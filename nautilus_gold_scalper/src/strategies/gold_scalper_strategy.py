@@ -91,6 +91,7 @@ class GoldScalperConfig(BaseStrategyConfig, frozen=True):
     flatten_time_et: str = "16:59"  # HH:MM ET hard cutoff
     allow_overnight: bool = False
     slippage_ticks: int = 2
+    slippage_multiplier: float = 1.5
     commission_per_contract: float = 2.5
     latency_ms: int = 0
     partial_fill_prob: float = 0.0  # 0-1
@@ -322,7 +323,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             comm_per_lot = Decimal(str(getattr(self.config, "commission_per_contract", 2.5)))
             costs = ExecutionCosts(
                 base_slippage_cents=base_cents,
-                slippage_multiplier=Decimal("1.5"),
+                slippage_multiplier=Decimal(str(getattr(self.config, "slippage_multiplier", 1.5))),
                 commission_per_lot=comm_per_lot,
             )
             self._execution_model = ExecutionModel(costs)
@@ -412,7 +413,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             if self._consistency_tracker:
                 self._consistency_tracker.reset_daily()
             if self._circuit_breaker:
-                self._circuit_breaker.reset()
+                self._circuit_breaker.reset_daily()
             
             self._last_reset_date = current_date
             self.log.info("Daily reset complete")
@@ -491,21 +492,32 @@ class GoldScalperStrategy(BaseGoldStrategy):
     def _check_for_signal(self, bar: Bar) -> None:
         """Check for trading signal and execute if valid."""
         # Debug: Log periodically
-        if len(self._ltf_bars) % 500 == 0:
-            print(f"[SIGNAL] Checking at bar {len(self._ltf_bars)}, flat={self.is_flat}")
+        log_interval = 100  # Log every 100 bars for visibility
+        should_log = len(self._ltf_bars) % log_interval == 0
+        
+        if should_log:
+            self.log.info(f"[SIGNAL_CHECK] Bar {len(self._ltf_bars)}: flat={self.is_flat}, allowed={self._is_trading_allowed}")
         
         # Safety checks
         if not self.instrument:
             logger.error("Cannot check signal: instrument not loaded")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "no_instrument", "bar": len(self._ltf_bars)})
             return
         
         if not self._is_trading_allowed:
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Trading not allowed (general flag)")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "trading_not_allowed", "bar": len(self._ltf_bars)})
             return
         
         # Reset per-bar news multiplier
         self._news_size_mult = 1.0
         
         if not self.is_flat:
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Already in position - skipping")
             return  # Already in a position
         
         # Check session (only if enabled)
@@ -516,16 +528,36 @@ class GoldScalperStrategy(BaseGoldStrategy):
             self._current_session = self._session_filter.get_session_info(bar_time)
             
             if not self._current_session.is_trading_allowed:
+                if should_log:
+                    self.log.info(f"[SIGNAL_CHECK] Session filter BLOCKED: {self._current_session.session.name if self._current_session else 'UNKNOWN'}")
+                if self._telemetry:
+                    self._telemetry.emit("signal_reject", {
+                        "reason": "session_filter",
+                        "session": self._current_session.session.name if self._current_session else "UNKNOWN",
+                        "bar": len(self._ltf_bars)
+                    })
                 return
 
         # Apex cutoff / overnight guard (block new trades after cutoff)
         if self._time_manager and not self._time_manager.check(bar.ts_event):
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Time manager BLOCKED (apex cutoff or outside hours)")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "time_cutoff", "bar": len(self._ltf_bars)})
             return
         if getattr(self, "_trading_blocked_today", False):
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Trading blocked today flag set")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "blocked_today", "bar": len(self._ltf_bars)})
             return
         
         # Check prop firm limits (only if enabled)
         if self.config.prop_firm_enabled and self._prop_firm and not self._prop_firm.can_trade():
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Prop firm manager BLOCKED")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "prop_firm", "bar": len(self._ltf_bars)})
             self._is_trading_allowed = False
             return
 
@@ -552,6 +584,14 @@ class GoldScalperStrategy(BaseGoldStrategy):
                         },
                     )
             if not cb_state.can_trade:
+                if should_log:
+                    self.log.info(f"[SIGNAL_CHECK] Circuit breaker BLOCKED (level={cb_state.level.name})")
+                if self._telemetry:
+                    self._telemetry.emit("signal_reject", {
+                        "reason": "circuit_breaker",
+                        "level": cb_state.level.name,
+                        "bar": len(self._ltf_bars)
+                    })
                 return
 
         # Strategy selector gate (regime/session/safety context)
@@ -574,15 +614,32 @@ class GoldScalperStrategy(BaseGoldStrategy):
             )
             selection = self._strategy_selector.select_strategy(context)
             if selection.strategy in (StrategyType.STRATEGY_NONE, StrategyType.STRATEGY_SAFE_MODE):
+                if should_log:
+                    self.log.info(f"[SIGNAL_CHECK] Strategy selector BLOCKED: {selection.strategy.name}, reason={selection.reason}")
+                if self._telemetry:
+                    self._telemetry.emit("signal_reject", {
+                        "reason": "strategy_selector",
+                        "strategy": selection.strategy.name,
+                        "selector_reason": selection.reason,
+                        "bar": len(self._ltf_bars)
+                    })
                 return
 
         # Consistency rule (30% daily of cumulative profit)
         if self._consistency_tracker and not self._consistency_tracker.can_trade():
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Consistency tracker BLOCKED (30% daily profit cap)")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "consistency_cap", "bar": len(self._ltf_bars)})
             self._is_trading_allowed = False
             return
 
         # Circuit breaker guard
         if self._circuit_breaker and not self._circuit_breaker.can_trade():
+            if should_log:
+                self.log.info("[SIGNAL_CHECK] Circuit breaker guard BLOCKED")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "circuit_breaker_guard", "bar": len(self._ltf_bars)})
             self._is_trading_allowed = False
             return
         
@@ -592,62 +649,101 @@ class GoldScalperStrategy(BaseGoldStrategy):
             bar_time = datetime.fromtimestamp(bar.ts_event / 1e9, tz=timezone.utc)
             news_window = self._news_calendar.check_news_window(now=bar_time)
             if news_window.action == NewsTradeAction.BLOCK:
-                if self.config.debug_mode and len(self._ltf_bars) % 200 == 0:
-                    self.log.info(f"[NEWS] Blocked by news: {news_window.reason}")
+                if should_log:
+                    self.log.info(f"[SIGNAL_CHECK] News filter BLOCKED: {news_window.reason}")
+                if self._telemetry:
+                    self._telemetry.emit("signal_reject", {
+                        "reason": "news_filter",
+                        "news_reason": news_window.reason,
+                        "bar": len(self._ltf_bars)
+                    })
                 return
             # apply conservative size/score adjustments
             self._news_size_mult = max(news_window.size_multiplier, 0.0)
         
         # Check spread
+        spread_score_adj = 0
+        spread_size_mult = 1.0
         if self._spread_snapshot:
             if not self._spread_snapshot.can_trade:
-                if len(self._ltf_bars) % 500 == 0:
-                    print(f"[SIGNAL] Spread blocked: {self._spread_snapshot.reason}")
+                if should_log:
+                    self.log.info(f"[SIGNAL_CHECK] Spread BLOCKED: {self._spread_snapshot.reason}")
+                if self._telemetry:
+                    self._telemetry.emit("signal_reject", {
+                        "reason": "spread_monitor",
+                        "spread_reason": self._spread_snapshot.reason,
+                        "bar": len(self._ltf_bars)
+                    })
                 return
             spread_score_adj = self._spread_snapshot.score_adjustment
             spread_size_mult = self._spread_snapshot.size_multiplier
-        else:
-            spread_score_adj = 0
-            spread_size_mult = 1.0
 
         if self._current_spread > self.config.max_spread_points:
-            if len(self._ltf_bars) % 500 == 0:
-                print(f"[SIGNAL] Spread too high: {self._current_spread} > {self.config.max_spread_points}")
+            if should_log:
+                self.log.info(f"[SIGNAL_CHECK] Spread too high: {self._current_spread} > {self.config.max_spread_points}")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {
+                    "reason": "spread_too_high",
+                    "spread": self._current_spread,
+                    "max": self.config.max_spread_points,
+                    "bar": len(self._ltf_bars)
+                })
             return
         
         # HTF alignment check (only if required)
         if self.config.require_htf_align:
             if self._htf_bias == MarketBias.RANGING:
-                if len(self._ltf_bars) % 500 == 0:
-                    print(f"[SIGNAL] HTF RANGING - blocked")
+                if should_log:
+                    self.log.info("[SIGNAL_CHECK] HTF bias RANGING - blocked")
+                if self._telemetry:
+                    self._telemetry.emit("signal_reject", {"reason": "htf_ranging", "bar": len(self._ltf_bars)})
                 return
         
         # Calculate confluence score
-        if len(self._ltf_bars) % 500 == 0:
-            print(f"[SIGNAL] Calculating confluence at bar {len(self._ltf_bars)}...")
+        if should_log:
+            self.log.info(f"[SIGNAL_CHECK] Calculating confluence at bar {len(self._ltf_bars)}...")
         confluence_result = self._calculate_confluence(bar)
         
         if confluence_result is None:
-            if len(self._ltf_bars) % 500 == 0:
-                print(f"[SIGNAL] Confluence is None at bar {len(self._ltf_bars)}")
+            if should_log:
+                self.log.info(f"[SIGNAL_CHECK] Confluence returned None (insufficient data or error)")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {"reason": "confluence_none", "bar": len(self._ltf_bars)})
             return
         
         news_score_adj = news_window.score_adjustment if news_window else 0
         effective_score = confluence_result.total_score + news_score_adj + spread_score_adj
         
-        if len(self._ltf_bars) % 500 == 0:
-            print(
-                f"[SIGNAL] Confluence: score={confluence_result.total_score:.1f} "
-                f"(news {news_score_adj:+}), effective={effective_score:.1f}, "
-                f"signal={confluence_result.direction}, threshold={self.config.execution_threshold}"
-            )
+        # ALWAYS log score calculation (critical for debugging)
+        self.log.info(
+            f"[SCORE] Bar {len(self._ltf_bars)}: base={confluence_result.total_score:.1f}, "
+            f"news={news_score_adj:+.1f}, spread={spread_score_adj:+.1f}, "
+            f"effective={effective_score:.1f}, signal={confluence_result.direction.name}, "
+            f"threshold={self.config.execution_threshold}"
+        )
+        if self._telemetry:
+            self._telemetry.emit("score_calculated", {
+                "bar": len(self._ltf_bars),
+                "base_score": confluence_result.total_score,
+                "news_adj": news_score_adj,
+                "spread_adj": spread_score_adj,
+                "effective_score": effective_score,
+                "signal": confluence_result.direction.name,
+                "threshold": self.config.execution_threshold
+            })
         
         self._last_confluence = confluence_result
         
         # Check if score meets threshold
         if effective_score < self.config.execution_threshold:
-            if self.config.debug_mode:
-                self.log.debug(f"Score {effective_score:.1f} below threshold {self.config.execution_threshold}")
+            self.log.info(f"[SIGNAL_CHECK] Score {effective_score:.1f} BELOW threshold {self.config.execution_threshold}")
+            if self._telemetry:
+                self._telemetry.emit("signal_reject", {
+                    "reason": "score_below_threshold",
+                    "score": effective_score,
+                    "threshold": self.config.execution_threshold,
+                    "bar": len(self._ltf_bars)
+                })
             return
         
         # Determine signal direction

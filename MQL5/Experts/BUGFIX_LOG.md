@@ -83,3 +83,25 @@ Central log for all bug fixes in MQL5 and Python code. Every agent fixing bugs M
 **Result:** Metrics telemetry P0 blocker RESOLVED. Backtests now output Sharpe/Sortino/Calmar/SQN for GO/NO-GO validation.
 
 ---
+
+## 2025-12-07 (FORGE - P1 realism + CB sizing fix)
+
+### Modules: nautilus_gold_scalper/src/strategies/base_strategy.py, gold_scalper_strategy.py, scripts/run_backtest.py, configs/strategy_config.yaml
+**Issue:** P1 items from Audit 003/005 still pending in codebase  
+- Circuit breaker size multiplier not affecting live sizing in some runs; trade PnL not persisted, so metrics/CB streaks could never trigger.  
+- Slippage/commission realism partially hardcoded (1.5x slippage multiplier not configurable via YAML).  
+- Telemetry metrics could be empty because `_trade_pnl_history` never filled.
+
+**Fixes:**  
+1) Append `net_pnl` to `_trade_pnl_history` on every position close and feed results to `PositionSizer.register_trade_result` (enables metrics + adaptive sizing + CB streaks).  
+2) Execution costs now honor YAML `slippage_multiplier` while still using `slippage_ticks` and `commission_per_contract`; added field to `GoldScalperConfig`, config loader, and `strategy_config.yaml`.  
+3) ExecutionModel instantiation uses configured multiplier instead of hardcoded default.
+
+**Impact:**  
+- CB size reductions now reliably activate after consecutive-loss thresholds.  
+- Sharpe/Sortino/Calmar/SQN telemetry gets populated from real trade history.  
+- Backtests can tune slippage realism directly from YAML without code edits.
+
+**Testing:** Targeted code inspection; no runtime tests executed (network/sandbox limits). Needs quick regression run when data available.
+
+---

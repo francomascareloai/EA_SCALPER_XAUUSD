@@ -46,6 +46,7 @@ risk:
 execution:
   execution_threshold: 70
   slippage_ticks: 2
+  slippage_multiplier: 1.5
   latency_ms: 50
   commission_per_contract: 2.5
   fill_model: realistic   # immediate | realistic | worst_case
