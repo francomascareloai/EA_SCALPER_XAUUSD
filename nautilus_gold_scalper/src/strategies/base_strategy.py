@@ -310,6 +310,12 @@ class BaseGoldStrategy(Strategy):
             self.log.warning("Cannot enter long - position already exists")
             return
         
+        # Partial fill simulation
+        if getattr(self.config, "partial_fill_prob", 0) > 0:
+            if random.random() < float(self.config.partial_fill_prob):
+                quantity = quantity * Decimal(str(self.config.partial_fill_ratio))
+                self.log.info(f"Partial fill simulated (LONG): qty adjusted to {quantity}")
+
         # Create market order
         order = self.order_factory.market(
             instrument_id=self.config.instrument_id,
@@ -331,6 +337,12 @@ class BaseGoldStrategy(Strategy):
             self.log.warning("Cannot enter short - position already exists")
             return
         
+        # Partial fill simulation
+        if getattr(self.config, "partial_fill_prob", 0) > 0:
+            if random.random() < float(self.config.partial_fill_prob):
+                quantity = quantity * Decimal(str(self.config.partial_fill_ratio))
+                self.log.info(f"Partial fill simulated (SHORT): qty adjusted to {quantity}")
+
         order = self.order_factory.market(
             instrument_id=self.config.instrument_id,
             order_side=OrderSide.SELL,

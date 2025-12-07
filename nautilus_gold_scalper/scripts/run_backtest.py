@@ -147,6 +147,9 @@ def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
         allow_overnight=exec_cfg.get("allow_overnight", False),
         slippage_ticks=int(exec_cfg.get("slippage_ticks", 2)),
         commission_per_contract=float(exec_cfg.get("commission_per_contract", 2.5)),
+        latency_ms=int(exec_cfg.get("latency_ms", 0)),
+        partial_fill_prob=float(exec_cfg.get("partial_fill_prob", 0.0)),
+        partial_fill_ratio=float(exec_cfg.get("partial_fill_ratio", 0.5)),
     )
 
 
@@ -229,6 +232,8 @@ class BacktestRunner:
         slippage_ticks: int = 2,
         commission_per_contract: float = 2.5,
         latency_ms: int = 0,
+        partial_fill_prob: float = 0.0,
+        partial_fill_ratio: float = 0.5,
     ):
         self.initial_balance = initial_balance
         self.log_level = log_level
@@ -238,6 +243,8 @@ class BacktestRunner:
         self.slippage_ticks = slippage_ticks
         self.commission_per_contract = commission_per_contract
         self.latency_ms = latency_ms
+        self.partial_fill_prob = partial_fill_prob
+        self.partial_fill_ratio = partial_fill_ratio
     
     def run(
         self,
@@ -442,6 +449,9 @@ def main():
     parser.add_argument('--latency', type=int, default=None, help='Simulated latency in ms')
     parser.add_argument('--slippage', type=int, default=None, help='Slippage in ticks (overrides config)')
     parser.add_argument('--commission', type=float, default=None, help='Commission per contract (overrides config)')
+    parser.add_argument('--latency', type=int, default=None, help='Simulated latency in ms')
+    parser.add_argument('--partial-prob', type=float, default=None, help='Partial fill probability (0-1)')
+    parser.add_argument('--partial-ratio', type=float, default=None, help='Partial fill ratio (0-1)')
     args = parser.parse_args()
     
     config_path = Path(args.config)
@@ -451,6 +461,8 @@ def main():
     slippage_ticks = args.slippage if args.slippage is not None else exec_cfg.get("slippage_ticks", 2)
     commission = args.commission if args.commission is not None else exec_cfg.get("commission_per_contract", 2.5)
     latency_ms = args.latency if args.latency is not None else exec_cfg.get("latency_ms", 0)
+    partial_prob = args.partial_prob if args.partial_prob is not None else exec_cfg.get("partial_fill_prob", 0.0)
+    partial_ratio = args.partial_ratio if args.partial_ratio is not None else exec_cfg.get("partial_fill_ratio", 0.5)
 
     runner = BacktestRunner(
         initial_balance=exec_cfg.get("initial_balance", 100_000.0),
@@ -458,6 +470,8 @@ def main():
         slippage_ticks=slippage_ticks,
         commission_per_contract=commission,
         latency_ms=latency_ms,
+        partial_fill_prob=partial_prob,
+        partial_fill_ratio=partial_ratio,
     )
     
     if args.sweep:
