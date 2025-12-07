@@ -213,8 +213,12 @@ def run_tick_backtest(
         account_balance=exec_cfg.get("initial_balance", initial_balance),
         flatten_time_et=exec_cfg.get("flatten_time_et", "16:59"),
         allow_overnight=exec_cfg.get("allow_overnight", False),
-        slippage_ticks=exec_cfg.get("slippage_ticks", slippage_ticks),
-        commission_per_contract=exec_cfg.get("commission_per_contract", commission_per_contract),
+        slippage_ticks=int(exec_cfg.get("slippage_ticks", slippage_ticks)),
+        commission_per_contract=float(exec_cfg.get("commission_per_contract", commission_per_contract)),
+        latency_ms=int(exec_cfg.get("latency_ms", latency_ms)),
+        partial_fill_prob=float(exec_cfg.get("partial_fill_prob", 0.0)),
+        partial_fill_ratio=float(exec_cfg.get("partial_fill_ratio", 0.5)),
+        max_spread_points=int(exec_cfg.get("max_spread_points", 80)),
         debug_mode=True,
     )
     

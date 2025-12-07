@@ -196,6 +196,10 @@ def run_nautilus_backtest(
         allow_overnight=exec_cfg.get("allow_overnight", False),
         slippage_ticks=int(exec_cfg.get("slippage_ticks", 2)),
         commission_per_contract=float(exec_cfg.get("commission_per_contract", 2.5)),
+        latency_ms=int(exec_cfg.get("latency_ms", 0)),
+        partial_fill_prob=float(exec_cfg.get("partial_fill_prob", 0.0)),
+        partial_fill_ratio=float(exec_cfg.get("partial_fill_ratio", 0.5)),
+        max_spread_points=int(exec_cfg.get("max_spread_points", 80)),
         debug_mode=True,
     )
     
