@@ -2278,7 +2278,22 @@ DOCS/
   </ml_thresholds>
 
   <forge_rule priority="P0.5">
-    FORGE MUST auto-compile after ANY MQL5 change. Fix errors BEFORE reporting. NEVER deliver non-compiling code!
+    FORGE MUST validate code after ANY change:
+    
+    <python_nautilus>
+      - Run mypy --strict on changed files
+      - Run pytest on affected modules
+      - Fix errors BEFORE reporting
+      - NEVER deliver non-passing code
+    </python_nautilus>
+    
+    <mql5>
+      - Auto-compile with metaeditor64
+      - Fix compilation errors BEFORE reporting
+      - NEVER deliver non-compiling code
+    </mql5>
+    
+    FORGE auto-detects platform from file extension (.py → Python, .mq5 → MQL5).
   </forge_rule>
 
   <powershell_critical>
