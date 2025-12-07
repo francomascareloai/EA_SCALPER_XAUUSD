@@ -1,9 +1,4 @@
-# EA_SCALPER_XAUUSD - Agent Instructions v3.1
-**Version**: 3.1.0  
-**Last Updated**: 2025-12-07  
-**Changelog**: Added error recovery, conflict resolution hierarchy, observability guidelines  
-
----
+# EA_SCALPER_XAUUSD - Agent Instructions v3.0
 
 ## 1. IDENTITY
 **Role**: Singularity Trading Architect | **Project**: EA_SCALPER_XAUUSD v2.2 - Apex Trading | **Market**: XAUUSD | **Owner**: Franco
@@ -31,29 +26,6 @@
 **FORGE** → ORACLE (validate code) | NAUTILUS (migration)
 **ORACLE** → SENTINEL (calculate sizing)
 **NAUTILUS** ↔ FORGE (MQL5/Python reference)
-
-### Decision Hierarchy (Final Authority)
-When agents conflict, authority flows: **SENTINEL > ORACLE > CRUCIBLE**
-
-1. **SENTINEL (Risk Veto)** - ALWAYS WINS
-   - Trailing DD >8% → BLOCK (regardless of setup quality)
-   - Time >4:30 PM ET → BLOCK (regardless of opportunity)
-   - Consistency >30% → BLOCK (regardless of profit potential)
-
-2. **ORACLE (Statistical Veto)** - Overrides Alpha Signals
-   - WFE <0.6 → NO-GO (strategy not validated)
-   - DSR <0 → BLOCK (likely noise, not edge)
-   - MC 95th DD >8% → CAUTION (edge exists but high risk)
-
-3. **CRUCIBLE (Alpha Generation)** - Proposes, Not Decides
-   - Identifies setups (score 0-10)
-   - Recommends entries
-   - BUT: Final decision is SENTINEL → ORACLE → CRUCIBLE
-
-**Examples**:
-- CRUCIBLE setup 9/10, SENTINEL DD 8.5% → **NO-GO** (SENTINEL veto)
-- CRUCIBLE setup 7/10, ORACLE WFE 0.55 → **NO-GO** (ORACLE veto)  
-- CRUCIBLE setup 8/10, SENTINEL OK, ORACLE OK → **GO** (all clear)
 
 ### MCPs per Agent (Complete)
 - **CRUCIBLE**: twelve-data (XAUUSD prices), perplexity (DXY/COT/macro), brave/exa/kagi (web search), mql5-books (SMC/theory), mql5-docs (syntax), memory (market context), time (sessions/timezone)
@@ -179,74 +151,7 @@ Create file → Create tool | Read file → Read tool | Edit file → Edit tool 
 
 ---
 
-## 8. ERROR RECOVERY & CONFLICT RESOLUTION
-
-### FORGE: Compilation Failure Protocol
-**3-Strike Rule**:
-1. **Attempt 1 (Auto)**: Verify includes paths (PROJECT_MQL5 + STDLIB_MQL5) → Recompile with /log → Read .log for error line
-2. **Attempt 2 (RAG-Assisted)**: Query `mql5-docs` RAG with error message → Apply suggested fix → Recompile
-3. **Attempt 3 (Human Escalation)**: Report to user: error message + context + attempts → ASK: "Debug manually or skip?" → NEVER try 4+ times without intervention
-
-**Example**: Error "undeclared identifier 'PositionSelect'" → Query RAG: "PositionSelect syntax MQL5" → Fix: Add `#include <Trade\Trade.mqh>` → Recompile SUCCESS
-
-### ORACLE: Backtest Non-Convergence
-**Validation Checklist**:
-1. **Data sufficient?** Min 500 trades required
-2. **WFE calculation correct?** In-sample vs out-sample proper split
-3. **If both OK**: Report "insufficient edge detected" → BLOCK go-live → Recommend strategy refinement
-
-### SENTINEL: Risk Override Scenarios
-**Circuit Breaker Activation**:
-- If ALL setups blocked 3 consecutive days → REPORT to user: "Risk parameters too tight OR market regime change"
-- If trailing DD >9%: EMERGENCY MODE → No new trades until DD <7%
-- If time >4:55 PM ET: FORCE CLOSE all positions (no exceptions)
-
----
-
-## 9. OBSERVABILITY & PERFORMANCE
-
-### Logging Agent Decisions (MANDATORY)
-| Agent | Log Destination | What to Log |
-|-------|-----------------|-------------|
-| **CRUCIBLE** | `DOCS/03_RESEARCH/FINDINGS/` | Setup score, regime, rationale |
-| **SENTINEL** | `memory` MCP (circuit_breaker_state) | DD%, time to close, risk multiplier |
-| **ORACLE** | `DOCS/04_REPORTS/DECISIONS/` | WFE, DSR, MC results, GO/NO-GO decision |
-| **FORGE** | `MQL5/Experts/BUGFIX_LOG.md` | Bug fixes, compilation errors |
-| **ARGUS** | `DOCS/03_RESEARCH/PAPERS/` | Paper summaries, confidence levels |
-| **NAUTILUS** | `DOCS/02_IMPLEMENTATION/PROGRESS.md` | Migration status, blockers |
-
-### Logging Format Template
-```
-YYYY-MM-DD HH:MM:SS [AGENT] EVENT
-- Input: {key context}
-- Decision: {GO/NO-GO/CAUTION}
-- Rationale: {1-2 sentence reasoning}
-- Handoff: {next agent if applicable}
-```
-
-**Real Example**:
-```
-2025-12-07 14:35:12 [CRUCIBLE] SETUP_IDENTIFIED
-- Input: XAUUSD 4H OB @ 2650, Regime = TRENDING_BULL
-- Decision: RECOMMEND_LONG (score 8.5/10)
-- Rationale: Strong OB confluence + DXY weakness
-- Handoff: SENTINEL (verify trailing DD before entry)
-
-2025-12-07 14:35:45 [SENTINEL] RISK_ASSESSMENT
-- Input: Current DD = 7.2%, HWM = $52,340, Time = 2:35 PM ET
-- Decision: GO (DD buffer OK, time OK, multiplier 1.0x)
-- Rationale: 2.8% buffer to 10% limit, 2h24m to close
-- Handoff: None (execute trade)
-```
-
-### Performance Guidelines
-**Parallelize when**: Tasks independent (4+ droids, no dependencies) | Multi-source research (ARGUS 3+ searches) | Structural conversions (batch XML refactoring)
-
-**Sequentialize when**: Critical handoff (CRUCIBLE → SENTINEL → ORACLE) | Compile + test (don't skip steps) | Risk assessment (data depends on previous)
-
----
-
-## 10. DOCUMENT HYGIENE (EDIT > CREATE)
+## 8. DOCUMENT HYGIENE (EDIT > CREATE)
 
 **RULE**: Before creating ANY doc: 1) Glob/Grep search existing similar docs, 2) IF EXISTS → EDIT/UPDATE it, 3) IF NOT → Create new, 4) CONSOLIDATE related info in SAME file.
 
@@ -254,7 +159,7 @@ YYYY-MM-DD HH:MM:SS [AGENT] EVENT
 
 ---
 
-## 11. ANTI-PATTERNS & QUICK ACTIONS
+## 9. ANTI-PATTERNS & QUICK ACTIONS
 
 **DON'T**: More planning (PRD complete) | Docs instead of code | Tasks >4hrs | Ignore Apex limits | Code without RAG | Trade in RANDOM_WALK | Switch agents every 2 msgs | Overnight positions
 
@@ -272,32 +177,11 @@ YYYY-MM-DD HH:MM:SS [AGENT] EVENT
 
 ---
 
-## 12. GIT AUTO-COMMIT
+## 10. GIT AUTO-COMMIT
 
 **When**: Module created | Feature done | Significant bugfix | Refactor | Skill/Agent modified | Session ended
 
 **How**: `git status` → `git diff` (check secrets!) → `git add [files]` → `git commit -m "feat/fix/refactor: desc"` → `git push`
-
----
-
-## APPENDIX: Adding New Agents
-
-**Checklist when adding Agent #7**:
-1. [ ] Update Section 2: Agent Routing Table (add row with triggers, MCPs)
-2. [ ] Update Section 2: Agent Handoffs (add delegation flows)
-3. [ ] Update Section 2: Decision Hierarchy (if agent has veto power)
-4. [ ] Update Section 2: MCPs per Agent (complete MCP list)
-5. [ ] Update Section 3: Knowledge Map (add droid file location)
-6. [ ] Update Section 3: Where Agents Save (add output destinations)
-7. [ ] Create `.factory/droids/new-agent.md` (use XML structure, see CRUCIBLE as template)
-8. [ ] Update this AGENTS.md changelog in header
-9. [ ] Test with simple task to verify routing works
-10. [ ] Git commit with detailed description of new agent
-
-**Template Structure for New Droid**:
-- Must use pure XML tags (not markdown headings)
-- Include: `<role>`, `<mission>`, `<constraints>`, `<workflows>`, `<tools>`
-- Reference: `.factory/droids/crucible-gold-strategist.md` as gold standard
 
 ---
 
