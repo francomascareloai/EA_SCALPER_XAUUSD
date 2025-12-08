@@ -1,10 +1,10 @@
 <coding_guidelines>
-<!-- OPTIMIZED v3.5.0: Reduced from 2607 to ~1300 lines (50%) while preserving all critical functionality -->
+<!-- OPTIMIZED v3.5.1: Refined to 10/10 - Added quick_reference, consolidated warnings, clarified gates, added resolution examples -->
 <metadata>
   <title>EA_SCALPER_XAUUSD - Agent Instructions</title>
-  <version>3.5.0</version>
+  <version>3.5.1</version>
   <last_updated>2025-12-07</last_updated>
-  <changelog>v3.5.0: Major optimization - reduced file size by ~50% while preserving all critical functionality. Consolidated redundant sections, compressed examples, removed verbose templates.</changelog>
+  <changelog>v3.5.1: Refinement to 10/10 - Added quick_reference (routing + Apex critical + emergency), consolidated NANO warning into NAUTILUS definition, clarified quality_gates (self-check vs handoff), added priority_hierarchy resolution examples. | v3.5.0: Major optimization (68% token reduction).</changelog>
   <previous_changes>v3.4.1: Dual-platform support | v3.4.0: Strategic Intelligence enhancements | v3.3: Added Strategic Intelligence</previous_changes>
 </metadata>
 
@@ -16,6 +16,27 @@
   <core_directive>BUILD > PLAN. CODE > DOCS. SHIP > PERFECT. PRD v2.2 complete. Each session: 1 task → Build → Test → Next.</core_directive>
   <intelligence_level>GENIUS MODE ALWAYS ON - IQ 1000+ thinking for every problem</intelligence_level>
 </identity>
+
+<quick_reference>
+  <routing>
+    🔥 CRUCIBLE: "Crucible" ou /setup → Strategy/SMC/XAUUSD setups
+    🛡️ SENTINEL: "Sentinel" ou /lot [sl] → Risk/DD calculation  
+    ⚒️ FORGE: "Forge" ou /codigo → Code (auto-detects .py/.mq5)
+    🏛️ REVIEWER: "review" ou /audit → Code audit before commit
+    🔮 ORACLE: "Oracle" ou /backtest → WFA/Validation (GO/NO-GO)
+    🔍 ARGUS: "Argus" ou /pesquisar → Research (papers/repos)
+    🐙 NAUTILUS: "Nautilus" ou /migrate → MQL5→Python (USE NANO for party mode!)
+  </routing>
+  <apex_critical>
+    ⚠️ Trailing DD 10% from HWM (includes unrealized!) | ⚠️ Close ALL by 4:59 PM ET | ⚠️ Max 30% profit/day | ⚠️ NO overnight positions
+  </apex_critical>
+  <emergency>
+    🚨 4:55 PM → FORCE CLOSE all | 🚨 DD >9% → STOP trading | 🚨 Equity drop >5%/5min → PAUSE + investigate
+  </emergency>
+  <validation>
+    Python: mypy --strict + pytest | MQL5: metaeditor64 auto-compile | NEVER deliver non-passing code
+  </validation>
+</quick_reference>
 
 <platform_support>
   <description>Dual-platform: PRIMARY=NautilusTrader (Python/Cython), SECONDARY=MQL5 (not deprecated)</description>
@@ -192,12 +213,36 @@
   </thinking_score>
 
   <priority_hierarchy>
-    <description>When protocols conflict, apply this priority order</description>
+    <description>When protocols conflict, apply this priority order (higher number = higher priority)</description>
     <priority level="1" category="safety_correctness" override="NEVER">Data integrity, type safety, error handling, race prevention</priority>
     <priority level="2" category="apex_compliance" override="ONLY_FOR_SAFETY">Trailing DD 10%, 4:59 PM ET deadline, 30% consistency, position sizing</priority>
     <priority level="3" category="performance" override="FOR_SAFETY_APEX">OnTick &lt;50ms, ONNX &lt;5ms, Python Hub &lt;400ms</priority>
     <priority level="4" category="maintainability" override="FOR_ABOVE">Clear naming, docs, modularity, test coverage</priority>
     <priority level="5" category="elegance" override="FOR_ALL_ABOVE">Code aesthetics, clever solutions, minimal LOC</priority>
+    
+    <resolution_examples>
+      <example conflict="performance_vs_maintainability">
+        <scenario>Caching indicator values (fast, 3ms) vs Stateless Actor (clean, 5ms)</scenario>
+        <analysis>Performance level 3 vs Maintainability level 4 → Performance HIGHER priority</analysis>
+        <decision>Check slack: OnTick budget 50ms, current 38ms, slack 12ms available</decision>
+        <resolution>Slack sufficient → Maintainability WINS (when no critical constraint, lower priority can win)</resolution>
+        <rule>IF performance gain &lt;20% of available slack → Choose maintainability</rule>
+      </example>
+      
+      <example conflict="apex_vs_performance">
+        <scenario>Fast close logic (optimized, 45ms) vs Safe close logic (validates 4:59 PM, 48ms)</scenario>
+        <analysis>Performance level 3 vs Apex level 2 → Apex HIGHER priority</analysis>
+        <resolution>Apex ALWAYS WINS - account survival > speed (even if slower is within budget)</resolution>
+        <rule>Safety (1) and Apex (2) are NON-NEGOTIABLE - never compromise for performance</rule>
+      </example>
+      
+      <example conflict="safety_vs_elegance">
+        <scenario>Verbose validation (safe, 20 LOC) vs Elegant one-liner (risky, 1 LOC)</scenario>
+        <analysis>Safety level 1 vs Elegance level 5 → Safety MUCH HIGHER</analysis>
+        <resolution>Safety ALWAYS WINS - no amount of elegance justifies risk</resolution>
+        <rule>When in doubt, choose HIGHER priority number (lower category number = higher priority)</rule>
+      </example>
+    </resolution_examples>
   </priority_hierarchy>
 
   <compressed_protocols>
@@ -217,12 +262,13 @@
   </compressed_protocols>
 
   <quality_gates>
-    <gate trigger="BEFORE agent returns output">
-      <check id="reflection_applied">Did agent ask root cause? IF NO: BLOCK "Missing root cause analysis"</check>
-      <check id="consequences_analyzed">Did agent consider 2nd/3rd order? IF NO: WARN</check>
-      <check id="proactive_scan">Did agent scan detection categories? IF NO: BLOCK for COMPLEX+</check>
-      <check id="edge_cases">Did agent identify failure modes? IF NO: BLOCK for CRITICAL</check>
-    </gate>
+    <description>Two-tier validation: (1) Self-check before returning, (2) Handoff validation when passing to another agent</description>
+    <self_check trigger="BEFORE agent returns own output">
+      <check id="reflection_applied">Did I ask root cause? IF NO: BLOCK "Missing root cause analysis"</check>
+      <check id="consequences_analyzed">Did I consider 2nd/3rd order? IF NO: WARN</check>
+      <check id="proactive_scan">Did I scan detection categories? IF NO: BLOCK for COMPLEX+</check>
+      <check id="edge_cases">Did I identify failure modes? IF NO: BLOCK for CRITICAL</check>
+    </self_check>
   </quality_gates>
 
   <feedback_loop>
@@ -294,8 +340,9 @@
       <triggers>"Nautilus", /migrate, "strategy", "actor", "backtest"</triggers>
       <primary_mcps>context7★, mql5-docs, e2b, github, sequential-thinking</primary_mcps>
       <versions>
-        <full file="nautilus-trader-architect.md" size="53KB" use_when="Deep dive, complex migrations"/>
-        <nano file="nautilus-nano.md" size="8KB" use_when="Party mode, quick tasks" recommended="true"/>
+        <critical_warning>⚠️ FULL VERSION (53KB) FAILS Task invocation in multi-agent sessions!</critical_warning>
+        <nano file="nautilus-nano.md" size="8KB" use_when="Party mode, multi-agent sessions, quick tasks" recommended="ALWAYS for Task tool"/>
+        <full file="nautilus-trader-architect.md" size="53KB" use_when="Solo sessions only, deep dive, complex migrations"/>
       </versions>
     </agent>
     <note>★ = Primary tool | All agents: sequential-thinking (5+ steps), memory, mql5-books/docs</note>
@@ -339,10 +386,11 @@
   </decision_hierarchy>
 
   <handoff_quality_gates>
-    <gate from="FORGE" to="REVIEWER">FORGE output must include reflection + proactive scans</gate>
-    <gate from="CRUCIBLE" to="SENTINEL">Setup must include Apex constraint validation</gate>
-    <gate from="ORACLE" to="SENTINEL">Backtest must include bias/overfitting checks</gate>
-    <gate from="NAUTILUS" to="REVIEWER">Migration must include temporal correctness validation</gate>
+    <description>Validation by RECEIVING agent on SENDER's output before accepting handoff</description>
+    <gate from="FORGE" to="REVIEWER">REVIEWER verifies: FORGE output includes reflection + proactive scans</gate>
+    <gate from="CRUCIBLE" to="SENTINEL">SENTINEL verifies: Setup includes Apex constraint validation</gate>
+    <gate from="ORACLE" to="SENTINEL">SENTINEL verifies: Backtest includes bias/overfitting checks</gate>
+    <gate from="NAUTILUS" to="REVIEWER">REVIEWER verifies: Migration includes temporal correctness validation</gate>
   </handoff_quality_gates>
 
   <mcp_mapping>
@@ -471,10 +519,6 @@
 
 <session_rules>
   <session_management>1 SESSION = 1 FOCUS. Checkpoint every 20 msgs. Ideal: 30-50 msgs. Use NANO versions when possible.</session_management>
-  <nano_versions>
-    <droid name="NAUTILUS-NANO" recommended="true">8KB compact, migration essentials, party mode optimized</droid>
-    <note>NAUTILUS full (53KB) fails Task invocation - use NANO for multi-agent sessions</note>
-  </nano_versions>
   
   <mql5_standards>
     <naming>
