@@ -28,18 +28,46 @@
 
 ---
 
-## 2025-12-08 18:15 (FORGE)
+## 2025-12-08 19:00 (FORGE)
+
+### 🚨 CRITICAL SECURITY UPDATE
+
+**What:** Fixed 7 CRITICAL GAPS in AGENTS.md for $50k account protection + added critical_bug_protocol  
+**Why:** Franco identified system managing $50k needs maximum quality - gaps could cause account termination  
+**Impact:** AGENTS.md v3.6.0 now has BLOCKING enforcement for all critical workflows:
+- ✅ GAP #1: Emergency DD >4.5% (was >9% - inconsistent with Apex 5%)
+- ✅ GAP #2: Pre-trade Apex checklist MANDATORY (6 checks BLOCK if fail)
+- ✅ GAP #3: Trading logic 4-agent review ENFORCED (FORGE→REVIEWER→ORACLE→SENTINEL chain required)
+- ✅ GAP #4: Sequential-thinking BLOCKING for CRITICAL tasks (15+ thoughts required, not optional)
+- ✅ GAP #5: Production error protocol (immediate halt, 5 Whys, prevention updates)
+- ✅ GAP #6: Pre-deploy profiling+coverage MANDATORY (OnTick <50ms, risk/ 90%+ coverage)
+- ✅ GAP #7: Handoff gates BLOCKING (can't skip REVIEWER, ORACLE, SENTINEL validation)
+
+**Prevention:** Added `<critical_bug_protocol>` with MANDATORY 5 Whys + Prevention steps for all CRITICAL bugs (Apex violations, $50k risks). Includes production_error_protocol with immediate halt procedures.
+
+**Files:**
+- AGENTS.md (v3.6.0 - 7 gaps fixed, critical_bug_protocol added)
+- nautilus_gold_scalper/BUGFIX_LOG.md (restructured with CRITICAL template)
+- MQL5/Experts/BUGFIX_LOG.md (restructured with CRITICAL template)
+- nautilus_gold_scalper/FUTURE_IMPROVEMENTS.md (added SOURCE fields to P1 ideas)
+
+**Validation:** All AGENTS.md sections updated with BLOCKING enforcement, examples added for CRITICAL bug prevention  
+**Commit:** pending
+
+---
+
+## 2025-12-08 18:30 (FORGE)
 
 ### ✨ FEATURE
 
-**What:** Created FUTURE_IMPROVEMENTS.md brainstorming repository for optimization ideas  
-**Why:** Franco requested systematic way to capture ideas for future enhancements without losing context - "base de ideias" for when he wants to improve  
-**Impact:** Organized repository for all agents to add optimization ideas (research findings, backtest insights, bottlenecks). Includes WHY/WHAT/IMPACT/EFFORT for each idea. Priority matrix (P1-P4) helps decide what to implement when bandwidth available.  
+**What:** Created FUTURE_IMPROVEMENTS.md brainstorming repository (TEMPLATE FIX - matched to DOCS/ format)  
+**Why:** Franco requested "base de ideias" for optimizations + asked to fix template format to match DOCS/02_IMPLEMENTATION/FUTURE_IMPROVEMENTS.md structure  
+**Impact:** Clean, organized repository with STATUS GERAL tables (JÁ IMPLEMENTADO vs NÃO IMPLEMENTADO), PHASEs by priority (P1-P4), consistent format per idea (Motivacao/Arquivos alvo/Proposta/Esforco/Dependencies/Referencias). 12 ideas ready: Fibonacci (P1), Kelly (P1), Bayesian (P2), HMM (P2), Transformer (P2), WFO (P3), Meta-learning (P4), etc.  
 **Files:**
-- nautilus_gold_scalper/FUTURE_IMPROVEMENTS.md (created - brainstorming base)
-- AGENTS.md (updated future_improvements_tracking section with triggers + format)
+- nautilus_gold_scalper/FUTURE_IMPROVEMENTS.md (recreated with correct template)
+- AGENTS.md (updated future_improvements_tracking section)
 
-**Validation:** Template complete with 15+ example ideas spanning strategy, risk, ML, architecture. Update protocol defined.  
+**Validation:** Template now matches DOCS/ structure exactly - tables, phases, code examples, archive sections (IMPLEMENTED/REJECTED)  
 **Commit:** pending
 
 ---

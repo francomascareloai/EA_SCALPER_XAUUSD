@@ -2,10 +2,10 @@
 <!-- OPTIMIZED v3.5.1: Refined to 10/10 - Added quick_reference, consolidated warnings, clarified gates, added resolution examples -->
 <metadata>
   <title>EA_SCALPER_XAUUSD - Agent Instructions</title>
-  <version>3.5.1</version>
-  <last_updated>2025-12-07</last_updated>
-  <changelog>v3.5.1: Refinement to 10/10 - Added quick_reference (routing + Apex critical + emergency), consolidated NANO warning into NAUTILUS definition, clarified quality_gates (self-check vs handoff), added priority_hierarchy resolution examples. | v3.5.0: Major optimization (68% token reduction).</changelog>
-  <previous_changes>v3.4.1: Dual-platform support | v3.4.0: Strategic Intelligence enhancements | v3.3: Added Strategic Intelligence</previous_changes>
+  <version>3.6.0</version>
+  <last_updated>2025-12-08</last_updated>
+  <changelog>v3.6.0: 🚨 CRITICAL SECURITY UPDATE - Fixed 7 gaps for $50k protection: (1) Emergency DD 4.5% (not 9%), (2) Pre-trade Apex checklist MANDATORY, (3) Trading logic 4-agent review ENFORCED, (4) Sequential-thinking BLOCKING for CRITICAL, (5) Production error protocol, (6) Pre-deploy profiling+coverage MANDATORY, (7) Handoff gates BLOCKING. Added critical_bug_protocol with 5 Whys + Prevention enforcement.</changelog>
+  <previous_changes>v3.5.3: future_improvements_tracking | v3.5.2: code_change_tracking | v3.5.0: 68% token reduction</previous_changes>
 </metadata>
 
 <identity>
@@ -28,10 +28,10 @@
     🐙 NAUTILUS: "Nautilus" ou /migrate → MQL5→Python (USE NANO for party mode!)
   </routing>
   <apex_critical>
-    ⚠️ Trailing DD 10% from HWM (includes unrealized!) | ⚠️ Close ALL by 4:59 PM ET | ⚠️ Max 30% profit/day | ⚠️ NO overnight positions
+    ⚠️ Trailing DD 5% from HWM (includes unrealized!) | ⚠️ Close ALL by 4:59 PM ET | ⚠️ Max 30% profit/day | ⚠️ NO overnight positions
   </apex_critical>
   <emergency>
-    🚨 4:55 PM → FORCE CLOSE all | 🚨 DD >9% → STOP trading | 🚨 Equity drop >5%/5min → PAUSE + investigate
+    🚨 4:55 PM → FORCE CLOSE all | 🚨 DD >4.5% → STOP trading | 🚨 Equity drop >5%/5min → PAUSE + investigate
   </emergency>
   <validation>
     Python: mypy --strict + pytest | MQL5: metaeditor64 auto-compile | NEVER deliver non-passing code
@@ -160,7 +160,7 @@
     
     <example name="pre_mortem_for_ml_model">
       Scenario: Deploy ONNX model for direction prediction
-      Pre-mortem: "Imagine it caused 10% trailing DD in 2 days. Why?"
+      Pre-mortem: "Imagine it caused 5% trailing DD (account blown). Why?"
       Answers: 1) Look-ahead bias in features 2) Overfitted to 2024 regime 3) Latency >50ms 4) Model chokes on noisy real-time data
       Outcome: Identified 4 failure modes BEFORE deployment, added validation gates
     </example>
@@ -207,15 +207,19 @@
       <threshold level="SIMPLE" min_score="0.3">3 questions + 1 scan + 3 thoughts</threshold>
       <threshold level="MEDIUM" min_score="0.5">5 questions + 3 scans + 5 thoughts</threshold>
       <threshold level="COMPLEX" min_score="0.7">7 questions + 5 scans + 10 thoughts</threshold>
-      <threshold level="CRITICAL" min_score="0.9">7 questions + 7 scans + 15+ thoughts + sequential-thinking</threshold>
+      <threshold level="CRITICAL" min_score="0.9" mandatory="sequential-thinking">7 questions + 7 scans + 15+ thoughts + sequential-thinking MANDATORY</threshold>
     </thresholds>
-    <enforcement>Score &lt; threshold → AUTO-INVOKE sequential-thinking → REQUIRE minimum thoughts</enforcement>
+    <enforcement>
+      <rule level="SIMPLE/MEDIUM/COMPLEX">Score &lt; threshold → AUTO-INVOKE sequential-thinking → REQUIRE minimum thoughts</rule>
+      <rule level="CRITICAL" blocking="true">Score &lt;0.9 OR sequential-thinking not used → BLOCK execution → REQUIRE 15+ thoughts sequential-thinking</rule>
+      <rationale>$50k at risk - CRITICAL tasks (trading logic, Apex rules, architecture, risk) CANNOT proceed without deep analysis</rationale>
+    </enforcement>
   </thinking_score>
 
   <priority_hierarchy>
     <description>When protocols conflict, apply this priority order (higher number = higher priority)</description>
     <priority level="1" category="safety_correctness" override="NEVER">Data integrity, type safety, error handling, race prevention</priority>
-    <priority level="2" category="apex_compliance" override="ONLY_FOR_SAFETY">Trailing DD 10%, 4:59 PM ET deadline, 30% consistency, position sizing</priority>
+    <priority level="2" category="apex_compliance" override="ONLY_FOR_SAFETY">Trailing DD 5%, 4:59 PM ET deadline, 30% consistency, position sizing</priority>
     <priority level="3" category="performance" override="FOR_SAFETY_APEX">OnTick &lt;50ms, ONNX &lt;5ms, Python Hub &lt;400ms</priority>
     <priority level="4" category="maintainability" override="FOR_ABOVE">Clear naming, docs, modularity, test coverage</priority>
     <priority level="5" category="elegance" override="FOR_ALL_ABOVE">Code aesthetics, clever solutions, minimal LOC</priority>
@@ -262,13 +266,83 @@
   </compressed_protocols>
 
   <quality_gates>
-    <description>Two-tier validation: (1) Self-check before returning, (2) Handoff validation when passing to another agent</description>
+    <description>Three-tier validation: (1) Self-check before returning, (2) Pre-trade Apex checklist (MANDATORY), (3) Handoff validation when passing to another agent</description>
+    
     <self_check trigger="BEFORE agent returns own output">
       <check id="reflection_applied">Did I ask root cause? IF NO: BLOCK "Missing root cause analysis"</check>
       <check id="consequences_analyzed">Did I consider 2nd/3rd order? IF NO: WARN</check>
       <check id="proactive_scan">Did I scan detection categories? IF NO: BLOCK for COMPLEX+</check>
       <check id="edge_cases">Did I identify failure modes? IF NO: BLOCK for CRITICAL</check>
     </self_check>
+    
+    <pre_trade_checklist mandatory="true" agent="SENTINEL">
+      <description>MANDATORY checks BEFORE any trade execution (code or live) - BLOCKS if ANY check fails</description>
+      <trigger>Before submitting order, before deploying trading logic, before go-live approval</trigger>
+      <checks>
+        <check id="current_dd">Trailing DD from HWM &lt;4% (80% of 5% Apex limit)? IF NO: BLOCK</check>
+        <check id="hwm_verified">High-water mark correctly calculated (includes unrealized)? IF NO: BLOCK</check>
+        <check id="time_check">Current time &lt;4:30 PM ET? IF NO: BLOCK (too close to deadline)</check>
+        <check id="consistency">Today's profit &lt;30% of account? IF NO: BLOCK (Apex consistency rule)</check>
+        <check id="position_sizing">Lot size ≤ Kelly optimal AND ≤1% risk? IF NO: BLOCK</check>
+        <check id="overnight_prevented">Will position close by 4:59 PM ET guaranteed? IF NO: BLOCK</check>
+      </checks>
+      <enforcement>
+        <rule>SENTINEL MUST run checklist before confirming any go-live</rule>
+        <rule>FORGE MUST validate checklist implementation before deploying trading code</rule>
+        <rule>ORACLE MUST verify checklist enforcement in backtest validation</rule>
+      </enforcement>
+    </pre_trade_checklist>
+    
+    <trading_logic_review mandatory="true">
+      <description>MANDATORY review for ANY trading logic (risk, signals, entries, exits, position sizing)</description>
+      <trigger>Before committing trading logic code, before deploying to production</trigger>
+      <required_agents>
+        <agent name="FORGE">Implements + validates (mypy/pytest)</agent>
+        <agent name="REVIEWER">Audits code for bugs, edge cases, Apex violations</agent>
+        <agent name="ORACLE">Validates in backtest (100+ trades, WFE ≥0.6)</agent>
+        <agent name="SENTINEL">Confirms risk calculations, Apex compliance</agent>
+      </required_agents>
+      <blocking_conditions>
+        <condition>Skip REVIEWER audit → BLOCK commit</condition>
+        <condition>Skip ORACLE validation → BLOCK go-live</condition>
+        <condition>SENTINEL risk concerns → BLOCK regardless of ORACLE approval</condition>
+      </blocking_conditions>
+      <enforcement priority="P0">NO trading logic reaches production without full 4-agent review chain</enforcement>
+    </trading_logic_review>
+    
+    <pre_deploy_validation mandatory="true">
+      <description>MANDATORY validation before deploying ANY code to production (trading or infrastructure)</description>
+      <performance_profiling agent="FORGE">
+        <requirement>Profile OnTick/critical path BEFORE deploy</requirement>
+        <thresholds>
+          <threshold component="OnTick">&lt;50ms (BLOCK if exceeded)</threshold>
+          <threshold component="ONNX">&lt;5ms (BLOCK if exceeded)</threshold>
+          <threshold component="Python Hub">&lt;400ms (BLOCK if exceeded)</threshold>
+        </thresholds>
+        <enforcement>If ANY threshold exceeded → OPTIMIZE → Re-profile → BLOCK until pass</enforcement>
+      </performance_profiling>
+      
+      <apex_rules_validation agent="SENTINEL">
+        <requirement>Verify ALL Apex rules enforced in code</requirement>
+        <rules_checklist>
+          <rule>Trailing DD 5% from HWM (includes unrealized)?</rule>
+          <rule>Force close ALL by 4:59 PM ET?</rule>
+          <rule>Consistency 30% max daily profit?</rule>
+          <rule>NO overnight positions possible?</rule>
+        </rules_checklist>
+        <enforcement>If ANY rule not enforced → BLOCK deploy</enforcement>
+      </apex_rules_validation>
+      
+      <test_coverage agent="FORGE">
+        <requirement>Minimum coverage for critical modules</requirement>
+        <thresholds>
+          <threshold module="risk/*">90%+ coverage (BLOCK if &lt;90%)</threshold>
+          <threshold module="signals/*">80%+ coverage (BLOCK if &lt;80%)</threshold>
+          <threshold module="strategies/*">85%+ coverage (BLOCK if &lt;85%)</threshold>
+        </thresholds>
+        <enforcement>Coverage gaps → Add tests → Re-run → BLOCK until pass</enforcement>
+      </test_coverage>
+    </pre_deploy_validation>
   </quality_gates>
 
   <feedback_loop>
@@ -365,14 +439,14 @@
   <decision_hierarchy>
     <description>When agents conflict: SENTINEL > ORACLE > CRUCIBLE</description>
     <level priority="1" name="SENTINEL" authority="Risk Veto - ALWAYS WINS">
-      <rule>Trailing DD >8% → BLOCK (regardless of setup quality)</rule>
+      <rule>Trailing DD >4% → BLOCK (80% of 5% Apex limit - safety buffer)</rule>
       <rule>Time >4:30 PM ET → BLOCK (regardless of opportunity)</rule>
       <rule>Consistency >30% → BLOCK (regardless of profit potential)</rule>
     </level>
     <level priority="2" name="ORACLE" authority="Statistical Veto">
       <rule>WFE &lt;0.6 → NO-GO (strategy not validated)</rule>
       <rule>DSR &lt;0 → BLOCK (likely noise, not edge)</rule>
-      <rule>MC 95th DD >8% → CAUTION</rule>
+      <rule>MC 95th DD >4% → CAUTION (80% of Apex 5% limit)</rule>
     </level>
     <level priority="3" name="CRUCIBLE" authority="Alpha Generation - Proposes, Not Decides">
       <rule>Identifies setups (score 0-10), recommends entries</rule>
@@ -385,13 +459,46 @@
     </examples>
   </decision_hierarchy>
 
-  <handoff_quality_gates>
-    <description>Validation by RECEIVING agent on SENDER's output before accepting handoff</description>
-    <gate from="FORGE" to="REVIEWER">REVIEWER verifies: FORGE output includes reflection + proactive scans</gate>
-    <gate from="CRUCIBLE" to="SENTINEL">SENTINEL verifies: Setup includes Apex constraint validation</gate>
-    <gate from="ORACLE" to="SENTINEL">SENTINEL verifies: Backtest includes bias/overfitting checks</gate>
-    <gate from="NAUTILUS" to="REVIEWER">REVIEWER verifies: Migration includes temporal correctness validation</gate>
-  </handoff_quality_gates>
+  <mandatory_handoff_gates blocking="true">
+    <description>MANDATORY validation by RECEIVING agent - BLOCKS if validation fails. Handoffs are NOT optional for critical workflows.</description>
+    
+    <gate from="FORGE" to="REVIEWER" priority="P0">
+      <validation>REVIEWER verifies: FORGE output includes reflection + proactive scans + tests passing</validation>
+      <blocking_condition>Skip REVIEWER audit → BLOCK commit (NO trading code without review)</blocking_condition>
+      <rationale>Code bugs with $50k = account termination. REVIEWER catches what FORGE missed.</rationale>
+    </gate>
+    
+    <gate from="CRUCIBLE" to="SENTINEL" priority="P0">
+      <validation>SENTINEL verifies: Setup includes Apex constraint validation (DD%, time, consistency)</validation>
+      <blocking_condition>Setup violates ANY Apex rule → BLOCK execution (NO EXCEPTIONS)</blocking_condition>
+      <rationale>CRUCIBLE proposes, SENTINEL decides. Risk veto always wins.</rationale>
+    </gate>
+    
+    <gate from="ORACLE" to="SENTINEL" priority="P0">
+      <validation>SENTINEL verifies: Backtest includes bias checks (look-ahead, overfitting, slippage realistic)</validation>
+      <blocking_condition">Backtest unrealistic (WFE &lt;0.6, slippage ignored) → BLOCK go-live</blocking_condition>
+      <rationale>Perfect backtest = overfitted. SENTINEL validates realism before $ risk.</rationale>
+    </gate>
+    
+    <gate from="NAUTILUS" to="REVIEWER" priority="P0">
+      <validation>REVIEWER verifies: Migration includes temporal correctness (no look-ahead, event-driven patterns)</validation>
+      <blocking_condition>Temporal violation detected (future data in calculation) → BLOCK merge</blocking_condition>
+      <rationale>Look-ahead bias = fake backtest performance. REVIEWER ensures causality.</rationale>
+    </gate>
+    
+    <gate from="FORGE" to="ORACLE" priority="P1">
+      <validation>ORACLE validates: Trading logic in backtest (100+ trades, WFE ≥0.6, realistic conditions)</validation>
+      <blocking_condition>Insufficient validation (&lt;100 trades, WFE &lt;0.6) → BLOCK go-live</blocking_condition>
+      <rationale>Untested trading logic = gambling. ORACLE proves edge before $ risk.</rationale>
+    </gate>
+    
+    <enforcement priority="P0">
+      <rule>MANDATORY handoffs CANNOT be skipped for convenience</rule>
+      <rule>Receiving agent MUST validate before accepting work</rule>
+      <rule>If validation fails → BLOCK → Return to sender → Fix → Re-submit</rule>
+      <rule>Trading logic handoffs: FORGE → REVIEWER → ORACLE → SENTINEL (full chain required)</rule>
+    </enforcement>
+  </mandatory_handoff_gates>
 
   <mcp_mapping>
     <agent name="CRUCIBLE" mcps="twelve-data (prices), perplexity (macro), mql5-books (SMC), memory (context), time (sessions)"/>
@@ -436,12 +543,140 @@
     <output agent="ALL" type="Progress" location="DOCS/02_IMPLEMENTATION/PROGRESS.md"/>
   </agent_outputs>
 
-  <bugfix_protocol>
-    <nautilus_log>nautilus_gold_scalper/BUGFIX_LOG.md</nautilus_log>
-    <mql5_log>MQL5/Experts/BUGFIX_LOG.md</mql5_log>
-    <format>YYYY-MM-DD (AGENT context) - Module: bug fix description.</format>
-    <routing>FORGE Python/Nautilus → nautilus_log | FORGE MQL5 → mql5_log | NAUTILUS → nautilus_log</routing>
-  </bugfix_protocol>
+  <code_change_tracking>
+    <description>Log COMPLETED work units and discovered bugs. Never log individual edits during implementation.</description>
+    
+    <nautilus_tracking>
+      <changelog>nautilus_gold_scalper/CHANGELOG.md</changelog>
+      <bugfix_log>nautilus_gold_scalper/BUGFIX_LOG.md</bugfix_log>
+      <index>nautilus_gold_scalper/INDEX.md</index>
+    </nautilus_tracking>
+    
+    <mql5_tracking>
+      <changelog>MQL5/Experts/CHANGELOG.md</changelog>
+      <bugfix_log>MQL5/Experts/BUGFIX_LOG.md</bugfix_log>
+    </mql5_tracking>
+    
+    <when_to_log>
+      <trigger type="work_complete">ONLY when work unit fully complete (feature done, tests passing, all edits finished)</trigger>
+      <trigger type="bug_discovered">IMMEDIATELY when bug discovered (so you don't forget), then fix it</trigger>
+    </when_to_log>
+    
+    <never_log>
+      <scenario>Individual file edits during implementation (e.g., 10 edits to finish feature = 1 log entry at end, NOT 10)</scenario>
+      <scenario>Mid-progress changes (feature half-done)</scenario>
+      <scenario>Temporary/experimental code</scenario>
+    </never_log>
+    
+    <changelog_format>
+      <header>## [Module] - YYYY-MM-DD HH:MM (AGENT)</header>
+      <category>🐛 BUGFIX | 🚀 IMPROVEMENT | ✨ FEATURE | ⚠️ BREAKING | ⚙️ CONFIG</category>
+      <required_fields>
+        <field name="What">Brief description (1 line)</field>
+        <field name="Why">Problem solved / motivation / context</field>
+        <field name="Impact">What changed (behavior, API, performance, dependencies)</field>
+        <field name="Files">List of modified files (relative paths)</field>
+        <field name="Validation">Tests passed, compilation status, quality gates</field>
+      </required_fields>
+      <optional_fields>
+        <field name="Commit">Git commit hash (if committed)</field>
+        <field name="Related">Links to issues, PRs, related changes</field>
+      </optional_fields>
+    </changelog_format>
+    
+    <bugfix_log_format>
+      <description>Simplified format for quick bug reference (debugging focus)</description>
+      <format>YYYY-MM-DD HH:MM [AGENT] Module::Function - Bug: [description] - Fix: [solution] - Root cause: [why it happened]</format>
+      <use_when>Debugging similar issues, understanding bug patterns, post-mortem analysis</use_when>
+    </bugfix_log_format>
+    
+    <index_update>
+      <description>Update INDEX.md "Current State" section when significant changes accumulate</description>
+      <trigger>Major feature complete | Architecture change | Migration phase done | Breaking changes</trigger>
+      <sections_to_update>
+        <section>Current State (capabilities, realism features)</section>
+        <section>Open Issues (add new blockers, remove resolved)</section>
+        <section>Changelog (high-level summary only)</section>
+      </sections_to_update>
+    </index_update>
+    
+    <future_improvements_tracking>
+      <description>Brainstorming repository for optimization ideas - add when insights emerge, NOT during implementation</description>
+      <files>
+        <file>nautilus_gold_scalper/FUTURE_IMPROVEMENTS.md</file>
+        <file>DOCS/02_IMPLEMENTATION/FUTURE_IMPROVEMENTS.md</file>
+      </files>
+      
+      <when_to_add>
+        <trigger agent="ARGUS">After research findings (papers, repos, patterns discovered)</trigger>
+        <trigger agent="ORACLE">After backtest reveals optimization opportunities (WFE patterns, parameter sensitivity)</trigger>
+        <trigger agent="FORGE">After discovering bottlenecks or elegant solutions during implementation</trigger>
+        <trigger agent="CRUCIBLE">After identifying strategy improvements from market analysis</trigger>
+        <trigger agent="SENTINEL">After discovering risk management enhancements</trigger>
+        <trigger agent="USER">During brainstorming sessions or "what if" discussions</trigger>
+      </when_to_add>
+      
+      <never_add>
+        <scenario>During active implementation (finish current work first)</scenario>
+        <scenario>Vague ideas without clear WHY/WHAT/IMPACT</scenario>
+        <scenario>Already implemented features</scenario>
+      </never_add>
+      
+      <entry_format>
+        <required>WHY (problem/opportunity/motivation)</required>
+        <required>WHAT (high-level approach, not full implementation)</required>
+        <required>IMPACT (expected improvement)</required>
+        <required>EFFORT (time estimate)</required>
+        <required>PRIORITY (P1=critical, P2=high value, P3=nice, P4=research)</required>
+        <optional>Dependencies, References, Status</optional>
+      </entry_format>
+      
+      <status_transitions>
+        <transition from="💡 IDEA" to="📋 PLANNED">Added to roadmap</transition>
+        <transition from="📋 PLANNED" to="🚧 IN PROGRESS">Implementation started</transition>
+        <transition from="🚧 IN PROGRESS" to="✅ DONE">Move to "Implemented" archive section</transition>
+        <transition from="any" to="❌ REJECTED">Move to "Rejected" archive with reason</transition>
+      </status_transitions>
+      
+      <philosophy>Ideas repository, NOT backlog. Captures insights for future decision-making when bandwidth available.</philosophy>
+    </future_improvements_tracking>
+    
+    <routing>
+      <rule agent="FORGE" platform="Python/Nautilus">→ nautilus_gold_scalper/CHANGELOG.md (all changes) + BUGFIX_LOG.md (if bug)</rule>
+      <rule agent="FORGE" platform="MQL5">→ MQL5/Experts/CHANGELOG.md + BUGFIX_LOG.md (if bug)</rule>
+      <rule agent="NAUTILUS">→ nautilus_gold_scalper/CHANGELOG.md (all changes) + BUGFIX_LOG.md (if bug)</rule>
+      <rule agent="REVIEWER">→ Note issues found but FORGE/NAUTILUS do actual logging</rule>
+    </routing>
+    
+    <enforcement>
+      <rule priority="P0">Log ONLY when work unit COMPLETE or bug DISCOVERED. Never log individual edits.</rule>
+      <rule priority="P1">Log BEFORE reporting completion to user (logging is part of "done")</rule>
+      <rule priority="P2">If bug discovered during work, log to BUGFIX_LOG immediately (prevents forgetting)</rule>
+    </enforcement>
+    
+    <examples>
+      <good>10 edits to implement feature → 1 CHANGELOG entry when done (feature complete + tests pass)</good>
+      <good>Bug discovered during implementation → BUGFIX_LOG entry immediately → Fix → Continue work</good>
+      <bad>Edit file A → Log → Edit file B → Log → Edit file A again → Log (TOO GRANULAR)</bad>
+    </examples>
+    
+    <example>
+      <markdown><![CDATA[
+## src/risk/drawdown_tracker.py - 2025-12-08 14:30 (FORGE)
+
+### 🐛 BUGFIX
+
+**What:** Fixed trailing DD calculation including unrealized P&L
+**Why:** Apex Trading requires trailing DD from HWM including open positions, was only counting realized
+**Impact:** Risk calculation now more conservative (correct), may block trades sooner when near HWM
+**Files:** 
+- nautilus_gold_scalper/src/risk/drawdown_tracker.py
+- nautilus_gold_scalper/tests/test_drawdown_tracker.py
+**Validation:** pytest passed (12 tests), mypy clean, calculation verified against Apex rules
+**Commit:** abc1234
+      ]]></markdown>
+    </example>
+  </code_change_tracking>
 
   <naming_conventions>
     <convention type="Reports">YYYYMMDD_TYPE_NAME.md</convention>
@@ -452,9 +687,9 @@
 
 <critical_context>
   <apex_trading severity="MOST DANGEROUS">
-    <rule type="trailing_dd">10% from HIGH-WATER MARK (follows peak equity, includes UNREALIZED P&L!)</rule>
-    <comparison>FTMO = fixed DD from initial | Apex = DD follows equity peak (MORE DANGEROUS!)</comparison>
-    <example>Profit $500 → Floor rises $500 → Available DD shrinks!</example>
+    <rule type="trailing_dd">5% from HIGH-WATER MARK (follows peak equity, includes UNREALIZED P&L!)</rule>
+    <comparison>FTMO = 10% fixed DD from initial | Apex = 5% trailing DD from peak (MUCH MORE DANGEROUS!)</comparison>
+    <example>Profit $500 → Floor rises $500 → Available DD shrinks! Only $2,500 buffer on $50k account!</example>
     <rule type="overnight">FORBIDDEN - Close ALL by 4:59 PM ET or ACCOUNT TERMINATED</rule>
     <time_constraints>
       <alert time="4:00 PM">alert</alert>
@@ -479,10 +714,12 @@
   </ml_thresholds>
 
   <forge_rule priority="P0.5">
-    FORGE MUST validate code after ANY change:
+    FORGE MUST validate code + log completed work:
     - Python/Nautilus: mypy --strict + pytest → Fix errors BEFORE reporting
     - MQL5: metaeditor64 auto-compile → Fix errors BEFORE reporting
-    FORGE auto-detects platform from file extension. NEVER deliver non-passing code.
+    - CHANGELOG.md: Update when work unit COMPLETE (not during individual edits)
+    - BUGFIX_LOG.md: Update when bug DISCOVERED (immediately, to not forget)
+    FORGE auto-detects platform from file extension. NEVER deliver non-passing code OR unlogged completed work.
   </forge_rule>
 
   <powershell_critical>Factory CLI = PowerShell, NOT CMD! Operators &amp;, &amp;&amp;, ||, 2>nul DON'T work. One command per Execute.</powershell_critical>
@@ -512,10 +749,106 @@
 
   <protocol agent="SENTINEL" name="Circuit Breaker">
     <rule>All setups blocked 3 days → Report "Risk params too tight OR market regime change"</rule>
-    <rule>Trailing DD >9% → EMERGENCY: No new trades until DD &lt;7%</rule>
+    <rule>Trailing DD >4.5% → EMERGENCY: No new trades until DD &lt;3.5% (90% of 5% Apex limit)</rule>
     <rule>Time >4:55 PM ET → FORCE CLOSE all positions (no exceptions)</rule>
   </protocol>
 </error_recovery>
+
+<critical_bug_protocol>
+  <description>When CRITICAL bug discovered (Apex violation, account risk $50k, data corruption, missed deadline) - MANDATORY root cause + prevention</description>
+  
+  <severity_levels>
+    <level name="CRITICAL" risk="$50k">Account survival risk, Apex rule violation, data integrity loss, position sizing error</level>
+    <level name="HIGH" risk="Trading">Trading logic error, performance regression >20%, signal generation failure</level>
+    <level name="MEDIUM" risk="Operational">Silent failures, logging issues, indicator bugs (non-critical)</level>
+  </severity_levels>
+  
+  <mandatory_steps>
+    <step order="1" action="IMMEDIATE_HALT">If live trading affected → HALT immediately (SENTINEL emergency protocol)</step>
+    <step order="2" action="ROOT_CAUSE">5 Whys analysis - find TRUE root cause (not symptom)</step>
+    <step order="3" action="FIX">Implement fix + comprehensive validation (tests, manual scenarios)</step>
+    <step order="4" action="PROTOCOL_UPDATE">UPDATE AGENTS.md to PREVENT recurrence:
+      - Add pattern to <pattern_recognition> if repeatable bug
+      - Add trigger to <auto_escalation> if complexity misjudged
+      - Add scan to <proactive_problem_detection> if detection gap
+      - Add test requirement if coverage missing
+    </step>
+    <step order="5" action="LOG">Log to BUGFIX_LOG.md with 🚨 CRITICAL marker + full Root Cause + Prevention sections</step>
+    <step order="6" action="POST_MORTEM">Which reflection question SHOULD have caught this? Update <mandatory_reflection_protocol> if gap found</step>
+  </mandatory_steps>
+  
+  <prevention_enforcement priority="P0">
+    <rule>CRITICAL bugs MUST update AGENTS.md protocols (step 4 above)</rule>
+    <rule>MUST add new pattern if bug follows recognizable pattern</rule>
+    <rule>MUST add auto_escalation trigger if task complexity was underestimated</rule>
+    <rule>MUST add test coverage requirement if missing tests enabled bug</rule>
+    <rule>NO EXCEPTIONS - Prevention updates are NOT optional</rule>
+  </prevention_enforcement>
+  
+  <production_error_protocol>
+    <description>Bug detected in LIVE trading with real $ at risk</description>
+    <immediate_actions>
+      <action>HALT all trading immediately (emergency shutdown)</action>
+      <action>Close all open positions at market</action>
+      <action>Disable EA/Strategy from auto-trading</action>
+      <action>Alert user with severity + impact assessment</action>
+      <action>Capture full state: positions, equity, DD%, pending orders, logs</action>
+    </immediate_actions>
+    <investigation>
+      <step>Reproduce bug in backtest/sandbox (NEVER test fixes in live)</step>
+      <step>5 Whys root cause analysis</step>
+      <step>Fix + validate in backtest (100+ trades if trading logic)</step>
+      <step>Code review by REVIEWER</step>
+      <step>Re-validation by ORACLE (if trading logic)</step>
+    </investigation>
+    <resume_criteria>
+      <criterion>Fix validated in backtest + manual scenarios</criterion>
+      <criterion>AGENTS.md prevention updates committed</criterion>
+      <criterion>User approval for live resume</criterion>
+      <criterion>Monitoring plan in place (what to watch for recurrence)</criterion>
+    </resume_criteria>
+  </production_error_protocol>
+  
+  <examples>
+    <example severity="CRITICAL">
+      <bug>Trailing DD calculation not including unrealized P&L</bug>
+      <impact>Would violate Apex 5% limit without warning → account termination</impact>
+      <root_cause_chain>
+        1. Why? Calculation only used realized P&L
+        2. Why? Original spec unclear about unrealized
+        3. Why? No validation against Apex rules in tests
+        4. Why? Test suite missing "open position + DD" case
+        5. Why? Coverage not enforced for risk/ modules
+      </root_cause_chain>
+      <prevention>
+        - Added pattern: "unrealized_pnl_ignored" to trading_patterns
+        - Added test: "DD calculation with open positions" (3 scenarios)
+        - Added auto_escalation: "DD calculation" → COMPLEX minimum
+        - Added scan: Check for mark-to-market in all risk calculations
+      </prevention>
+    </example>
+    
+    <example severity="HIGH">
+      <bug>4:59 PM deadline check using server time, not ET (wrong timezone)</bug>
+      <impact>Overnight position held → Apex rule violation</impact>
+      <root_cause_chain>
+        1. Why? Used datetime.now() without timezone conversion
+        2. Why? Assumed server = ET (incorrect assumption)
+        3. Why? No validation of actual deadline enforcement
+        4. Why? Missing "deadline simulation" test
+        5. Why? Apex constraints not in complexity assessment
+      </root_cause_chain>
+      <prevention>
+        - Added pattern: "timezone_assumption" to general_patterns
+        - Added test: "Force close at 4:59 PM ET" (timezone edge cases)
+        - Added heuristic: "Apex deadline" → COMPLEX minimum
+        - Added mandatory question: "Timezone correctness?" for time-based logic
+      </prevention>
+    </example>
+  </examples>
+  
+  <format_reference>See BUGFIX_LOG.md templates (Standard vs CRITICAL format)</format_reference>
+</critical_bug_protocol>
 
 <session_rules>
   <session_management>1 SESSION = 1 FOCUS. Checkpoint every 20 msgs. Ideal: 30-50 msgs. Use NANO versions when possible.</session_management>
@@ -593,9 +926,9 @@
     <agent name="CRUCIBLE" destination="DOCS/03_RESEARCH/FINDINGS/">Setup score, regime, rationale</agent>
     <agent name="SENTINEL" destination="memory MCP (circuit_breaker_state)">DD%, time to close, risk multiplier</agent>
     <agent name="ORACLE" destination="DOCS/04_REPORTS/DECISIONS/">WFE, DSR, MC results, GO/NO-GO</agent>
-    <agent name="FORGE" destination="BUGFIX_LOG.md">Bug fixes, compilation errors</agent>
+    <agent name="FORGE" destination="CHANGELOG.md + BUGFIX_LOG.md">ALL code changes (bugs, features, improvements, config)</agent>
     <agent name="ARGUS" destination="DOCS/03_RESEARCH/PAPERS/">Paper summaries, confidence levels</agent>
-    <agent name="NAUTILUS" destination="DOCS/02_IMPLEMENTATION/PROGRESS.md">Migration status, blockers</agent>
+    <agent name="NAUTILUS" destination="CHANGELOG.md + BUGFIX_LOG.md + PROGRESS.md">Code changes + migration status</agent>
   </logging_destinations>
 
   <logging_format>YYYY-MM-DD HH:MM:SS [AGENT] EVENT - Input: {context} - Decision: {GO/NO-GO/CAUTION} - Rationale: {reason} - Handoff: {next agent}</logging_format>
@@ -646,22 +979,35 @@
 </best_practices>
 
 <git_workflow>
-  <when>
-    <trigger>Module created</trigger>
-    <trigger>Feature done</trigger>
-    <trigger>Significant bugfix</trigger>
-    <trigger>Refactor</trigger>
-    <trigger>Agent modified</trigger>
-    <trigger>Session ended</trigger>
-  </when>
-
+  <policy>Commit ONLY when work unit COMPLETE and VALIDATED. Never mid-progress.</policy>
+  
+  <auto_commit_triggers>
+    <trigger>Implementation plan fully completed (all checklist items done)</trigger>
+    <trigger>Feature implementation complete + validation passed (tests/compile/quality gates)</trigger>
+    <trigger>Migration phase complete (e.g., full module migrated MQL5→Nautilus + validated)</trigger>
+    <trigger>Major refactor complete + all affected modules tested</trigger>
+  </auto_commit_triggers>
+  
+  <validation_required>
+    <check>Python: mypy + pytest passed</check>
+    <check>MQL5: metaeditor64 compilation passed</check>
+    <check>No secrets in git diff --cached</check>
+    <check>Quality gates passed (strategic_intelligence applied)</check>
+  </validation_required>
+  
   <how>
+    <step>Verify completion: All plan items checked? All validation passed?</step>
     <step>git status</step>
-    <step>git diff (check secrets!)</step>
-    <step>git add [files]</step>
-    <step>git commit -m "feat/fix/refactor: desc"</step>
-    <step>git push</step>
+    <step>git diff --cached (verify NO secrets!)</step>
+    <step>git add [relevant files]</step>
+    <step>git commit -m "type: [complete work unit description]"</step>
   </how>
+  
+  <never>
+    <anti_pattern>Mid-progress commits (feature half-done)</anti_pattern>
+    <anti_pattern>Failed validation (tests failing, won't compile)</anti_pattern>
+    <anti_pattern>Auto-push (user controls push timing)</anti_pattern>
+  </never>
 </git_workflow>
 
 <appendix>

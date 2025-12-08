@@ -1,107 +1,74 @@
-# BUGFIX LOG - EA_SCALPER_XAUUSD
+# MQL5 EA - Bug Fix Log
 
-## Purpose
-Central log for all bug fixes in MQL5 and Python code. Every agent fixing bugs MUST document here.
+**Purpose:** Track MQL5 bugs with ROOT CAUSE analysis to prevent recurrence  
+**Owner:** FORGE (MQL5 mode)  
+**Format:** Structured Markdown (newest first)  
+**Usage:** Debugging, compilation patterns, post-mortem analysis
 
----
-
-## 2025-12-07 (FORGE - ORACLE audit fixes)
-
-### Module: nautilus_gold_scalper/src/strategies/gold_scalper_strategy.py
-**Bug #2 (ORACLE):** execution_threshold set to 65 instead of 70 (TIER_B_MIN)
-- **Symptom:** Strategy accepted TIER-C signals (60-69 score) when it should only accept TIER-B+ (70+)
-- **Impact:** Poor win rate due to low-quality signal acceptance
-- **Root Cause:** Threshold lowered from MQL5 standard (70) during migration
-- **Fix:** Line 67 changed from 65 to 70 to match MQL5 TIER_B_MIN
-- **Evidence:** MQL5/Include/EA_SCALPER/Scoring/CConfluenceScorer.mqh uses TIER_B_MIN = 70
-
-### Module: nautilus_gold_scalper/src/strategies/gold_scalper_strategy.py
-**Bug #4 (ORACLE):** ConfluenceScorer instantiated without min_score_to_trade config
-- **Symptom:** Config parameter `execution_threshold` defined but never passed to scorer
-- **Impact:** Scorer used default TIER_INVALID (60) instead of config value (70)
-- **Root Cause:** Constructor call missing parameter during migration
-- **Fix:** Line 162-164 now passes `min_score_to_trade=float(self.config.execution_threshold)` to ConfluenceScorer constructor
-- **Evidence:** confluence_scorer.py line 951 checks `self.min_score_to_trade` but it was never set from config
-
-**Result:** Both bugs fixed. Strategy now enforces TIER-B minimum (70) consistently with MQL5.
+**CRITICAL bugs (account risk, Apex violations):** MUST include 5 Whys + Prevention (AGENTS.md updates)
 
 ---
 
-## 2025-12-07 (POST-VALIDATION import tests)
+## Template for Standard Bugs
 
-### Module: nautilus_gold_scalper/src/ml/model_trainer.py
-**Bug:** NameError when onnxruntime import fails
-- **Symptom:** `NameError: name 'ort' is not defined` at class definition time (line 637)
-- **Impact:** ML module completely unusable - couldn't even import the file
-- **Root Cause:** Type hint `-> ort.InferenceSession` evaluated at class definition time, but `ort` imported in try/except block and may not exist
-- **Fix:** Added `from __future__ import annotations` at top of file to defer type hint evaluation until runtime
-- **Why missed:** Audit 001 checked file existence but didn't run actual import tests
+```markdown
+## YYYY-MM-DD HH:MM [AGENT] - Module
 
-### Module: nautilus_gold_scalper/src/ml/ensemble_predictor.py
-**Bug:** NameError when onnxruntime import fails (same as model_trainer.py)
-- **Symptom:** `NameError: name 'ort' is not defined` at class definition time (line 635)
-- **Impact:** ML ensemble prediction completely unusable
-- **Root Cause:** Type hint `-> ort.InferenceSession` in method signature but `ort` may not exist
-- **Fix:** Added `from __future__ import annotations` at top of file
-- **Detection:** Discovered during post-audit import validation testing
-
-**Result:** All 11 critical modules (8 core + 3 ML) now import successfully. Validates importance of running actual import tests, not just file checks.
+**Bug:** Brief description  
+**Impact:** What broke / consequences  
+**Root Cause:** Why it happened (1-2 sentences)  
+**Fix:** Solution applied  
+**Files:** List of modified files (.mqh, .mq5)  
+**Validation:** Compilation passed, backtest results  
+**Commit:** hash
+```
 
 ---
 
-## 2025-12-07 (FORGE - Metrics telemetry implementation)
+## Template for CRITICAL Bugs (🚨 Account Risk / Apex Violations)
 
-### Module: nautilus_gold_scalper/src/utils/metrics.py (NEW)
-**Issue:** No Sharpe/Sortino/Calmar/SQN telemetry for GO/NO-GO decisions
-- **Symptom:** Backtests completed but lacked performance metrics needed for validation plan Phase 6
-- **Impact:** Cannot make GO/NO-GO decision without core metrics (Audit 003 P0 blocker)
-- **Root Cause:** No metrics calculation module existed, only basic PnL tracking
-- **Fix:** Created comprehensive MetricsCalculator with:
-  - Sharpe Ratio (annualized, risk-adjusted return)
-  - Sortino Ratio (downside deviation only)
-  - Calmar Ratio (CAGR / Max DD)
-  - SQN - System Quality Number (Van Tharp)
-  - Supporting metrics: Win Rate, Profit Factor, Expectancy, Max DD
-  - Handles edge cases: zero std_dev (perfect consistency) → inf Sharpe/SQN
-- **Testing:** 9 unit tests (100% pass), validates edge cases (all wins, all losses, empty, high Sharpe)
-- **Evidence:** Prompt 005 requires these metrics for GO/NO-GO framework decision tree
+```markdown
+## 🚨 YYYY-MM-DD HH:MM [AGENT] - CRITICAL
 
-### Module: nautilus_gold_scalper/src/strategies/gold_scalper_strategy.py
-**Integration:** Metrics calculation into strategy lifecycle
-- **Added:** `_trade_pnl_history` list to track all realized PnLs
-- **Added:** `_metrics_calculator` instance (risk_free_rate=0.05, 252 trading days)
-- **Added:** `_calculate_and_emit_metrics()` method - calculates metrics and emits to telemetry
-- **Hooked:** `_on_strategy_stop()` calls metrics calculation on backtest completion
-- **Output:** Metrics emitted to `logs/telemetry.jsonl` in structured JSON format
+**Module:** MQL5/Include/EA_SCALPER/Module.mqh  
+**Severity:** CRITICAL (Account survival - $50k risk) | HIGH (Trading logic) | MEDIUM  
+**Bug:** Brief description  
+**Impact:** Specific consequences (would violate Apex? lose money?)  
 
-### Module: nautilus_gold_scalper/src/strategies/base_strategy.py
-**Integration:** PnL tracking in position close event
-- **Added:** PnL tracking in `on_position_closed()` after circuit breaker update
-- **Logic:** Appends `net_pnl` to `_trade_pnl_history` if attribute exists
-- **Safe:** Uses `hasattr()` check for backward compatibility
+**Root Cause (5 Whys):**
+1. Why? [First level]
+2. Why? [Deeper]
+3. Why? [Process issue]
+4. Why? [Missing validation]
+5. Why? [Root cause]
 
-**Result:** Metrics telemetry P0 blocker RESOLVED. Backtests now output Sharpe/Sortino/Calmar/SQN for GO/NO-GO validation.
+**Fix:** Solution applied  
 
----
+**Prevention (MANDATORY - Protocol Updates):**
+- ✅ Updated AGENTS.md: [which section, what added]
+- ✅ Added test: [manual backtest, compilation check]
+- ✅ Added pattern: [if repeatable bug pattern]
+- ✅ Updated complexity: [if escalation needed]
 
-## 2025-12-07 (FORGE - P1 realism + CB sizing fix)
+**Files:**
+- MQL5/Include/path/to/file.mqh (fixed)
+- MQL5/Experts/EA_NAME.mq5 (test)
+- AGENTS.md (protocol update)
 
-### Modules: nautilus_gold_scalper/src/strategies/base_strategy.py, gold_scalper_strategy.py, scripts/run_backtest.py, configs/strategy_config.yaml
-**Issue:** P1 items from Audit 003/005 still pending in codebase  
-- Circuit breaker size multiplier not affecting live sizing in some runs; trade PnL not persisted, so metrics/CB streaks could never trigger.  
-- Slippage/commission realism partially hardcoded (1.5x slippage multiplier not configurable via YAML).  
-- Telemetry metrics could be empty because `_trade_pnl_history` never filled.
-
-**Fixes:**  
-1) Append `net_pnl` to `_trade_pnl_history` on every position close and feed results to `PositionSizer.register_trade_result` (enables metrics + adaptive sizing + CB streaks).  
-2) Execution costs now honor YAML `slippage_multiplier` while still using `slippage_ticks` and `commission_per_contract`; added field to `GoldScalperConfig`, config loader, and `strategy_config.yaml`.  
-3) ExecutionModel instantiation uses configured multiplier instead of hardcoded default.
-
-**Impact:**  
-- CB size reductions now reliably activate after consecutive-loss thresholds.  
-- Sharpe/Sortino/Calmar/SQN telemetry gets populated from real trade history.  
-- Backtests can tune slippage realism directly from YAML without code edits.
-
-**Testing:** Targeted code inspection; no runtime tests executed (network/sandbox limits). Needs quick regression run when data available.
+**Validation:** [proof fix works - compilation + backtest]  
+**Commit:** hash
+```
 
 ---
+
+## Log Entries
+
+### 2025-12-08 18:00 [FORGE] - BUGFIX_LOG.md
+
+**Bug:** No structured MQL5 bug tracking system  
+**Impact:** MQL5 bugs not analyzed for root cause, compilation patterns not learned  
+**Root Cause:** Missing systematic logging for MQL5 codebase with prevention enforcement  
+**Fix:** Created BUGFIX_LOG.md with mandatory Root Cause + Prevention for CRITICAL bugs  
+**Files:** BUGFIX_LOG.md  
+**Validation:** Template complete with 🚨 CRITICAL protocol  
+**Commit:** pending
