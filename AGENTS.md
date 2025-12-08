@@ -2,10 +2,10 @@
 <!-- OPTIMIZED v3.5.1: Refined to 10/10 - Added quick_reference, consolidated warnings, clarified gates, added resolution examples -->
 <metadata>
   <title>EA_SCALPER_XAUUSD - Agent Instructions</title>
-  <version>3.6.0</version>
+  <version>3.7.0</version>
   <last_updated>2025-12-08</last_updated>
-  <changelog>v3.6.0: 🚨 CRITICAL SECURITY UPDATE - Fixed 7 gaps for $50k protection: (1) Emergency DD 4.5% (not 9%), (2) Pre-trade Apex checklist MANDATORY, (3) Trading logic 4-agent review ENFORCED, (4) Sequential-thinking BLOCKING for CRITICAL, (5) Production error protocol, (6) Pre-deploy profiling+coverage MANDATORY, (7) Handoff gates BLOCKING. Added critical_bug_protocol with 5 Whys + Prevention enforcement.</changelog>
-  <previous_changes>v3.5.3: future_improvements_tracking | v3.5.2: code_change_tracking | v3.5.0: 68% token reduction</previous_changes>
+  <changelog>v3.7.0: 🛡️ MULTI-TIER DD PROTECTION - Added comprehensive drawdown_protection system with DAILY DD limits (1.5% → 2.0% → 2.5% → 3.0% HALT) + TOTAL DD limits (3.0% → 3.5% → 4.0% → 4.5% → 5.0% TERMINATED) + dynamic daily limit formula (adjusts based on remaining buffer) + recovery strategy (allows multi-day recovery vs single-day termination). Fixed emergency_mode DD threshold bug (9% → 4.5%). SENTINEL now enforces both daily and total DD before allowing trades. Conservative approach: 3% daily max allows recovery opportunities before hitting 5% Apex limit.</changelog>
+  <previous_changes>v3.6.0: 7 security gaps fixed | v3.5.3: future_improvements_tracking | v3.5.0: 68% token reduction</previous_changes>
 </metadata>
 
 <identity>
@@ -30,8 +30,11 @@
   <apex_critical>
     ⚠️ Trailing DD 5% from HWM (includes unrealized!) | ⚠️ Close ALL by 4:59 PM ET | ⚠️ Max 30% profit/day | ⚠️ NO overnight positions
   </apex_critical>
+  <dd_limits>
+    📊 Daily DD: 1.5% ⚠️ → 2.0% 🟡 → 2.5% 🟠 → 3.0% 🔴 HALT | 📊 Total DD: 3.0% ⚠️ → 3.5% 🟡 → 4.0% 🟠 → 4.5% 🔴 → 5.0% ☠️ TERMINATED
+  </dd_limits>
   <emergency>
-    🚨 4:55 PM → FORCE CLOSE all | 🚨 DD >4.5% → STOP trading | 🚨 Equity drop >5%/5min → PAUSE + investigate
+    🚨 4:55 PM → FORCE CLOSE all | 🚨 Total DD >4.5% → HALT trading | 🚨 Daily DD >3.0% → END day | 🚨 Equity drop >5%/5min → PAUSE + investigate
   </emergency>
   <validation>
     Python: mypy --strict + pytest | MQL5: metaeditor64 auto-compile | NEVER deliver non-passing code
@@ -255,11 +258,11 @@
       <required_questions>Q1 (root cause), Q3 (consequences), Q6 (edge cases)</required_questions>
       <required_scans>trading_specific (always), security (if external input)</required_scans>
     </fast_mode>
-    <emergency_mode trigger="4:55 PM ET OR DD >9% OR equity drop >5% in 5 minutes">
+    <emergency_mode trigger="4:55 PM ET OR DD >4.5% OR equity drop >5% in 5 minutes">
       <protocol>OVERRIDE ALL genius protocols → ACT IMMEDIATELY</protocol>
       <actions>
         <action scenario="4:55_PM_ET">CLOSE all positions immediately, CANCEL orders, LOG, post-mortem after</action>
-        <action scenario="trailing_DD_>9%">STOP new signals, REDUCE sizes to 50%, ALERT SENTINEL</action>
+        <action scenario="trailing_DD_>4.5%">STOP new signals, REDUCE sizes to 50%, ALERT SENTINEL</action>
         <action scenario="rapid_equity_drop">PAUSE trading, INVESTIGATE, ALERT user, REQUIRE manual override</action>
       </actions>
     </emergency_mode>
@@ -700,6 +703,130 @@
     <rule type="consistency">Max 30% profit in single day</rule>
     <rule type="risk_per_trade">0.5-1% max (conservative near HWM)</rule>
   </apex_trading>
+
+  <drawdown_protection>
+    <description>CRITICAL: Multi-tier DD protection system. Apex limit is 5% trailing DD, but DAILY DD must be much lower to allow recovery opportunities. SENTINEL enforces both daily and total DD limits.</description>
+    
+    <daily_dd_limits>
+      <description>DD from day start balance (resets daily at session open)</description>
+      <calculation>Daily DD% = (Day Start Balance - Current Equity) / Day Start Balance × 100</calculation>
+      
+      <tier level="1" threshold="1.5%" action="WARNING" severity="⚠️">
+        <response>Log alert, continue trading cautelosamente</response>
+        <rationale>Primeiro sinal - revisar estratégia intraday</rationale>
+      </tier>
+      
+      <tier level="2" threshold="2.0%" action="REDUCE" severity="🟡">
+        <response>Cortar position sizes para 50%, apenas setups A/B rating</response>
+        <rationale>Volatilidade excessiva - reduzir exposição imediatamente</rationale>
+      </tier>
+      
+      <tier level="3" threshold="2.5%" action="STOP_NEW" severity="🟠">
+        <response>NO new trades, fechar posições existentes em BE/small profit</response>
+        <rationale>Limite conservador atingido - proteger capital restante</rationale>
+      </tier>
+      
+      <tier level="4" threshold="3.0%" action="EMERGENCY_HALT" severity="🔴">
+        <response>FORCE CLOSE ALL positions, END trading for day, LOG incident</response>
+        <rationale>Limite máximo diário - recuperar amanhã com mente fresca</rationale>
+        <recovery>Permitir múltiplos dias de recuperação antes de atingir 5% total DD</recovery>
+      </tier>
+    </daily_dd_limits>
+    
+    <total_dd_limits>
+      <description>DD trailing from high-water mark (HWM = peak equity including unrealized P&L)</description>
+      <calculation>Total DD% = (HWM - Current Equity) / HWM × 100</calculation>
+      
+      <tier level="1" threshold="3.0%" action="WARNING" severity="⚠️">
+        <response>Revisar estratégia geral, reduzir daily DD limit para 2.5%</response>
+        <rationale>40% do buffer consumido - ajustar conservadorismo</rationale>
+      </tier>
+      
+      <tier level="2" threshold="3.5%" action="CONSERVATIVE" severity="🟡">
+        <response>Daily DD limit reduzido para 2.0%, apenas A+ setups</response>
+        <rationale>30% de buffer restante - trading altamente seletivo</rationale>
+      </tier>
+      
+      <tier level="3" threshold="4.0%" action="CRITICAL" severity="🟠">
+        <response>Daily DD limit reduzido para 1.0%, apenas perfect setups, considerar pausa</response>
+        <rationale>20% de buffer restante - risco extremo de terminação</rationale>
+      </tier>
+      
+      <tier level="4" threshold="4.5%" action="HALT_ALL" severity="🔴">
+        <response>HALT all trading immediately, revisar o que deu errado, planejar recuperação</response>
+        <rationale>10% de buffer restante - um dia ruim = conta terminada</rationale>
+      </tier>
+      
+      <tier level="5" threshold="5.0%" action="TERMINATED" severity="☠️">
+        <response>ACCOUNT TERMINATED by Apex Trading - sem apelação</response>
+        <rationale>Limite Apex atingido - falha total de risk management</rationale>
+      </tier>
+    </total_dd_limits>
+    
+    <dynamic_daily_limit>
+      <description>Daily DD limit ajustado dinamicamente baseado em remaining total DD buffer</description>
+      <formula>Max Daily DD% = MIN(3.0%, Remaining Buffer% × 0.6)</formula>
+      <rationale>Factor 0.6 garante que não consumimos todo buffer em um único dia, permitindo recuperação gradual</rationale>
+      
+      <example scenario="fresh_account">
+        <total_dd>0%</total_dd>
+        <remaining_buffer>5% - 0% = 5%</remaining_buffer>
+        <max_daily_dd>MIN(3%, 5% × 0.6) = MIN(3%, 3%) = 3.0% ✅</max_daily_dd>
+      </example>
+      
+      <example scenario="warning_level">
+        <total_dd>3.5%</total_dd>
+        <remaining_buffer>5% - 3.5% = 1.5%</remaining_buffer>
+        <max_daily_dd>MIN(3%, 1.5% × 0.6) = MIN(3%, 0.9%) = 0.9% ✅</max_daily_dd>
+        <interpretation>Altamente conservador - account em risco</interpretation>
+      </example>
+      
+      <example scenario="critical_level">
+        <total_dd>4.5%</total_dd>
+        <remaining_buffer>5% - 4.5% = 0.5%</remaining_buffer>
+        <max_daily_dd>MIN(3%, 0.5% × 0.6) = MIN(3%, 0.3%) = 0.3% ✅</max_daily_dd>
+        <interpretation>Extremamente conservador - quase sem margem de erro</interpretation>
+      </example>
+    </dynamic_daily_limit>
+    
+    <recovery_strategy>
+      <description>Sistema de DD em camadas permite recuperação gradual multi-dia</description>
+      
+      <scenario name="realistic_recovery">
+        <day number="1">
+          <event>Hit 2.5% daily DD (STOP level)</event>
+          <action>Ended trading, total DD = 2.5%</action>
+        </day>
+        <day number="2">
+          <max_daily_dd>MIN(3%, (5% - 2.5%) × 0.6) = 1.5%</max_daily_dd>
+          <strategy>Cautious trading, A+ setups only, aim +1.5% profit</strategy>
+          <result>End day at -1.0% total DD</result>
+        </day>
+        <day number="3">
+          <max_daily_dd>MIN(3%, (5% - 1%) × 0.6) = 2.4%</max_daily_dd>
+          <strategy>Conservative but more flexible, aim +1.0% profit</strategy>
+          <result>End day at 0% DD (back to HWM) ✅</result>
+        </day>
+      </scenario>
+      
+      <comparison name="no_daily_limit">
+        <description>Se daily DD = 5% (igual a total limit)</description>
+        <day number="1">Hit 5% DD = ACCOUNT TERMINATED ❌</day>
+        <recovery>IMPOSSIBLE - zero chances de recuperação</recovery>
+      </comparison>
+    </recovery_strategy>
+    
+    <sentinel_enforcement>
+      <description>SENTINEL must enforce BOTH daily and total DD limits BEFORE allowing any trade</description>
+      
+      <rule priority="1">Check current total DD from HWM (includes unrealized P&L)</rule>
+      <rule priority="2">Check current daily DD from day start balance</rule>
+      <rule priority="3">Calculate dynamic max daily DD based on remaining buffer</rule>
+      <rule priority="4">Block trade if: Daily DD + Trade Risk > Max Daily DD</rule>
+      <rule priority="5">Block trade if: Total DD + Trade Risk > 4.5% (emergency threshold)</rule>
+      <rule priority="6">Log all DD calculations to observability for audit trail</rule>
+    </sentinel_enforcement>
+  </drawdown_protection>
 
   <performance_limits>
     <limit component="OnTick">&lt;50ms</limit>

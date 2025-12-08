@@ -3,6 +3,11 @@ Prop Firm Manager – compliance and risk throttling for prop accounts.
 
 API aligns with tests in tests/test_risk/test_prop_firm_manager.py while
 keeping lightweight hooks for runtime use in run_backtest.
+
+AGENTS.md v3.7.0 Integration:
+- Multi-tier DD protection (daily 1.5%→3.0%, total 3.0%→5.0%)
+- Dynamic daily limit: MIN(3%, Remaining Buffer × 0.6)
+- SENTINEL enforcement of both daily and total DD limits
 """
 from __future__ import annotations
 
@@ -13,6 +18,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from .consistency_tracker import ConsistencyTracker
+from .dd_protection import DDProtectionCalculator, DDProtectionState
 
 
 class AccountTerminatedException(Exception):
@@ -46,6 +52,8 @@ class PropFirmState:
     trailing_dd_current: float
     consecutive_wins: int
     consecutive_losses: int
+    # AGENTS.md v3.7.0 Multi-Tier DD fields
+    dd_protection: Optional[DDProtectionState] = None
 
 
 class PropFirmManager:
@@ -128,14 +136,47 @@ class PropFirmManager:
         return state.is_trading_allowed
 
     def validate_trade(self, risk_amount: float, contracts: float) -> Tuple[bool, str]:
+        """
+        Validate trade against prop firm limits.
+        Includes AGENTS.md v3.7.0 multi-tier DD protection.
+        
+        Args:
+            risk_amount: Risk in absolute dollars
+            contracts: Number of contracts
+            
+        Returns:
+            (allowed, reason)
+        """
         if contracts > self.limits.max_contracts:
             return False, "Max contracts exceeded"
 
+        # Legacy daily limit check (keep for backward compatibility)
         available = self.get_max_risk_available()
         if risk_amount > available:
             return False, "Daily limit would be exceeded"
+        
+        # AGENTS.md v3.7.0 Multi-Tier DD Protection
+        dd_state = self.get_dd_protection_state()
+        risk_pct = (risk_amount / self._equity) * 100 if self._equity > 0 else 0
+        allowed, reason = DDProtectionCalculator.validate_trade(dd_state, risk_pct)
+        
+        if not allowed:
+            return False, f"DD Protection: {reason}"
+        
         return True, ""
 
+    # -------------------- DD Protection Integration (AGENTS.md v3.7.0)
+    def get_dd_protection_state(self) -> DDProtectionState:
+        """
+        Get current DD protection state with multi-tier limits.
+        Implements AGENTS.md v3.7.0 specification.
+        """
+        return DDProtectionCalculator.calculate_state(
+            hwm=self._high_water,
+            day_start_balance=self._daily_start_equity,
+            current_equity=self._equity
+        )
+    
     # -------------------- metrics
     def get_state(self) -> PropFirmState:
         daily_loss = max(0.0, self._daily_start_equity - self._equity)
@@ -162,14 +203,18 @@ class PropFirmManager:
             risk_level = RiskLevel.BREACHED
             is_hard_breached = True
 
+        # Get DD protection state (AGENTS.md v3.7.0 multi-tier system)
+        dd_protection = self.get_dd_protection_state()
+        
         return PropFirmState(
-            is_trading_allowed=not is_hard_breached,
+            is_trading_allowed=not is_hard_breached and dd_protection.can_trade,
             is_hard_breached=is_hard_breached,
             risk_level=risk_level,
             daily_loss_current=daily_loss,
             trailing_dd_current=trailing_dd,
             consecutive_wins=self._consecutive_wins,
             consecutive_losses=self._consecutive_losses,
+            dd_protection=dd_protection,
         )
 
     def get_max_risk_available(self) -> float:
