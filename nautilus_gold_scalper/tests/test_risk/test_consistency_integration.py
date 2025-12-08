@@ -17,26 +17,30 @@ class TestConsistencyIntegration:
         et_tz = ZoneInfo("America/New_York")
         now = datetime(2024, 11, 1, 10, 0, 0, tzinfo=et_tz)
         
-        # Day 1: Make $5,000 total profit
-        tracker.update_profit(trade_pnl=1000.0, now=now)
-        tracker.update_profit(trade_pnl=1500.0, now=now)
-        tracker.update_profit(trade_pnl=2500.0, now=now)
+        # Day 1: Make $10,000 total profit (build history)
+        tracker.update_profit(trade_pnl=10000.0, now=now)
         
-        # Total profit = $5,000, Daily profit = $5,000
-        assert tracker.total_profit == 5000.0
-        assert tracker.daily_profit == 5000.0
+        # Total profit = $10,000, Daily profit = $10,000
+        # First day = 100% daily consistency (blocks immediately)
+        assert not tracker.can_trade(now=now), \
+            "First day with profit blocks (100% > 20% limit)"
         
-        # Should still be able to trade (100% of total is from today, but total profit exists)
-        assert tracker.can_trade(now=now), "Should be able to trade with first day profits"
-        
-        # Day 2: Make more profit
+        # Day 2: Make $1,500 profit (15% of total - should be ALLOWED)
         now_day2 = now + timedelta(days=1)
-        tracker.update_profit(trade_pnl=3000.0, now=now_day2)
+        tracker.update_profit(trade_pnl=1500.0, now=now_day2)
         
-        # Total profit = $8,000, Daily profit = $3,000
-        # Daily % = 3000 / 8000 = 37.5% > 20% limit
-        # Should be BLOCKED
-        assert not tracker.can_trade(now=now_day2), \
+        # Total profit = $11,500, Daily profit = $1,500
+        # Daily % = 1500 / 11500 = 13% < 20% limit → ALLOWED
+        assert tracker.can_trade(now=now_day2), \
+            "Should allow trades when daily profit 13% < 20% limit"
+        
+        # Day 3: Make $3,000 profit (25% of total - should be BLOCKED)
+        now_day3 = now_day2 + timedelta(days=1)
+        tracker.update_profit(trade_pnl=3000.0, now=now_day3)
+        
+        # Total profit = $14,500, Daily profit = $3,000
+        # Daily % = 3000 / 14500 = 20.7% > 20% limit → BLOCKED
+        assert not tracker.can_trade(now=now_day3), \
             "Should block trades when daily profit >20% of total profit"
         
         daily_pct = tracker.get_daily_profit_pct()

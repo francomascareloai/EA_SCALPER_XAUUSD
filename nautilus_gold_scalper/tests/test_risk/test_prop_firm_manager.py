@@ -7,6 +7,7 @@ from src.risk.prop_firm_manager import (
     PropFirmManager,
     PropFirmLimits,
     RiskLevel,
+    AccountTerminatedException,
 )
 
 
@@ -35,7 +36,10 @@ class TestPropFirmManager:
         # Simulate loss exceeding daily limit
         pfm.update_equity(96_500)  # -$3,500 (> $3,000 limit)
         
-        assert pfm.can_trade() is False
+        # Should raise exception on breach
+        with pytest.raises(AccountTerminatedException):
+            pfm.can_trade()
+        
         state = pfm.get_state()
         assert state.risk_level == RiskLevel.BREACHED
         assert state.is_hard_breached is True
@@ -53,7 +57,10 @@ class TestPropFirmManager:
         pfm.update_equity(105_000)  # New high
         pfm.update_equity(101_500)  # -$3,500 from high
         
-        assert pfm.can_trade() is False
+        # Should raise exception on breach
+        with pytest.raises(AccountTerminatedException):
+            pfm.can_trade()
+        
         state = pfm.get_state()
         assert state.trailing_dd_current == 3_500
     
@@ -144,7 +151,10 @@ class TestPropFirmManager:
         # 95% of limit = CRITICAL (blocks trading)
         pfm.update_equity(97_150)  # -$2,850
         assert pfm.get_state().risk_level == RiskLevel.CRITICAL
-        assert pfm.can_trade() is False
+        
+        # Should raise exception when breached
+        with pytest.raises(AccountTerminatedException):
+            pfm.can_trade()
     
     def test_momentum_adjustment_factor(self):
         """Momentum factor should adjust based on streaks."""

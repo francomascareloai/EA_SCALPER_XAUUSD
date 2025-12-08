@@ -18,7 +18,9 @@ def test_circuit_breaker_consecutive_losses_reduces_size():
 
 def test_circuit_breaker_resets():
     cb = CircuitBreaker()
+    cb.update_equity(100000.0)
     cb.register_trade_result(pnl=-100, is_win=False)
-    cb.reset()
+    cb.update_equity(99900.0)
+    cb.reset_daily()
     assert cb.can_trade() is True
     assert cb.get_size_multiplier() == 1.0
