@@ -17,6 +17,14 @@
 - `tests/` – unit coverage per module family
 - `reports/backtests/` - output/logs (telemetry CSV from runners)
 
+## Documentation (root level)
+- `INDEX.md` – This file: structural overview + current state
+- `CHANGELOG.md` – Detailed log of COMPLETED work units (features, bugfixes, improvements)
+- `BUGFIX_LOG.md` – Quick reference for bugs discovered + fixes (debugging focus)
+- `FUTURE_IMPROVEMENTS.md` – Brainstorming repository for optimization ideas (WHY/WHAT/IMPACT/EFFORT/PRIORITY)
+- `README.md` – Project overview + quick start
+- `*.md` (other) – Implementation notes, migration summaries
+
 ## Current State (backtesting realism)
 - Tick-first Nautilus runner (`scripts/run_backtest.py`): auto-detects tick files under `Python_Agent_Hub/ml_pipeline/data`, converts to `QuoteTick`, aggregates to M5 bars, defaults to all ticks (sample=1), execution threshold 70.
 - Prop/FTMO risk tightened: intrabar mark-to-market + `DrawdownTracker` enforcing daily/total DD; auto-halt + flatten on breach; daily reset wired.

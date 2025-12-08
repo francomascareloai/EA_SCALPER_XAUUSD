@@ -18,7 +18,7 @@ class ConsistencyTracker:
         self.initial_balance = Decimal(str(initial_balance))
         self.total_profit = Decimal("0")
         self.daily_profit = Decimal("0")
-        self.consistency_limit = Decimal("0.25")  # 25% safety buffer vs Apex 30%
+        self.consistency_limit = Decimal("0.20")  # 20% safety buffer (10% margin vs Apex 30%)
         self._limit_hit = False
         self.et_tz = ZoneInfo(tz)
         self._last_day = None

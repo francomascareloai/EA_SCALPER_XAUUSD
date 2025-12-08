@@ -138,7 +138,11 @@ class DrawdownTracker:
             self._max_losses = max(self._max_losses, self._current_losses)
 
         self._current_equity = current_equity
-        self._last_update = now or datetime.now(timezone.utc)
+        # Always prefer explicit timestamp for backtest accuracy
+        # Use datetime.now() only as fallback for live trading
+        if now is None:
+            now = datetime.now(timezone.utc)
+        self._last_update = now
 
         # Peak/high-water updates
         if current_equity > self._peak_equity:
@@ -199,7 +203,8 @@ class DrawdownTracker:
         self._daily_start_equity = self._current_equity
         self._daily_drawdown = 0.0
         self._daily_drawdown_pct = 0.0
-        self._last_day_check = datetime.now(timezone.utc)
+        # Use last_update timestamp instead of wall-clock for backtest accuracy
+        self._last_day_check = self._last_update
 
     def should_reduce_size(self, threshold_streak: int = 3) -> bool:
         """Return True when losing streak exceeds threshold."""
@@ -314,9 +319,12 @@ class DrawdownTracker:
         return max(0.0, (self._current_equity - (self._peak_at_max_dd - self._max_drawdown_abs)) / self._max_drawdown_abs)
 
     def _check_new_day(self, now: Optional[datetime] = None) -> None:
-        now = now or datetime.now(timezone.utc)
+        """Check if new trading day and reset if needed. Uses backtest timestamp if provided."""
+        if now is None:
+            now = datetime.now(timezone.utc)
         if now.date() != self._last_day_check.date():
             self.reset_daily()
+        # Update check timestamp to provided time for backtest accuracy
         self._last_day_check = now
 
     def _check_alerts(self) -> None:
@@ -327,11 +335,13 @@ class DrawdownTracker:
             thr_pct = thr * 100
             if max_pct >= thr_pct:
                 msg = f"Drawdown alert {thr_pct:.0f}% | daily {self._daily_drawdown_pct:.2f}% total {self._total_drawdown_pct:.2f}%"
-                self._alerts_triggered.append((datetime.now(timezone.utc), msg))
+                # Use last_update timestamp instead of wall-clock for backtest accuracy
+                self._alerts_triggered.append((self._last_update, msg))
 
     def _save_snapshot(self, severity: DrawdownSeverity) -> None:
         snap = DrawdownSnapshot(
-            timestamp=datetime.now(timezone.utc),
+            # Use last_update timestamp instead of wall-clock for backtest accuracy
+            timestamp=self._last_update,
             equity=self._current_equity,
             peak_equity=self._peak_equity,
             daily_dd=self._daily_drawdown,

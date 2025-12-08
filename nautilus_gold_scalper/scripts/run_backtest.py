@@ -29,6 +29,7 @@ from nautilus_trader.model.enums import BarAggregation, PriceType, AggregationSo
 from nautilus_trader.model.instruments import CurrencyPair
 
 from src.strategies.gold_scalper_strategy import GoldScalperStrategy, GoldScalperConfig
+from src.utils.metrics import MetricsCalculator
 
 
 def find_tick_file() -> Path:
@@ -463,43 +464,74 @@ class BacktestRunner:
             print(f"Total PnL (net commissions): ${total_pnl:,.2f} ({total_pnl/1000:.2f}%)")
             if total_commissions > 0:
                 print(f"Commissions: ${total_commissions:,.2f} ({fills_count} fills @ {self.commission_per_contract} each)")
-            # Basic metrics
-            if len(account) > 1:
-                returns = account['total'].pct_change().dropna()
-                if len(returns) > 0:
-                    mean_ret = returns.mean()
-                    std_ret = returns.std()
-                    downside = returns[returns < 0].std()
-                    sharpe = (mean_ret / std_ret) * np.sqrt(252) if std_ret > 0 else 0.0
-                    sortino = (mean_ret / downside) * np.sqrt(252) if downside and downside > 0 else 0.0
-                    max_total = account['total'].cummax()
-                    dd = (account['total'] - max_total) / max_total
-                    max_dd = dd.min() * 100 if len(dd) else 0
-                    calmar = (returns.mean() * 252) / (abs(max_dd) / 100) if max_dd != 0 else 0.0
-                    sqn = 0.0
-                    if len(fills) > 1 and 'realized_pnl' in fills.columns:
-                        trade_pnls = fills['realized_pnl'].astype(float)
-                        if trade_pnls.std() > 0:
-                            sqn = trade_pnls.mean() / trade_pnls.std() * math.sqrt(len(trade_pnls))
+            # Calculate performance metrics using MetricsCalculator
+            if len(account) > 1 and fills is not None and len(fills) > 0:
+                # Extract PnL series from account equity changes
+                equity_series = account['total'].values
+                pnl_series = []
+                
+                # Calculate per-trade PnL from equity changes
+                # Approximate trade PnLs from equity curve changes
+                for i in range(1, len(equity_series)):
+                    trade_pnl = equity_series[i] - equity_series[i-1]
+                    if abs(trade_pnl) > 0.01:  # Filter out noise
+                        pnl_series.append(trade_pnl)
+                
+                if len(pnl_series) > 0:
+                    # Use MetricsCalculator for accurate metrics
+                    calculator = MetricsCalculator(risk_free_rate=0.02)
+                    metrics_obj = calculator.calculate(
+                        pnl_series=pnl_series,
+                        initial_balance=100000.0
+                    )
+                    
+                    # Print formatted metrics
+                    print(f"\n" + "="*60)
+                    print("PERFORMANCE METRICS")
+                    print("="*60)
+                    print(f"Total PnL:        ${metrics_obj.total_pnl:>12,.2f}")
+                    print(f"Num Trades:       {metrics_obj.num_trades:>12}")
+                    print(f"Wins / Losses:    {metrics_obj.num_wins:>12} / {metrics_obj.num_losses}")
+                    print(f"Win Rate:         {metrics_obj.win_rate:>12.1f}%")
+                    print(f"Profit Factor:    {metrics_obj.profit_factor:>12.2f}")
+                    print(f"Avg Win:          ${metrics_obj.avg_win:>12,.2f}")
+                    print(f"Avg Loss:         ${metrics_obj.avg_loss:>12,.2f}")
+                    print(f"-"*60)
+                    print(f"Sharpe Ratio:     {metrics_obj.sharpe_ratio:>12.3f}")
+                    print(f"Sortino Ratio:    {metrics_obj.sortino_ratio:>12.3f}")
+                    print(f"Calmar Ratio:     {metrics_obj.calmar_ratio:>12.3f}")
+                    print(f"SQN:              {metrics_obj.sqn:>12.3f}")
+                    print(f"-"*60)
+                    print(f"Max Drawdown:     {metrics_obj.max_drawdown_pct:>12.2f}%")
+                    print(f"Std Dev:          ${metrics_obj.std_dev:>12,.2f}")
+                    print(f"Recovery Factor:  {metrics_obj.recovery_factor:>12.2f}")
+                    print("="*60)
+                    
+                    # Also log as JSON for programmatic parsing
                     log_line = {
                         "event": "metrics",
-                        "sharpe": round(sharpe, 3),
-                        "sortino": round(sortino, 3),
-                        "max_drawdown_pct": round(max_dd, 3),
-                        "calmar": round(calmar, 3),
-                        "sqn": round(sqn, 3),
+                        "sharpe": round(metrics_obj.sharpe_ratio, 3),
+                        "sortino": round(metrics_obj.sortino_ratio, 3),
+                        "calmar": round(metrics_obj.calmar_ratio, 3),
+                        "sqn": round(metrics_obj.sqn, 3),
+                        "max_drawdown_pct": round(metrics_obj.max_drawdown_pct, 3),
+                        "win_rate": round(metrics_obj.win_rate, 1),
+                        "profit_factor": round(metrics_obj.profit_factor, 2),
                     }
                     print(json.dumps(log_line))
+                    
                     metrics = {
                         "final_balance": final_balance,
                         "total_pnl": total_pnl,
                         "fills": fills_count,
                         "commissions": total_commissions,
-                        "sharpe": sharpe,
-                        "sortino": sortino,
-                        "max_drawdown_pct": max_dd,
-                        "calmar": calmar,
-                        "sqn": sqn,
+                        "sharpe": metrics_obj.sharpe_ratio,
+                        "sortino": metrics_obj.sortino_ratio,
+                        "max_drawdown_pct": metrics_obj.max_drawdown_pct,
+                        "calmar": metrics_obj.calmar_ratio,
+                        "sqn": metrics_obj.sqn,
+                        "win_rate": metrics_obj.win_rate,
+                        "profit_factor": metrics_obj.profit_factor,
                     }
                     with open(output_dir / "metrics.json", "w", encoding="utf-8") as f:
                         json.dump(metrics, f, indent=2)
