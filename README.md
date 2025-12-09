@@ -8,6 +8,8 @@
 
 **Automated Gold Trading System for Prop Firms (Apex Trader Funding & FTMO)**
 
+**Dataset ativo para backtests:** `data/raw/full_parquet/xauusd_2003_2025_stride20_full.parquet` (32.7M ticks, 2003-05-05 → 2025-11-28, stride 20). Todas as execuções devem usar este arquivo.
+
 > After many requests and messages, I've made this repository public again. This is a personal project that I've been developing to automate gold (XAUUSD) trading with a focus on prop firm challenges (Apex Trader Funding, FTMO, and others).
 
 ---

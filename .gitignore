@@ -162,3 +162,10 @@ data/processed/
 data/features/
 data/segments/
 data/ticks/
+!data/config.yaml
+!data/README.md
+!data/raw/*.metadata.json
+
+# Parquet datasets
+*.parquet
+
