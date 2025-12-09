@@ -295,6 +295,7 @@ class ConfluenceScorer:
         self.min_score_to_trade = min_score_to_trade
         self.use_session_filter = use_session_filter
         self.use_regime_filter = use_regime_filter
+        self.config = None  # Fix: Attribute for optional config access (used in _calculate_total)
         
         self._components = ScoringComponents()
     

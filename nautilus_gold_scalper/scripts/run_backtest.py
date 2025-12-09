@@ -95,12 +95,18 @@ def load_tick_data(
         raise ValueError("Tick data contains NaN bid/ask values")
     
     if start_date:
-        df = df[df['datetime'] >= start_date]
+        start_ts = pd.Timestamp(start_date, tz='UTC')
+        df = df[df['datetime'] >= start_ts]
     if end_date:
-        df = df[df['datetime'] <= end_date]
+        # Add 1 day to include the entire end date
+        end_ts = pd.Timestamp(end_date, tz='UTC') + pd.Timedelta(days=1)
+        df = df[df['datetime'] < end_ts]
     
     if sample_rate > 1:
         df = df.iloc[::sample_rate]
+    
+    if len(df) == 0:
+        raise ValueError(f"No data found for date range: {start_date} to {end_date}")
     
     print(f"Loaded {len(df):,} ticks from {df['datetime'].iloc[0]} to {df['datetime'].iloc[-1]}")
     return df
@@ -149,8 +155,9 @@ def build_strategy_config(cfg: dict, bar_type: BarType, instrument_id):
         ltf_bar_type=bar_type,
         execution_threshold=int(execution_threshold),
         min_mtf_confluence=float(confluence_cfg.get("min_score_to_trade", 50)),
-        use_session_filter=True,
-        use_regime_filter=True,
+        use_session_filter=exec_cfg.get("use_session_filter", True),
+        use_regime_filter=exec_cfg.get("use_regime_filter", True),
+        require_htf_align=exec_cfg.get("require_htf_align", True),
         use_mtf=exec_cfg.get("use_mtf", True),
         use_footprint=exec_cfg.get("use_footprint", True),
         prop_firm_enabled=True,
@@ -352,10 +359,18 @@ class BacktestRunner:
         
         print(f"Instrument: {self.instrument.id}")
         
-        # Load tick data - use parquet file directly
-        tick_path = Path(__file__).parent.parent.parent / "data" / "ticks" / "xauusd_2020_2024_stride20.parquet"
+        # Load tick data from config.yaml (SINGLE SOURCE OF TRUTH)
+        config_path = Path(__file__).parent.parent.parent / "data" / "config.yaml"
+        if not config_path.exists():
+            raise FileNotFoundError(f"Data config not found: {config_path}. Please create data/config.yaml first!")
+        
+        data_config = yaml.safe_load(open(config_path))
+        tick_path = Path(__file__).parent.parent.parent / data_config["active_dataset"]["path"]
+        print(f"[CONFIG] Using dataset: {data_config['active_dataset']['name']}")
+        print(f"[CONFIG] Path: {tick_path}")
+        
         if not tick_path.exists():
-            raise FileNotFoundError(f"Tick data not found at {tick_path}")
+            raise FileNotFoundError(f"Tick data not found at {tick_path}. Check data/config.yaml!")
         df = load_tick_data(str(tick_path), start_date, end_date, sample_rate)
         
         # Create bar type (EXTERNAL since we pre-aggregate)
@@ -598,7 +613,7 @@ def main():
 
     runner = BacktestRunner(
         initial_balance=exec_cfg.get("initial_balance", 100_000.0),
-        log_level="ERROR" if args.sweep else "INFO",
+        log_level="DEBUG" if not args.sweep else "ERROR",  # FORÇA DEBUG para single run
         slippage_ticks=slippage_ticks,
         commission_per_contract=commission,
         latency_ms=latency_ms,

@@ -184,6 +184,7 @@ class BaseGoldStrategy(Strategy):
         self._daily_trades = 0
         self._daily_pnl = 0.0
         self._is_trading_allowed = True
+        self.log.info(f"[INIT] _is_trading_allowed = True (initial state)")
         self._current_regime = None
         self._current_session = None
         self._last_confluence = None
@@ -201,6 +202,7 @@ class BaseGoldStrategy(Strategy):
         self._daily_trades = 0
         self._daily_pnl = 0.0
         self._is_trading_allowed = True
+        self.log.info(f"[DAILY_RESET] _is_trading_allowed = True (daily reset)")
         
         # Reset PropFirmManager daily counters (if exists)
         if hasattr(self, 'prop_firm_manager') and self.prop_firm_manager is not None:
@@ -307,7 +309,7 @@ class BaseGoldStrategy(Strategy):
         """Handle position opened event."""
         self._position = self.cache.position(event.position_id)
         self._daily_trades += 1
-        qty = self._position.quantity.as_double()
+        # qty calculation moved to execution cost section (avoid duplicate code)
         
         self.log.info(
             f"Position OPENED: {self._position.side} "
@@ -320,9 +322,13 @@ class BaseGoldStrategy(Strategy):
             self._submit_bracket_orders()
 
         # Apply execution costs (slippage + commission) on entry
+        # Handle avg_px_open being Price or float
+        avg_price = self._position.avg_px_open.as_double() if hasattr(self._position.avg_px_open, 'as_double') else float(self._position.avg_px_open)
+        qty = self._position.quantity.as_double() if hasattr(self._position.quantity, 'as_double') else float(self._position.quantity)
+        
         open_cost = self._calculate_execution_cost(
             side="buy" if self._position.side == PositionSide.LONG else "sell",
-            price=self._position.avg_px_open.as_double(),
+            price=avg_price,
             quantity=qty,
         )
         if open_cost > 0:
@@ -335,7 +341,7 @@ class BaseGoldStrategy(Strategy):
         # Check if max daily trades reached
         if self._daily_trades >= self.config.max_trades_per_day:
             self._is_trading_allowed = False
-            self.log.warning(f"Max daily trades reached ({self._daily_trades})")
+            self.log.warning(f"[BLOCKED] _is_trading_allowed = False (max daily trades: {self._daily_trades})")
     
     def on_position_changed(self, event: PositionChanged) -> None:
         """Handle position changed event."""
@@ -345,13 +351,17 @@ class BaseGoldStrategy(Strategy):
         """Handle position closed event."""
         if self._position and self._position.id == event.position_id:
             pnl = float(self._position.realized_pnl)
-            qty = self._position.quantity.as_double()
+            # Handle quantity being Quantity or float
+            position_qty = self._position.quantity
+            qty = position_qty.as_double() if hasattr(position_qty, 'as_double') else float(position_qty)
+            
+            # Handle avg_px_close/avg_px_open being Price or float
+            close_px = getattr(self._position, "avg_px_close", self._position.avg_px_open) if hasattr(self._position, "avg_px_close") else self._position.avg_px_open
+            close_price = close_px.as_double() if hasattr(close_px, 'as_double') else float(close_px)
 
             close_cost = self._calculate_execution_cost(
                 side="sell" if self._position.side == PositionSide.LONG else "buy",
-                price=getattr(self._position, "avg_px_close", self._position.avg_px_open).as_double()
-                if hasattr(self._position, "avg_px_close")
-                else self._position.avg_px_open.as_double(),
+                price=close_price,
                 quantity=qty,
             )
             net_pnl = pnl - close_cost
@@ -408,7 +418,7 @@ class BaseGoldStrategy(Strategy):
                 daily_dd_pct = abs(self._daily_pnl) / account_balance * 100.0
                 if daily_dd_pct >= daily_limit_pct:
                     self._is_trading_allowed = False
-                    self.log.error(f"Daily loss limit breached: {daily_dd_pct:.2f}% >= {daily_limit_pct:.2f}%")
+                    self.log.error(f"[BLOCKED] _is_trading_allowed = False (daily DD breach: {daily_dd_pct:.2f}% >= {daily_limit_pct:.2f}%)")
             
             self._position = None
     
@@ -674,6 +684,7 @@ class BaseGoldStrategy(Strategy):
                     f"total {total_dd:.2f}% (limit {total_limit_pct}%). Trading halted."
                 )
             self._is_trading_allowed = False
+            self.log.error(f"[BLOCKED] _is_trading_allowed = False (DD breach: daily={daily_dd:.2f}%, total={total_dd:.2f}%)")
             if self._position:
                 self._close_position()
     

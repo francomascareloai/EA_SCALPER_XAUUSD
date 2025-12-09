@@ -197,10 +197,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _on_strategy_start(self) -> None:
         """Initialize all analyzers and managers."""
-        # Session filter
+        # Session filter (TEMPORARY DEBUG: Allow all sessions)
         self._session_filter = SessionFilter(
-            allow_asian=False,
-            allow_late_ny=False,
+            allow_asian=True,   # TEMPORARY DEBUG
+            allow_late_ny=True,  # TEMPORARY DEBUG
         )
         
         # Regime detector
@@ -371,26 +371,36 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _check_daily_reset(self, timestamp_ns: int) -> None:
         """
-        Reset daily counters at day change.
+        Reset daily counters at day change using **ET calendar days**.
         
-        Args:
-            timestamp_ns: Current timestamp in nanoseconds
+        Apex rules (cutoff 16:59 ET, no overnight) require resets on the
+        Eastern Time boundary; otherwise, after the cutoff the strategy stays
+        blocked until 00:00 UTC and misses London/NY next day.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
+        try:
+            from zoneinfo import ZoneInfo
+            et_tz = ZoneInfo("America/New_York")
+        except Exception:  # pragma: no cover
+            from datetime import timezone
+            et_tz = timezone.utc
         
-        current_date = datetime.fromtimestamp(timestamp_ns / 1e9, tz=timezone.utc).date()
+        current_date_et = datetime.fromtimestamp(timestamp_ns / 1e9, tz=et_tz).date()
         
         if not hasattr(self, '_last_reset_date'):
-            self._last_reset_date = current_date
+            self._last_reset_date = current_date_et
             return
         
-        if current_date != self._last_reset_date:
-            self.log.info(f"=== NEW TRADING DAY: {current_date} ===")
+        if current_date_et != self._last_reset_date:
+            self.log.info(f"=== NEW TRADING DAY (ET): {current_date_et} ===")
             
             # Reset daily counters
             self._daily_trades = 0
             self._daily_pnl = 0.0
+            # Re-enable trading after prior-day cutoff/blocks
+            self._is_trading_allowed = True
             self._trading_blocked_today = False
+            self.log.info("[DAILY_RESET] trading_allowed=True (lifted prior cutoff/blocks)")
             if self._drawdown_tracker:
                 try:
                     self._drawdown_tracker.reset_daily()
@@ -415,8 +425,8 @@ class GoldScalperStrategy(BaseGoldStrategy):
             if self._circuit_breaker:
                 self._circuit_breaker.reset_daily()
             
-            self._last_reset_date = current_date
-            self.log.info("Daily reset complete")
+            self._last_reset_date = current_date_et
+            self.log.info("Daily reset complete (ET)")
     
     def _on_strategy_stop(self) -> None:
         """Cleanup analyzers."""
@@ -442,15 +452,10 @@ class GoldScalperStrategy(BaseGoldStrategy):
         state = self._structure_analyzer.analyze(highs, lows, closes)
         self._htf_bias = state.bias
         
-        # Update regime
+        # Update regime (do NOT block trading here - check in _check_for_signal instead)
         if self._regime_detector:
             self._current_regime = self._regime_detector.analyze(closes)
-            
-            if self._current_regime.regime == MarketRegime.REGIME_RANDOM_WALK:
-                self.log.warning("HTF in RANDOM WALK regime - trading disabled")
-                self._is_trading_allowed = False
-            else:
-                self._is_trading_allowed = True
+            self.log.info(f"[HTF_REGIME] Regime detected: {self._current_regime.regime}")
         
         if self.config.debug_mode:
             self.log.debug(f"HTF Bias: {self._htf_bias}, Regime: {self._current_regime.regime if self._current_regime else 'N/A'}")
@@ -483,6 +488,9 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _on_ltf_bar(self, bar: Bar) -> None:
         """Process M5 bar - Update execution-level analysis."""
+        # Ensure daily counters unblock trading when a new ET day starts
+        self._check_daily_reset(bar.ts_event)
+
         # Enforce intraday operational rules (Apex)
         if self._time_manager and not self._time_manager.check(bar.ts_event):
             return
@@ -491,6 +499,9 @@ class GoldScalperStrategy(BaseGoldStrategy):
     
     def _check_for_signal(self, bar: Bar) -> None:
         """Check for trading signal and execute if valid."""
+        # Import datetime at function start (used by multiple checks below)
+        from datetime import datetime, timezone
+        
         # Debug: Log periodically
         log_interval = 100  # Log every 100 bars for visibility
         should_log = len(self._ltf_bars) % log_interval == 0
@@ -522,7 +533,6 @@ class GoldScalperStrategy(BaseGoldStrategy):
         
         # Check session (only if enabled)
         if self.config.use_session_filter and self._session_filter:
-            from datetime import datetime, timezone
             # Use bar timestamp for backtesting, not current time!
             bar_time = datetime.fromtimestamp(bar.ts_event / 1e9, tz=timezone.utc)
             self._current_session = self._session_filter.get_session_info(bar_time)
@@ -559,6 +569,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             if self._telemetry:
                 self._telemetry.emit("signal_reject", {"reason": "prop_firm", "bar": len(self._ltf_bars)})
             self._is_trading_allowed = False
+            self.log.warning(f"[BLOCKED] _is_trading_allowed = False (prop_firm.can_trade() returned False)")
             return
 
         # Circuit breaker gate
@@ -632,6 +643,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             if self._telemetry:
                 self._telemetry.emit("signal_reject", {"reason": "consistency_cap", "bar": len(self._ltf_bars)})
             self._is_trading_allowed = False
+            self.log.warning(f"[BLOCKED] _is_trading_allowed = False (consistency_tracker 30% daily cap)")
             return
 
         # Circuit breaker guard
@@ -641,6 +653,7 @@ class GoldScalperStrategy(BaseGoldStrategy):
             if self._telemetry:
                 self._telemetry.emit("signal_reject", {"reason": "circuit_breaker_guard", "bar": len(self._ltf_bars)})
             self._is_trading_allowed = False
+            self.log.warning(f"[BLOCKED] _is_trading_allowed = False (circuit_breaker.can_trade() returned False)")
             return
         
         # News filter (uses bar timestamp for backtest realism)
@@ -939,18 +952,33 @@ class GoldScalperStrategy(BaseGoldStrategy):
             return None
     
     def _analyze_mtf_component(self, structure_state: Optional[Any]) -> tuple[float, bool]:
-        """Analyze multi-timeframe alignment component."""
+        """Analyze multi-timeframe alignment component using bar data."""
         if not self._mtf_manager or not self.config.use_mtf:
             return 0.0, False
         
+        # Need enough history on each TF
+        if len(self._htf_bars) < 50 or len(self._mtf_bars) < 50 or len(self._ltf_bars) < 50:
+            return 0.0, False
+        
         try:
+            htf_highs = np.array([b.high.as_double() for b in self._htf_bars[-200:]])
+            htf_lows  = np.array([b.low.as_double() for b in self._htf_bars[-200:]])
+            htf_closes= np.array([b.close.as_double() for b in self._htf_bars[-200:]])
+            mtf_highs = np.array([b.high.as_double() for b in self._mtf_bars[-200:]])
+            mtf_lows  = np.array([b.low.as_double() for b in self._mtf_bars[-200:]])
+            mtf_closes= np.array([b.close.as_double() for b in self._mtf_bars[-200:]])
+            ltf_highs = np.array([b.high.as_double() for b in self._ltf_bars[-200:]])
+            ltf_lows  = np.array([b.low.as_double() for b in self._ltf_bars[-200:]])
+            ltf_closes= np.array([b.close.as_double() for b in self._ltf_bars[-200:]])
+            
             mtf_result = self._mtf_manager.analyze(
-                htf_bias=self._htf_bias,
-                mtf_order_blocks=self._mtf_order_blocks,
-                mtf_fvgs=self._mtf_fvgs,
-                ltf_structure=structure_state,
+                htf_data={"highs": htf_highs, "lows": htf_lows, "closes": htf_closes},
+                mtf_data={"highs": mtf_highs, "lows": mtf_lows, "closes": mtf_closes},
+                ltf_data={"highs": ltf_highs, "lows": ltf_lows, "closes": ltf_closes},
+                current_price=self._ltf_bars[-1].close.as_double(),
+                session_ok=self._current_session.is_trading_allowed if self._current_session else True,
             )
-            return mtf_result.confluence_score, mtf_result.is_aligned
+            return mtf_result.mtf_score, mtf_result.is_aligned
         except Exception as e:
             logger.error(f"MTF analysis failed: {e}")
             return 0.0, False
@@ -1028,14 +1056,23 @@ class GoldScalperStrategy(BaseGoldStrategy):
             pip_value=self.instrument.pip_value.as_double() if self.instrument and hasattr(self.instrument, "pip_value") else 10.0,
         )
         
-        if position_size <= 0:
+        # Normalize to float and wrap into Quantity
+        try:
+            pos_val = float(position_size)
+        except Exception:
             return None
         
-        return Quantity.from_str(str(round(max(0.01, position_size), 2)))
+        if pos_val <= 0:
+            return None
+        
+        return Quantity.from_str(str(round(max(0.01, pos_val), 2)))
     
     def on_quote_tick(self, tick: QuoteTick) -> None:
         """Track spread for spread filter."""
         super().on_quote_tick(tick)
+
+        # Daily reset guard (ET calendar) to re-enable trading after prior cutoff blocks
+        self._check_daily_reset(tick.ts_event)
 
         # Apex time guard on every tick
         if self._time_manager and not self._time_manager.check(tick.ts_event):

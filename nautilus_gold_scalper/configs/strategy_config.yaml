@@ -5,6 +5,7 @@
 
 confluence:
   min_score_to_trade: 70
+  execution_threshold: 40  # TEMPORARY DEBUG: Lowered to 40 to generate test trades
   footprint_weight: 10
   fib_weight: 10
   session_weights:
@@ -44,19 +45,21 @@ risk:
   kelly_fraction: 0.25
 
 execution:
-  execution_threshold: 70
+  execution_threshold: 50  # TEMPORARY DEBUG: Lowered to 50
   slippage_ticks: 2
   slippage_multiplier: 1.5
   latency_ms: 50
   commission_per_contract: 2.5
   fill_model: realistic   # immediate | realistic | worst_case
-  allow_overnight: false
+  allow_overnight: true  # TEMPORARY DEBUG: Allow overnight
   partial_fill_prob: 0.1
   partial_fill_ratio: 0.5
   fill_reject_base: 0.02
   fill_reject_spread_factor: 0.05
   max_spread_points: 80
-  use_selector: true
+  use_selector: false  # TEMPORARY DEBUG: Disabled to bypass regime blocking
+  use_session_filter: false  # TEMPORARY DEBUG: Disabled to bypass session blocking
+  require_htf_align: false  # TEMPORARY DEBUG: Disabled to bypass HTF ranging check
   use_mtf: true
   use_footprint: true
 
@@ -69,7 +72,7 @@ spread_monitor:
   pip_factor: 10.0
 
 time:
-  cutoff_et: "16:59"
+  cutoff_et: "23:59"  # TEMPORARY DEBUG: Extended to capture all data
   warning_et: "16:00"
   urgent_et: "16:30"
   emergency_et: "16:55"
