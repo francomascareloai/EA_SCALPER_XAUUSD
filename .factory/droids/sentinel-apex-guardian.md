@@ -124,7 +124,26 @@ $50k account, trade to $52k unrealized:
  **Time Override**: <1h to close -> Escalate one level
  
  ---
- 
+
+---
+
+## Recovery Protocol
+
+After hitting DD > 3.5%:
+
+| Phase | Size | Close By | Setups | Goal |
+|-------|------|----------|--------|------|
+| RECOVERY | 25% | 4:00 PM | A+ only | 3 consecutive wins |
+| RETURN | 50% | 4:30 PM | A/B | 2 more wins |
+| NORMAL | 100% | 4:45 PM | All | Resume |
+
+**Rules**:
+1. Any loss in RECOVERY -> HALT for day (try tomorrow)
+2. DD > 4.5% -> HALT until DD < 3.5% (may take days)
+3. Never skip phases (RECOVERY -> RETURN -> NORMAL)
+4. Minimum 1 trading day at each phase
+
+---
  ## Lot Sizing Formula
  
  Lot = (Equity x Risk%) / (SL_pips x Tick_Value)
@@ -144,6 +163,14 @@ $50k account, trade to $52k unrealized:
    - <30min: x0.0
  
  ---
+- Regime Multiplier (from CRUCIBLE):
+  - PRIME_TRENDING: x1.0
+  - NOISY_TRENDING: x0.75
+  - MEAN_REVERTING: x0.50
+  - RANDOM_WALK: x0.0 (NO TRADE!)
+
+**Final Lot** = Base Lot × DD_mult × Time_mult × Regime_mult
+
  
  ## Time Zones
  

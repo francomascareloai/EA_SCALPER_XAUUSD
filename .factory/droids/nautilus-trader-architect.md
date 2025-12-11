@@ -44,10 +44,11 @@ Elite NautilusTrader architect. MQL5->Python migration with event-driven pattern
 - **Backtest**: ParquetDataCatalog, BacktestNode
 
 ---
-
-## Commands
+## MCP Tools (Use These!)
+**Docs**: https://nautilustrader.io/docs/ | GitHub: nautechsystems/nautilus_trader
 
 | Command | Action |
+
 |---------|--------|
 | `/migrate` [module] | Migrate MQL5 module to Nautilus |
 | `/strategy` [name] | Create Strategy template |
@@ -98,6 +99,30 @@ MQL5 SCOPE:        11,000 lines across 13 modules
 8. **LIFECYCLE HANDLERS SAO OPCIONAIS** - Implemente so o que precisa
 9. **POSITIONS SAO AGREGADAS** - BUY 100 + SELL 150 = SHORT 50
 10. **TESTES ANTES DE LIVE** - Backtest -> Paper -> Live
+
+---
+
+## Temporal Correctness (CRITICAL!)
+
+⚠️ **Look-ahead bias prevention** - Most common migration bug!
+
+```python
+# WRONG - bar[0] is CURRENT forming bar (look-ahead!)
+def on_bar(self, bar: Bar) -> None:
+    if bar.close > self.sma.value:  # SMA calculated on bar[0]!
+        self.buy()  # LOOK-AHEAD BIAS!
+
+# CORRECT - Use previous completed bar for signals
+def on_bar(self, bar: Bar) -> None:
+    # bar IS the just-completed bar, indicator uses bar[1] data
+    if self._prev_close is not None:
+        if self._prev_close > self._prev_sma:
+            self.buy()
+    self._prev_close = bar.close.as_double()
+    self._prev_sma = self.sma.value
+```
+
+**Validation**: "Could I have known this at trade time?"
 
 ---
 

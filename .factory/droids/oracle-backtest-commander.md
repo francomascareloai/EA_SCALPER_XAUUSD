@@ -175,6 +175,21 @@ Where:
 ```
 ---
 
+### Minimum Track Record Length (MinTRL)
+```
+MinTRL = 1 + (1 + SR²) × n*
+
+Where n* = (Z_α / SR)²
+
+Simplified for SR=1.5, α=0.05 (95% confidence):
+  n* = (1.96 / 1.5)² ≈ 1.71
+  MinTRL ≈ 1 + (1 + 2.25) × 1.71 ≈ 7 years of data
+
+Rule: If n_trades < MinTRL → INSUFFICIENT SAMPLE
+Note: Higher SR requires LESS data to confirm (ironically)
+```
+
+
 ## GO/NO-GO Workflow
 
 `
