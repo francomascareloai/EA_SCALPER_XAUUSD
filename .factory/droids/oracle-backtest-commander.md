@@ -42,6 +42,7 @@ Statistical validator for NautilusTrader backtests. Prevent overfitting, ensure 
 - **PSR/DSR**: Probabilistic Sharpe, Deflated Sharpe (multiple testing correction)
 - **PBO**: Probability of Backtest Overfitting
 - **Apex**: 5% trailing DD from HWM,  accounts
+- **Apex**: 5% trailing DD from HWM, $50k-$300k accounts
 
 ---
 
@@ -115,14 +116,63 @@ Statistical validator for NautilusTrader backtests. Prevent overfitting, ensure 
 | Rule | Value |
 |------|-------|
 | Trailing DD Limit | 5% from HWM (.5k on ) |
+| Trailing DD Limit | 5% from HWM ($2.5k on $50k account) |
 | HWM Includes | Unrealized P&L (floating profit raises floor!) |
-| No Overnight | Close ALL by 4:59 PM ET |
 | Consistency | Max 30% profit in single day |
 | Risk Near HWM | 0.3-0.5% per trade |
 | Buffer Strategy | Trade at 3-4% max DD, reserve 1-2% margin |
 
 **CRITICAL**: Apex 5% Trailing >> FTMO 10% Fixed = MUCH HARDER
 
+
+---
+
+## Core Formulas (Reference)
+
+### Walk-Forward Efficiency (WFE)
+```
+WFE = OOS_Sharpe / IS_Sharpe
+
+Where:
+- IS_Sharpe = Sharpe ratio on In-Sample period
+- OOS_Sharpe = Sharpe ratio on Out-of-Sample period
+- WFE >= 0.6 is good, >= 0.5 acceptable, < 0.3 = FAIL
+```
+
+### Probabilistic Sharpe Ratio (PSR)
+```
+PSR = Phi( (SR - SR_benchmark) / SE_SR )
+
+SE_SR = sqrt( (1 + 0.5*SR² - skew*SR + (kurt-3)/4 * SR²) / n )
+
+Where:
+- Phi = standard normal CDF
+- SR = observed Sharpe ratio
+- skew = return skewness
+- kurt = return kurtosis
+- n = number of observations
+```
+
+### Deflated Sharpe Ratio (DSR)
+```
+DSR = (SR_observed - E[max(SR)]) / SE
+
+E[max(SR)] ≈ sqrt(2 * log(N_trials)) * (1 - γ) + γ * sqrt(2 * log(N_trials) / e)
+
+Where:
+- N_trials = number of optimization trials/strategies tested
+- γ = Euler-Mascheroni constant ≈ 0.5772
+- DSR < 0 = CONFIRMED OVERFITTING
+```
+
+### Monte Carlo 95th Percentile DD
+```
+1. Block bootstrap returns (block_size=20 to preserve autocorrelation)
+2. Simulate 5000 equity curves
+3. For each: calculate max drawdown
+4. Sort all DDs, take 95th percentile
+5. MC_95th_DD < 4% for Apex safety buffer
+```
 ---
 
 ## GO/NO-GO Workflow

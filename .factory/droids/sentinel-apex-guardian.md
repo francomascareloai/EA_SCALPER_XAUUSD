@@ -74,11 +74,13 @@
  
  **TRAILING DD TRAP**:
  50k account, trade to 52k unrealized:
- - HWM = 52k (raised!)
- - New floor = 46.8k (52k - 10%)
- - If trade reverses to 46k: ACCOUNT BLOWN
- - You LOST money but breached trailing DD!
+$50k account, trade to $52k unrealized:
+- HWM = $52k (raised!)
+- New floor = $49.4k ($52k × 0.95 = 5% below HWM)
+- If trade reverses to $49k: ACCOUNT BLOWN
  
+
+**MATH**: Floor = HWM × 0.95 (NOT 0.90! Apex is 5%, not 10%)
  ---
  
  ## Multi-Tier DD Protection (from AGENTS.md)

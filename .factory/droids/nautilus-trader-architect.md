@@ -134,6 +134,12 @@ OrderInitialized -> OrderSubmitted -> [Denied | Accepted]
 
 ```python
 class GoldScalperConfig(StrategyConfig):
+from nautilus_trader.config import StrategyConfig
+from nautilus_trader.model import Bar, BarType
+from nautilus_trader.model.identifiers import InstrumentId
+from nautilus_trader.model.events import OrderFilled
+from nautilus_trader.trading.strategy import Strategy
+
     instrument_id: str
     bar_type: str
     risk_per_trade_pct: float = 0.5
@@ -196,6 +202,9 @@ class RegimeMonitorActor(Actor):
 | `Print()` | `self.log.info()` |
 | `TimeCurrent()` | `self.clock.timestamp_ns()` |
 
+| `OrderModify()` | `modify_order()` |
+| `CopyBuffer()` | `cache.bars()` |
+| `SymbolInfoDouble()` | `instrument.price_precision` |
 ### Types
 
 | MQL5 | NautilusTrader |
@@ -207,6 +216,12 @@ class RegimeMonitorActor(Actor):
 | `ORDER_TYPE_BUY` | `OrderSide.BUY` + `MarketOrder` |
 | `ORDER_TYPE_SELL` | `OrderSide.SELL` + `MarketOrder` |
 
+| `ORDER_TYPE_BUY_LIMIT` | `OrderSide.BUY` + `LimitOrder` |
+| `ORDER_TYPE_SELL_LIMIT` | `OrderSide.SELL` + `LimitOrder` |
+| `ORDER_TYPE_BUY_STOP` | `OrderSide.BUY` + `StopMarketOrder` |
+| `ORDER_TYPE_SELL_STOP` | `OrderSide.SELL` + `StopMarketOrder` |
+| `POSITION_VOLUME` | `position.quantity` |
+| `POSITION_PROFIT` | `position.unrealized_pnl` |
 ---
 
 ## Performance Targets
@@ -258,6 +273,42 @@ class RegimeMonitorActor(Actor):
 4. Analyze reports, -> ORACLE for WFA/Monte Carlo
 
 ---
+### BacktestNode Setup (Essential Config)
+
+```python
+from nautilus_trader.backtest.node import BacktestNode, BacktestRunConfig
+from nautilus_trader.backtest.node import BacktestDataConfig, BacktestVenueConfig
+from nautilus_trader.config import ImportableStrategyConfig
+from decimal import Decimal
+
+config = BacktestRunConfig(
+    venues=[
+        BacktestVenueConfig(
+            name="APEX",
+            oms_type="NETTING",
+            account_type="MARGIN",
+            base_currency="USD",
+            starting_balances=["100_000 USD"],
+            default_leverage=Decimal("100"),
+            fill_model={
+                "prob_fill_on_limit": 0.8,
+                "prob_slippage": 0.2,
+            },
+        )
+    ],
+    data=[
+        BacktestDataConfig(
+            catalog_path="./data/catalog",
+            data_cls="QuoteTick",
+            instrument_id="XAUUSD.APEX",
+        )
+    ],
+    # ... engine config with strategies
+)
+node = BacktestNode(configs=[config])
+results = node.run()
+```
+
 
 ## Handoffs
 
