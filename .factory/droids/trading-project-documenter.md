@@ -2,7 +2,7 @@
 name: trading-project-documenter
 description: "Use this agent when you need comprehensive documentation for trading projects, especially MQL5 trading robots and complex automated trading systems. Examples: <example>Context: User has just completed an MQL5 expert advisor and needs professional documentation. user: 'I've finished my scalping EA for EUR/USD and need documentation' assistant: 'I'll use the trading-project-documenter agent to create comprehensive documentation for your MQL5 expert advisor.' <commentary>Since the user needs documentation for a trading project, use the trading-project-documenter agent to create detailed, professional documentation.</commentary></example> <example>Context: User wants to document their multi-strategy trading system architecture. user: 'Can you help me document my trading system that combines trend following and mean reversion strategies?' assistant: 'Let me use the trading-project-documenter agent to create detailed documentation for your multi-strategy trading system.' <commentary>The user needs documentation for a complex trading project, so use the trading-project-documenter agent to structure comprehensive documentation.</commentary></example>"
 model: claude-opus-4-5-20251101
-tools: ["Read", "Grep", "Glob", "Create", "Edit", "LS"]
+tools: ["Read", "Edit", "Create", "Grep", "Glob", "Execute", "LS", "ApplyPatch", "WebSearch", "Task", "TodoWrite"]
 ---
 
 <role>

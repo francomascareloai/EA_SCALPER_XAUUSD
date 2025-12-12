@@ -2,7 +2,7 @@
 name: project-reader
 description: "Use this agent when you need to analyze, understand, or get insights about a project structure, codebase, or documentation. Examples: <example>Context: User wants to understand the overall architecture of a React project. user: 'Can you help me understand the structure of this React project?' assistant: 'I'll use the project-reader agent to analyze the project structure and provide you with a comprehensive overview.' <commentary>The user needs project analysis, so use the project-reader agent to examine the codebase structure.</commentary></example> <example>Context: User has just joined a new codebase and needs orientation. user: 'I'm new to this codebase, can you give me an overview of how it's organized?' assistant: 'Let me use the project-reader agent to analyze the project structure and give you a proper orientation.' <commentary>New team member needs project understanding, perfect use case for project-reader agent.</commentary></example>"
 model: claude-sonnet-4-5-20250929
-tools: ["Read", "Grep", "Glob", "LS"]
+tools: ["Read", "Edit", "Create", "Grep", "Glob", "Execute", "LS", "ApplyPatch", "WebSearch", "Task", "TodoWrite"]
 ---
 
 <role>

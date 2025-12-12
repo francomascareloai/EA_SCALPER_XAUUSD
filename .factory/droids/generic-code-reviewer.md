@@ -14,7 +14,7 @@ description: |
   Triggers: "review", "audit", "analyze code", "check", "validate", "before commit"
 model: claude-sonnet-4-5-20250929
 reasoningEffort: high
-tools: ["Read", "Grep", "Glob", "sequential-thinking", "context7___get-library-docs", "context7___resolve-library-id"]
+tools: ["Read", "Edit", "Create", "Grep", "Glob", "Execute", "LS", "ApplyPatch", "WebSearch", "Task", "TodoWrite"]
 ---
 
 <droid_specialization>

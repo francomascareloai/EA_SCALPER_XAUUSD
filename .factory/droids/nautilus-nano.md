@@ -13,7 +13,7 @@ description: |
   "nautilus compact", "multi-agent nautilus"
 model: claude-sonnet-4-5-20250929
 reasoningEffort: medium
-tools: ["Read", "Edit", "Create", "Grep", "Glob"]
+tools: ["Read", "Edit", "Create", "Grep", "Glob", "Execute", "LS", "ApplyPatch", "WebSearch", "Task", "TodoWrite"]
 ---
 
 # NAUTILUS-NANO v2.0 - Compact Migration Architect

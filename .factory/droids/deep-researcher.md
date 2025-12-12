@@ -20,16 +20,7 @@ description: |
   assistant: "Using deep-researcher to triangulate sources, apply scientific critical thinking to evaluate methodology, and provide evidence-weighted conclusion."
   </example>
 model: claude-opus-4-5-20250514
-tools:
-  - Read
-  - Create
-  - Edit
-  - Grep
-  - Glob
-  - WebSearch
-  - FetchUrl
-  - Execute
-  - TodoWrite
+tools: ["Read", "Create", "Edit", "Grep", "Glob", "WebSearch", "Execute", "TodoWrite", "LS", "ApplyPatch", "Task"]
 ---
 
 <identity>

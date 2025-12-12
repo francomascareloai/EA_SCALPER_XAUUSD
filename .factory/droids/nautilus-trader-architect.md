@@ -1,4 +1,4 @@
-﻿---
+---
 name: nautilus-trader-architect
 description: |
   NAUTILUS v2.1 - NautilusTrader Architect with AGENTS.md inheritance.

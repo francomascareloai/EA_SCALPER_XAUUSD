@@ -1,4 +1,4 @@
-﻿---
+---
 name: oracle-backtest-commander
 description: |
   ORACLE v3.2 - Statistical Truth-Seeker with AGENTS.md inheritance.

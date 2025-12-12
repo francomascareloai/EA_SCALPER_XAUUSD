@@ -16,7 +16,7 @@ description: |
   </example>
 model: claude-sonnet-4-5-20250929
 reasoningEffort: high
-tools: ["Read", "Grep", "Glob", "Execute", "calculator"]
+tools: ["Read", "Edit", "Create", "Grep", "Glob", "Execute", "LS", "ApplyPatch", "WebSearch", "Task", "TodoWrite"]
 ---
 
 # SENTINEL v2.0 - The FTMO Risk Guardian
