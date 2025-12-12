@@ -64,6 +64,97 @@
 ## Log Entries
 
 ### 2025-12-08 18:00 [FORGE] - BUGFIX_LOG.md
+### 🚨 2025-12-11 [FORGE ANALYSIS] - CRITICAL BUGS DISCOVERED
+
+## 🚨 CRITICAL BUG #1: Look-Ahead Bias in Feature Engineering
+**File:** `src/ml/feature_engineering.py:318-319`
+**Severity:** CRITICAL (Backtest invalidation)
+**Bug:** Swing point calculation uses `center=True` which looks at future bars
+```python
+swing_high = high.rolling(window * 2 + 1, center=True).max()  # LOOKS AHEAD!
+swing_low = low.rolling(window * 2 + 1, center=True).min()   # LOOKS AHEAD!
+```
+**Impact:** Training on future information → overfitted backtest → production failure
+**Root Cause:** `center=True` parameter includes `window` future bars in calculation
+**Fix Required:** Remove `center=True` or shift results forward by `window` periods
+**Status:** ❌ PENDING FIX
+
+---
+
+## 🚨 CRITICAL BUG #2: Missing Attribute in BaseStrategy
+**File:** `src/strategies/base_strategy.py:207`
+**Severity:** CRITICAL (Runtime AttributeError)
+**Bug:** Attribute `_min_bars_for_signal` referenced but never defined
+```python
+self.log.info(f"... (need {self._min_bars_for_signal} bars, have {len(self._ltf_bars)})")
+```
+**Impact:** AttributeError at runtime when logging → strategy crashes
+**Root Cause:** Attribute used in log message but not initialized in __init__
+**Fix Required:** Add `self._min_bars_for_signal: int = 50` to `__init__`
+**Status:** ❌ PENDING FIX
+
+---
+
+## 🟠 HIGH BUG #3: Pickle Security Vulnerabilities
+**Files:** 
+- `src/ml/model_trainer.py:378-385, 446-449`
+- `src/ml/ensemble_predictor.py:586-589, 674-679, 682-692`
+**Severity:** HIGH (Security - arbitrary code execution)
+**Bug:** Pickle fallback and calibrator storage use pickle (code execution risk)
+**Impact:** Loading malicious .pkl file → remote code execution → account compromise
+**Root Cause:** ONNX fallback to pickle, calibrators always pickle
+**Fix Required:** Remove pickle fallback, enforce ONNX-only, convert calibrators to JSON
+**Status:** ❌ PENDING FIX
+
+---
+
+## 🟠 HIGH BUG #4: 4:59 PM ET Deadline Not Enforced in Adapters
+**Files:** 
+- `src/execution/base_adapter.py:send_order()` 
+- `src/execution/mt5_adapter.py`
+- `src/execution/ninjatrader_adapter.py`
+**Severity:** HIGH (Apex rule violation → account termination)
+**Bug:** Adapters can submit orders after 4:59 PM ET cutoff
+**Impact:** Order fills after cutoff → overnight position → Apex account terminated
+**Root Cause:** TimeConstraintManager only blocks strategy, not adapter layer
+**Fix Required:** Add 4:59 PM ET check to `BaseAdapter.send_order()`
+**Status:** ❌ PENDING FIX
+
+---
+
+## 🟠 HIGH BUG #5: News Calendar Hardcoded to Dec 2025
+**File:** `src/signals/news_calendar.py:125-179`
+**Severity:** HIGH (Production blocker after Dec 2025)
+**Bug:** `get_hardcoded_events_2025()` only contains December 2025 events
+**Impact:** News-aware trading fails in 2026
+**Root Cause:** Hardcoded events, no dynamic data source
+**Fix Required:** Add 2026+ events or implement API/CSV loader
+**Status:** ❌ PENDING FIX
+
+---
+
+## 🟡 MEDIUM BUG #6: Slippage Model Not Applied in Backtests
+**Files:** 
+- `src/execution/execution_model.py` (implemented)
+- `src/execution/base_adapter.py` (not integrated)
+**Severity:** MEDIUM (Unrealistic backtest results)
+**Bug:** ExecutionModel.apply_slippage() exists but never called by BaseAdapter
+**Impact:** Backtests show perfect fills (unrealistic) → overestimate performance
+**Fix Required:** Integrate slippage model into BaseAdapter fill simulation
+**Status:** ❌ PENDING FIX
+
+---
+
+## 🟡 MEDIUM BUG #7: ONNX Input Shape Validation Missing
+**File:** `src/ml/ensemble_predictor.py:188-208`
+**Severity:** MEDIUM (Unclear runtime errors)
+**Bug:** No validation that features.shape[1] matches expected input dimensions
+**Impact:** Runtime errors with unhelpful messages if feature count mismatches
+**Fix Required:** Add shape check before model.run()
+**Status:** ❌ PENDING FIX
+
+---
+
 
 **Bug:** No structured bug tracking system  
 **Impact:** Bugs not analyzed for root cause, patterns not learned  

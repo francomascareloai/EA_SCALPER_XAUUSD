@@ -105,6 +105,9 @@ class BaseGoldStrategy(Strategy):
         self._last_confluence: Optional[ConfluenceResult] = None
         self._execution_model = getattr(self, "_execution_model", None)
         self._fill_costs = getattr(self, "_fill_costs", {})
+        
+        # Signal generation thresholds
+        self._min_bars_for_signal: int = 50  # Minimum bars required for signal generation
     
     # ========== Lifecycle Methods ==========
     
@@ -433,7 +436,8 @@ class BaseGoldStrategy(Strategy):
         # Partial fill simulation
         if getattr(self.config, "partial_fill_prob", 0) > 0:
             if random.random() < float(self.config.partial_fill_prob):
-                quantity = quantity * Decimal(str(self.config.partial_fill_ratio))
+                ratio = float(self.config.partial_fill_ratio)
+                quantity = Quantity.from_str(f"{quantity.as_double() * ratio:.2f}")
                 self.log.info(f"Partial fill simulated (LONG): qty adjusted to {quantity}")
 
         # Partial fill simulation
@@ -547,6 +551,8 @@ class BaseGoldStrategy(Strategy):
         - Base probability from config.partial_fill_prob
         - Spread-aware degradation: higher spread ratio => lower fill ratio
         """
+        if not hasattr(quantity, "as_double"):
+            quantity = Quantity.from_str(f"{float(quantity):.2f}")
         fill_ratio = 1.0
         cfg_prob = float(getattr(self.config, "partial_fill_prob", 0.0))
         cfg_ratio = float(getattr(self.config, "partial_fill_ratio", 0.5))

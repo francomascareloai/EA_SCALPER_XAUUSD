@@ -1,9 +1,12 @@
 # AGENTS.md Optimization Summary
 
-**Reduced AGENTS.md from 2,607 to 585 lines (78% reduction) while preserving ALL critical functionality**
+**Reduced AGENTS.md from 2,607 to 1,101 lines (57% reduction) while preserving ALL critical functionality**
+
+**ATUALIZADO 2025-12-11**: Aplicação parcial/conservadora - v3.6 e v3.7 adicionaram novos conteúdos críticos (drawdown_protection multi-tier, security fixes, future_improvements_tracking) que expandiram o arquivo além da otimização original.
 
 ## Version
-v1 - Initial optimization
+v1 - Initial optimization (2025-12-08)
+v1.1 - Corrected metrics after partial application (2025-12-11)
 
 ## Key Findings
 - `strategic_intelligence` section was 46% of file (~1,200 lines) with extreme redundancy
@@ -11,8 +14,9 @@ v1 - Initial optimization
 - Pattern concepts were duplicated across 2 sections
 - Amplifier system was described twice with redundant examples
 - "7 questions" concept repeated 5+ times throughout document
-- Projected token savings: **~68%** (28,000 → 9,000 tokens)
+- Projected token savings: **~57%** (actual application was conservative)
 - All critical functionality preserved and validated
+- **Note**: Subsequent versions (v3.6, v3.7) added new critical features that partially offset optimization gains
 
 ## Files Created
 - `agents-optimization-analysis.md` - Detailed analysis with redundancy findings and optimization plan
@@ -22,11 +26,13 @@ v1 - Initial optimization
 
 ## Metrics
 
-| Metric | Before | After | Reduction |
+| Metric | Before (v3.4) | After (v3.7) | Reduction |
 |--------|--------|-------|-----------|
-| Lines | 2,607 | 585 | 78% |
-| Characters | 114,063 | 35,509 | 69% |
-| Est. Tokens | ~28,000 | ~9,000 | 68% |
+| Lines | 2,607 | 1,101 | 57% |
+| Characters | 114,063 | ~49,000 | ~57% |
+| Est. Tokens | ~28,000 | ~12,000 | ~57% |
+
+**Note**: Original optimization achieved 78% reduction, but conservative application + new features (v3.6-v3.7) resulted in 57% net reduction.
 
 ## What Was Preserved (100%)
 - All 7 agents with triggers and MCPs

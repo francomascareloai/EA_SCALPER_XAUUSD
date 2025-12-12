@@ -3,7 +3,7 @@
 **Owner:** FORGE  
 **Scope:** Python/NautilusTrader migration of EA_SCALPER_XAUUSD  
 **Last update:** 2025-12-03
-
+**Last update:** 2025-12-11
 ## Directory Map (high level)
 - `configs/` – central strategy config (`strategy_config.yaml`)
 - `scripts/` – runners (`run_backtest.py`, future batch/optuna hooks)
@@ -36,6 +36,16 @@
 - Telemetry: JSONL sink (`logs/telemetry.jsonl`) captures spread/circuit/cutoff/partial-fill events for audits.
 
 ## Open Issues (next)
+
+### 🚨 CRITICAL BUGS (2025-12-11 Analysis)
+- ✅ FIXED: Look-ahead bias in ML feature_engineering.py (swing points with center=True)
+- ✅ FIXED: Missing `_min_bars_for_signal` attribute in base_strategy.py
+- ❌ PENDING: Pickle security in model_trainer.py / ensemble_predictor.py (should be ONNX-only)
+- ❌ PENDING: 4:59 PM ET deadline NOT enforced in execution adapters (Apex violation risk)
+- ❌ PENDING: Slippage model not integrated with base_adapter.py (unrealistic backtests)
+- ❌ PENDING: News calendar hardcoded to Dec 2025 only
+
+### P1 - High Priority
 1) Batch runner still bar-based (`scripts/batch_backtest.py`); upgrade to tick pipeline + news gating for large sweeps.  
 2) Telemetry JSONL added; still need Parquet schema (signal/open/close, news context, DD) for 1k+ backtests.  
 3) Strategy still runs with HTF disabled when using tick-only bars; optional H1 reconstruction from ticks is pending.  
@@ -44,6 +54,12 @@
 6) Prop firm circuit breaker: mapped to YAML thresholds; still need stress tests + cooldown tuning.
 
 ## Planned Improvements (backtest scale & quality)
+### P2 - Medium Priority (from 2025-12-11 Analysis)
+7) ONNX input shape validation missing in ensemble_predictor.py
+8) Stacking ensemble not integrated in ensemble_predictor.py (advertised but unused)
+9) DSR (Degradation Score Ratio) not calculated in WFA (model_trainer.py)
+10) OOS Sharpe ratio not calculated in WFA (requires trade simulation)
+
 - Tick batch sweeps + WFA using same QuoteTick pipeline; reuse new news/DD gating.
 - Parquet telemetry writer + CLI (`--parquet`, `--logdir`); aggregate summary CSV.
 - Optional H1/H15 bar rebuild from ticks to re-enable full MTF alignment while staying tick-realistic.
@@ -52,6 +68,7 @@
 - Position sizing hooks: apply footprint/news/drawdown multipliers to risk% (partially in place).
 
 ## Changelog (recent)
+- 2025-12-11: **DEEP ANALYSIS** by FORGE - Found 7 bugs, fixed 2 critical (look-ahead bias in feature_engineering.py, missing `_min_bars_for_signal` in base_strategy.py)
 - 2025-12-03: NewsCalendar injected into GoldScalperStrategy (block/size/score), intrabar drawdown guard, MTM equity, daily reset tied to tracker.  
 - 2025-12-03: Tick runner defaults (sample=1, threshold=65), CLI `--no-news`, param sweep uses filters on.  
 - 2025-12-03: Footprint strong-signal threshold lifted to 60 to align with stacked+absorption tests.  

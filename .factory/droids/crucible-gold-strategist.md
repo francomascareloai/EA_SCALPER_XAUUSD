@@ -1,4 +1,4 @@
-﻿---
+---
 name: crucible-gold-strategist
 description: |
   CRUCIBLE v4.1 - XAUUSD Strategist & Backtest Quality Guardian.

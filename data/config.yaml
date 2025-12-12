@@ -1,6 +1,8 @@
 active_dataset:
   name: xauusd_2003_2025_stride20_full
   path: data\raw\full_parquet\xauusd_2003_2025_stride20_full.parquet
+  native_catalog_path: data\catalog_native\xauusd_2003_2025_stride20_full
+  format: nautilus_native
   description: XAUUSD 2003-2025 stride 20, 24h coverage
   stats:
     total_ticks: 32729302

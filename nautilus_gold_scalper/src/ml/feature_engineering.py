@@ -313,10 +313,11 @@ class FeatureEngineer:
         high = df['high']
         low = df['low']
         
-        # Swing points (simplified - local maxima/minima)
+        # Swing points (simplified - local maxima/minima, NO look-ahead)
+        # CRITICAL FIX: Removed center=True which caused look-ahead bias
         window = 5
-        swing_high = high.rolling(window * 2 + 1, center=True).max()
-        swing_low = low.rolling(window * 2 + 1, center=True).min()
+        swing_high = high.rolling(window * 2 + 1).max()
+        swing_low = low.rolling(window * 2 + 1).min()
         
         feats['swing_high_distance'] = (swing_high - close) / close
         feats['swing_low_distance'] = (close - swing_low) / close

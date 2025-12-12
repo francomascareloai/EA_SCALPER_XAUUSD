@@ -27,6 +27,8 @@ from nautilus_trader.model.objects import Money, Price, Quantity
 from nautilus_trader.model.data import QuoteTick, Bar, BarType, BarSpecification
 from nautilus_trader.model.enums import BarAggregation, PriceType, AggregationSource
 from nautilus_trader.model.instruments import CurrencyPair
+from nautilus_trader.persistence.catalog import ParquetDataCatalog
+from nautilus_trader.persistence.wranglers import QuoteTickDataWrangler
 
 from src.strategies.gold_scalper_strategy import GoldScalperStrategy, GoldScalperConfig
 from src.utils.metrics import MetricsCalculator
@@ -110,6 +112,79 @@ def load_tick_data(
     
     print(f"Loaded {len(df):,} ticks from {df['datetime'].iloc[0]} to {df['datetime'].iloc[-1]}")
     return df
+
+
+def build_ticks_with_wrangler(
+    df: pd.DataFrame,
+    instrument: CurrencyPair,
+    slippage_ticks: int,
+    latency_ms: int,
+    default_volume: float = 1.0,
+) -> list[QuoteTick]:
+    """Convert dataframe (datetime/bid/ask) to QuoteTicks using Cython wrangler, applying slippage/latency."""
+    if df.empty:
+        return []
+
+    wrangler = QuoteTickDataWrangler(instrument)
+
+    # Apply slippage at the price level before constructing ticks
+    slip_value = float(instrument.price_increment) * max(0, slippage_ticks)
+    if slip_value:
+        df = df.copy()
+        df["bid"] = df["bid"] - slip_value
+        df["ask"] = df["ask"] + slip_value
+
+    tick_df = pd.DataFrame(
+        {
+            "bid_price": df["bid"].astype(float),
+            "ask_price": df["ask"].astype(float),
+            "bid_size": default_volume,
+            "ask_size": default_volume,
+        },
+        index=pd.DatetimeIndex(df["datetime"], name="timestamp"),
+    )
+
+    ticks = wrangler.process(tick_df, default_volume=default_volume, ts_init_delta=int(max(0, latency_ms)) * 1_000_000)
+    return ticks
+
+
+def adjust_ticks_from_catalog(
+    ticks: list[QuoteTick],
+    instrument: CurrencyPair,
+    slippage_ticks: int,
+    latency_ms: int,
+) -> list[QuoteTick]:
+    """Apply slippage/latency to QuoteTicks loaded from catalog using raw-array fast path."""
+    if (slippage_ticks <= 0) and (latency_ms <= 0):
+        return ticks
+
+    slip_raw = int(round(float(instrument.price_increment) * max(0, slippage_ticks) * 1_000_000_000))
+    latency_ns = int(max(0, latency_ms) * 1_000_000)
+
+    bid_raw = np.fromiter((t.bid_price.raw for t in ticks), dtype=np.int64)
+    ask_raw = np.fromiter((t.ask_price.raw for t in ticks), dtype=np.int64)
+    size_raw = np.fromiter((t.bid_size.raw for t in ticks), dtype=np.int64)
+    ts_event = np.fromiter((t.ts_event for t in ticks), dtype=np.int64)
+    ts_init = np.fromiter((t.ts_init for t in ticks), dtype=np.int64)
+
+    if slip_raw:
+        bid_raw = bid_raw - slip_raw
+        ask_raw = ask_raw + slip_raw
+    if latency_ns:
+        ts_event = ts_event + latency_ns
+        ts_init = ts_init + latency_ns
+
+    return QuoteTick.from_raw_arrays_to_list(
+        instrument.id,
+        instrument.price_precision,
+        instrument.size_precision,
+        bid_raw,
+        ask_raw,
+        size_raw,
+        size_raw,
+        ts_event,
+        ts_init,
+    )
 
 
 def load_yaml_config(config_path: Path) -> dict:
@@ -366,14 +441,38 @@ class BacktestRunner:
         
         data_config = yaml.safe_load(open(config_path))
         tick_path = Path(__file__).parent.parent.parent / data_config["active_dataset"]["path"]
+        native_catalog_path = data_config["active_dataset"].get("native_catalog_path")
+        native_catalog = Path(native_catalog_path) if native_catalog_path else None
+
         print(f"[CONFIG] Using dataset: {data_config['active_dataset']['name']}")
         print(f"[CONFIG] Path: {tick_path}")
+        if native_catalog and native_catalog.exists():
+            print(f"[CONFIG] Native catalog detected: {native_catalog}")
         
-        if not tick_path.exists():
-            raise FileNotFoundError(f"Tick data not found at {tick_path}. Check data/config.yaml!")
-        df = load_tick_data(str(tick_path), start_date, end_date, sample_rate)
+        start_ns = pd.Timestamp(start_date, tz="UTC").value if start_date else None
+        end_ns = (pd.Timestamp(end_date, tz="UTC") + pd.Timedelta(days=1)).value if end_date else None
+
+        if native_catalog and native_catalog.exists():
+            catalog = ParquetDataCatalog(str(native_catalog))
+            quote_ticks = catalog.query(
+                data_cls=QuoteTick,
+                identifiers=[self.instrument.id.value],
+                start=start_ns,
+                end=end_ns,
+            )
+            quote_ticks = adjust_ticks_from_catalog(quote_ticks, self.instrument, self.slippage_ticks, self.latency_ms)
+        else:
+            if not tick_path.exists():
+                raise FileNotFoundError(f"Tick data not found at {tick_path}. Check data/config.yaml!")
+            df = load_tick_data(str(tick_path), start_date, end_date, sample_rate)
+            quote_ticks = build_ticks_with_wrangler(
+                df=df,
+                instrument=self.instrument,
+                slippage_ticks=self.slippage_ticks,
+                latency_ms=self.latency_ms,
+            )
         
-        # Create bar type (EXTERNAL since we pre-aggregate)
+        # Create bar type for internal aggregation from ticks
         bar_type = BarType(
             instrument_id=self.instrument.id,
             bar_spec=BarSpecification(
@@ -381,20 +480,13 @@ class BacktestRunner:
                 aggregation=BarAggregation.MINUTE,
                 price_type=PriceType.MID,
             ),
-            aggregation_source=AggregationSource.EXTERNAL,
+            aggregation_source=AggregationSource.INTERNAL,
         )
         print(f"Bar type: {bar_type}")
-        
-        # Convert ticks to QuoteTicks for spread-aware execution
-        quote_ticks = create_quote_ticks(df, self.instrument, slippage_ticks=self.slippage_ticks, latency_ms=self.latency_ms)
 
-        # Pre-aggregate ticks to M5 bars
-        bars = aggregate_ticks_to_bars(df, bar_type, interval_minutes=5)
-        
-        # Add data to engine
+        # Add data to engine (bars aggregated internally)
         self.engine.add_data(quote_ticks)
-        self.engine.add_data(bars)
-        print(f"Added {len(quote_ticks):,} ticks and {len(bars):,} bars to engine")
+        print(f"Added {len(quote_ticks):,} ticks to engine (bars aggregated internally)")
         
         # Configure strategy from YAML + overrides
         strategy_cfg_dict = load_yaml_config(Path(__file__).parent.parent / "configs" / "strategy_config.yaml")

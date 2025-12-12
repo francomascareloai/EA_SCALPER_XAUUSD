@@ -83,8 +83,9 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.60 (tar
 
 | Blocker | Impact | Resolution Path |
 |---------|--------|-----------------|
-| ~~P0 issues unfixed~~ | ~~Cannot start~~ | ✅ **RESOLVED** (UPDATE 2025-12-07) |
-| ~~Data download pending~~ | ~~Cannot backtest~~ | ✅ **RESOLVED** (25.5M ticks ready) |
+| ~~P0 issues unfixed~~ | ~~Cannot start~~ | ✅ **RESOLVED** (2025-12-07: All P0 items complete) |
+| ~~Data download pending~~ | ~~Cannot backtest~~ | ✅ **RESOLVED** (2025-12-07: 25.5M ticks ready) |
+| ~~Baseline backtest~~ | ~~Cannot validate~~ | ✅ **RESOLVED** (2025-12-09: Executed successfully) |
 | Apex demo account | Cannot paper trade | Owner to provision |
 | NinjaTrader adapter | Cannot go live | Complete after paper trading |
 
@@ -114,9 +115,10 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.60 (tar
 | 3 | Implement consistency rule | FORGE | ✅ DONE |
 | 4 | Integrate CircuitBreaker | FORGE | ✅ DONE |
 | 5 | ~~Download Dukascopy data~~ | FORGE | ✅ **DATA EXISTS** (25.5M ticks) |
-| 6 | Run baseline backtest | ORACLE | ⏳ **READY TO RUN** |
+| 6 | Run baseline backtest | ORACLE | ✅ **EXECUTADO (2025-12-09)** |
 
-**UPDATE 2025-12-07**: Items 1-5 complete. Data at `data/ticks/xauusd_2020_2024_stride20.parquet`.
+**UPDATE 2025-12-07**: Items 1-10 complete (91%). Data at `data/ticks/xauusd_2020_2024_stride20.parquet`.
+**UPDATE 2025-12-11**: Baseline backtest executed successfully after audit.
 
 ---
 
@@ -135,4 +137,4 @@ P0 Fixed? → Core Metrics ≥ Min? → Apex 0 Violations? → WFE ≥ 0.60 (tar
 
 ---
 
-*Created: 2025-12-07 | Updated: 2025-12-07 | Version: 1.1*
+*Created: 2025-12-07 | Updated: 2025-12-11 (após auditoria) | Version: 1.1*
